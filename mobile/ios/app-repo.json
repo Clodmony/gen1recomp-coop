@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.75",
+          "date": "2026-10-11",
+          "size": 56260241,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.75/gen1recomp++-0.3.75-ios.ipa",
+          "localizedDescription": "Deez bugs\n\n## Issues closed\n\n- #2847 pikachu bump sfx\n- #2848 most pointless bug to be patched\n- #2849 Bug with move reminder in Emerald\n- #2853 Viridian City blackboard is a little broken\n- #2854 Wrong theme when rival leaves lab\n\n## Contributors\n\n- @AverageConsumer\n- @bryanthaboi\n- @Nexhas28"
+        },
+        {
           "version": "0.3.74",
           "date": "2026-10-10",
           "size": 56260051,
