@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.79",
+          "date": "2026-10-11",
+          "size": 56273971,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.79/gen1recomp++-0.3.79-ios.ipa",
+          "localizedDescription": "Bazinga m9\n\n## Issues closed\n\n- #2862 (Crystal) Pokémon gaining exp. in battle tower\n- #2863 (RBY, GSC) FLASH state not being saved\n- #2864 (Crystal) Missing SFX when closing options\n- #2865 Poison visual effect missing\n- #2866 Problem importing Fire Red\n- #2867 \"display\" refresh rate just sets framerate to 60\n- #2868 HM animations not playing\n- #2871 (Crystal) Does Thief and/or wild pokemon Held Items work correctly?\n\n## Contributors\n\n- @bryanthaboi\n- @claude\n- @Nexhas28"
+        },
+        {
           "version": "0.3.78",
           "date": "2026-10-11",
           "size": 56271392,
