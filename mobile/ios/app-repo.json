@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.76",
+          "date": "2026-10-11",
+          "size": 56267765,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.76/gen1recomp++-0.3.76-ios.ipa",
+          "localizedDescription": "Everyone thinks they are the real they\n\n## Issues closed\n\n- #2788 [Save editor] Pokéblocks editor\n- #2811 [Save editor] A more direct way to set the Mirage Island values ​​in the save editor\n- #2829 Can't scroll up or down in the save file editor on sbc-portmaster version\n- #2837 SBC PortMaster package fails to launch on ROCKNIX: libtheoradec.so.1 not found\n- #2850 [Save editor] Sort pokémon in the boxes\n\n## Contributors\n\n- @bryanthaboi"
+        },
+        {
           "version": "0.3.75",
           "date": "2026-10-11",
           "size": 56260241,
