@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.80",
+          "date": "2026-10-11",
+          "size": 56274201,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.80/gen1recomp++-0.3.80-ios.ipa",
+          "localizedDescription": "Quick performant update gen 3\n\n## Contributors\n\n- @bryanthaboi"
+        },
+        {
           "version": "0.3.79",
           "date": "2026-10-11",
           "size": 56273971,
