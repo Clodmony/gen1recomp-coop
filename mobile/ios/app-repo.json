@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.84",
+          "date": "2026-10-12",
+          "size": 56324224,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.84/gen1recomp++-0.3.84-ios.ipa",
+          "localizedDescription": "bazinga nation runnin wild\n\n## Issues closed\n\n- #2897 Various Gen 3 sound effects lowers the music volume down\n- #2898 (Modding API + Trades) Gen1 copy of Gen2 species added through mod throws error when trying to trade between the two gens\n- #2899 Ditto appears to keep it's crit rate rather than changing to the transformed mon.\n- #2900 Explode/Self Destruct interaction with Substitute.\n- #2901 Issues with healing paralysis in a battle.\n- #2902 Union room parity?\n- #2903 Union Room parity? (Part 2)\n- #2904 (Modding API) \"pokemon.sprite\" and \"pokemon.icon\" hooks crash and burn for UNOWN specifically, and only in gen3\n\n## Contributors\n\n- @1Jamie\n- @bryanthaboi"
+        },
+        {
           "version": "0.3.83",
           "date": "2026-10-12",
           "size": 56309430,
