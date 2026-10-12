@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.82",
+          "date": "2026-10-12",
+          "size": 56311752,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.82/gen1recomp++-0.3.82-ios.ipa",
+          "localizedDescription": "Cry cry cry (gen 3 ambient cries)\n\n## Contributors\n\n- @bryanthaboi"
+        },
+        {
           "version": "0.3.81",
           "date": "2026-10-12",
           "size": 56304890,
