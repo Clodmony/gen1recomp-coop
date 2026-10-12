@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.85",
+          "date": "2026-10-12",
+          "size": 56323592,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.85/gen1recomp++-0.3.85-ios.ipa",
+          "localizedDescription": "Gazoontite ?\n\n## Issues closed\n\n- #2907 Character sprite on Trainer Card incorrect\n- #2909 Inaccurate location banner\n- #2911 Awkward silence in cutscenes\n- #2913 Savestates can be used to bypass guy that stops you from going to left\n\n## Contributors\n\n- @bryanthaboi"
+        },
+        {
           "version": "0.3.84",
           "date": "2026-10-12",
           "size": 56324224,
