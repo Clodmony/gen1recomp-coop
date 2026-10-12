@@ -1,0 +1,78 @@
+name: coop-ci
+
+# The co-op fork's CI: the ROM-free jobs of upstream's ci.yml (headless test
+# groups, luacheck, mod lint, fixture PNGs) on the integration branch and on
+# pull requests into it. Upstream's own workflows (ci, release, windows-sign,
+# platform-artifact-comment) are disabled in the fork's Actions settings: they
+# build and sign platform packages, which the fork never ships.
+on:
+  push:
+    branches: [gen1recomp-coop]
+  pull_request:
+    branches: [gen1recomp-coop]
+
+concurrency:
+  group: coop-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  headless:
+    name: headless / ${{ matrix.group }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [engine, gen2, save-codecs, save-records, save-world, save-editor, mods, game3]
+    steps:
+      - uses: actions/checkout@v7
+      - name: set up Java 17 for Android picker copy tests
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: ./.github/actions/setup-luajit
+      - run: python3 -m pip install --upgrade pillow
+      - name: run ROM-free group
+        run: ./scripts/test.sh --group "${{ matrix.group }}"
+
+  luacheck:
+    name: engine lint (luacheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-luajit
+        with:
+          luacheck: 'true'
+      - run: ./scripts/lint.sh --ci
+
+  gates:
+    name: mod lint and fixture PNGs (tools/verify.sh stages)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-luajit
+      - run: python3 -m pip install --upgrade pillow
+      - name: lint every committed mod
+        run: |
+          set -e
+          for mod in mods/*/; do
+            [ -f "$mod/manifest.json" ] || continue
+            echo "== $mod"
+            python3 tools/modkit.py lint "${mod%/}"
+          done
+      - name: fixture assets are valid PNGs
+        run: |
+          python3 - <<'PY'
+          import glob, sys
+          from PIL import Image
+          paths = sorted(glob.glob("tests/fixture_data/assets/*.png"))
+          if not paths:
+              sys.exit("no fixture assets found")
+          for path in paths:
+              with Image.open(path) as image:
+                  image.load()
+          print(f"{len(paths)} fixture assets valid")
+          PY

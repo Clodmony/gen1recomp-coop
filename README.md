@@ -1,3 +1,14 @@
+> [!NOTE]
+> **This is gen1recomp-coop, an unofficial fork.** Based on the Pokemon Gen 1
+> Recompilation Project by BOIS CLUB GAMES, LLC
+> (https://github.com/bryanthaboi/gen1recomp). It adds a cooperative
+> two-player campaign, online and local split-screen, and is not affiliated
+> with or supported by the upstream project: report problems with the co-op
+> mode here, not upstream. The fork publishes no builds. Its changes are
+> written by an AI coding agent directed by the fork's owner (every commit
+> after upstream `f63f485c`); see [AGENTS.md](AGENTS.md). Upstream's README
+> follows unchanged.
+
 # G1R Deluxe aka Gen1Recomp
 
 A native LÖVE2D recreation of Poke Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire, and Emerald.
