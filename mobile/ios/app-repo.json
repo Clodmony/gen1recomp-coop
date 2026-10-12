@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.83",
+          "date": "2026-10-12",
+          "size": 56309430,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.83/gen1recomp++-0.3.83-ios.ipa",
+          "localizedDescription": "Keep em comin\n\n## Issues closed\n\n- #2889 Save screen not accurate\n- #2890 Poke Dude walking animation broken\n- #2891 Using Teachy TV doesn't have a fading animation\n- #2892 Teachy TV item random space\n- #2893 no old man throwing pokeball animation\n- #2894 old man instantly throws pokeball\n- #2895 issues with transition going out of buildings\n- #2896 pokemon catch jingle isn't cued properly\n\n## Contributors\n\n- @bryanthaboi"
+        },
+        {
           "version": "0.3.82",
           "date": "2026-10-12",
           "size": 56311752,
