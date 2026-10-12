@@ -13,6 +13,13 @@
       "category": "games",
       "versions": [
         {
+          "version": "0.3.81",
+          "date": "2026-10-12",
+          "size": 56304890,
+          "downloadURL": "https://github.com/bryanthaboi/gen1recomp/releases/download/v0.3.81/gen1recomp++-0.3.81-ios.ipa",
+          "localizedDescription": "my flow state is getting fungshway'd\n\n## Issues closed\n\n- #2873 [Emerald] Loading save state during battle doesn't work properly\n- #2876 Ninja Boys and Hidden Trainers show\n- #2877 Pokenav menu broken\n- #2878 putting pokemon in box ui is broken\n- #2879 sadly the running against something or someone ends with you stuck for 2 frames in walking animation\n- #2880 [FireRed]  Evolving Pokémon, doesn't change name\n- #2882 FRLG: roaming beast's PID and IVs are re-rolled every encounter\n\n## Contributors\n\n- @bryanthaboi\n- @Nexhas28"
+        },
+        {
           "version": "0.3.80",
           "date": "2026-10-11",
           "size": 56274201,
