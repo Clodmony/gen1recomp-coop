@@ -998,3 +998,10 @@ sibling's D-numbers.
   upstream's link port 7777. A co-op host and upstream's own link (a Cable
   Club cable, for example) could otherwise not run in one process. The
   session core is in [session.md](session.md).
+- **G9. The fork has its own save folder; upstream's updater and sync are
+  off** (#26, owner, 2026-10-13). The LÖVE identity is `gen1recomp-coop`, not
+  upstream's `pokemon-love2d`, so the two never share saves, options or ROM
+  caches. Upstream saves come over by copying the folder by hand, as
+  [launcher.md](launcher.md) describes; an import in the launcher may come
+  with #6. The self-updater and cloud sync stay off until the fork wants its
+  own (`src/coop/Upstream.lua`).

@@ -70,7 +70,7 @@ do
   local path = SaveIO.defaultPath()
   check(type(path) == "string" and #path > 0, "defaultPath nonempty")
   check(path:match("save%.lua$"), "defaultPath ends with save.lua")
-  local identity = os.getenv("POKEPORT_IDENTITY") or "pokemon-love2d"
+  local identity = os.getenv("POKEPORT_IDENTITY") or "gen1recomp-coop" -- co-op (#26)
   check(path:find(identity, 1, true) ~= nil, "defaultPath uses game identity folder")
   local sys = ""
   if package.config:sub(1, 1) ~= "\\" then
