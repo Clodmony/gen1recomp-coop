@@ -38,6 +38,17 @@ jobs:
       - name: run ROM-free group
         run: ./scripts/test.sh --group "${{ matrix.group }}"
 
+  enet:
+    # the co-op session over real ENet sockets (#10): lua-enet ships with
+    # LOVE, so this suite runs under a windowless LOVE
+    name: co-op session over ENet (LOVE)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends love
+      - run: love --version
+      - run: love tests/coop/enet
+
   luacheck:
     name: engine lint (luacheck)
     runs-on: ubuntu-latest

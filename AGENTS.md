@@ -25,6 +25,9 @@ Read before working:
   marked carry, adapt or skip), the issue for each area and this fork's
   decisions (G1, G2, …). A rule that changes is edited there and the change
   recorded as a decision.
+- [docs/coop/session.md](docs/coop/session.md): the session core every co-op
+  feature builds on (host, client, protocol, transports, logs, the
+  `--coop-host`/`--coop-join` development entry).
 
 ## Hard rules
 
