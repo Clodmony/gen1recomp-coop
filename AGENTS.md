@@ -74,12 +74,19 @@ Read before working:
 
 ## Workflow
 
-- **One issue per session.** Pick the issue with the owner, branch
-  `coop/<issue>-<topic>` from `gen1recomp-coop`, reproduce the problem (a
-  failing test first), fix it, run `tools/verify.sh`, update the docs, push and
-  open a draft pull request that says `Closes #N`. Then write the handoff note
-  (open pull requests, branch state, next candidates) and stop: the owner
-  starts a fresh session for the next issue.
+- **One group per session** (owner, 2026-10-13). Issues are grouped into
+  GitHub milestones `Group N: <topic>`, numbered in the order they unblock
+  each other. Work on the open group with the lowest number, unless the owner
+  picks another. A session takes one group: branch `coop/group<N>-<topic>`
+  from `gen1recomp-coop`, and for each issue in it reproduce the problem (a
+  failing test first) and fix it, one commit or more per issue. Then run
+  `tools/verify.sh`, update the docs, push and open one draft pull request
+  that says `Closes #N` for every issue it finishes. Then write the handoff
+  note (open pull requests, branch state, next group) and stop: the owner
+  starts a fresh session for the next group. If a group grows too long, stop
+  at an issue boundary, open the pull request for the finished issues, and
+  leave the rest of the group for the next session. An issue found on the
+  way goes into the milestone where it fits.
 - **GitHub issues are the task list.** New work, bugs found on the way and
   follow-ups become issues; there is no task file in the repository.
 - **The owner merges.** A pull request is merged only when the owner says so,
@@ -87,7 +94,7 @@ Read before working:
 - **Scratch lives on disk, outside the repository**, under
   `~/dev-scratch/gen1recomp-coop/`: captures, logs, verify runs, extra git
   worktrees, pull request bodies. /tmp is a small RAM disk on the owner's
-  machine. Delete an issue's scratch when its pull request is open.
+  machine. Delete a group's scratch when its pull request is open.
 
 ## Setup
 
