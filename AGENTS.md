@@ -20,7 +20,11 @@ Read before working:
   [docs/union-room.md](docs/union-room.md),
   [docs/guides/online-play.md](docs/guides/online-play.md),
   [docs/link-security.md](docs/link-security.md).
-- Co-op design and progress notes go under `docs/coop/` as the work starts.
+- [docs/coop/design.md](docs/coop/design.md): the co-op design, carried over
+  from the sibling fork pokerecomp-online-coop (every rule with its source,
+  marked carry, adapt or skip), the issue for each area and this fork's
+  decisions (G1, G2, …). A rule that changes is edited there and the change
+  recorded as a decision.
 
 ## Hard rules
 
