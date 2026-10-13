@@ -305,7 +305,7 @@ function Host:_move(link, msg)
       return self:_refuse(link, msg.seq, "bad_step")
     end
   end
-  p.map, p.x, p.y, p.facing = msg.map, msg.x, msg.y, msg.facing
+  p.map, p.x, p.y, p.facing, p.travel = msg.map, msg.x, msg.y, msg.facing, msg.travel
   self.dirty = true
 end
 
@@ -427,7 +427,8 @@ end
 
 local function publicView(p)
   return { id = p.id, name = p.name, game = p.game, connected = p.connected,
-           map = p.map, x = p.x, y = p.y, facing = p.facing }
+           map = p.map, x = p.x, y = p.y, facing = p.facing,
+           travel = p.map and p.travel or nil }
 end
 
 function Host:_broadcast()

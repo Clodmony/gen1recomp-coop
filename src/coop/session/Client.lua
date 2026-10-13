@@ -8,7 +8,7 @@
 --   c:probe()            -- optional: the lobby view, nobody is created
 --   c:join()             -- hello; status becomes "joined" on welcome
 --   every frame: c:update()
---   c:move("PALLET_TOWN", 5, 6, "down", false)
+--   c:move("PALLET_TOWN", 5, 6, "down", false, "walk")
 --   c:leave()
 --
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
@@ -83,9 +83,10 @@ function Client:send(msg)
   return self.seq
 end
 
-function Client:move(map, x, y, facing, warp)
+function Client:move(map, x, y, facing, warp, travel)
   return self:send({ type = "move", map = map, x = x, y = y,
-                     facing = facing, warp = warp and true or false })
+                     facing = facing, warp = warp and true or false,
+                     travel = travel or "walk" })
 end
 
 -- this device's lines since the last batch, every SHARE_INTERVAL seconds

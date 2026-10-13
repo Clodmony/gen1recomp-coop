@@ -358,6 +358,8 @@ function Game:step(dt)
     self.stack:update(dt)
   end
   if self.unionPresence then self.unionPresence:tick() end
+  -- co-op (#15): the partners of a co-op session (src/coop/game/Presence.lua)
+  require("src.coop.game.Presence").step(self)
   -- play time for the trainer card / save screen
   self.save.playTime = (self.save.playTime or 0) + dt
   -- Music.update is NOT serviced here: it decrements fade counters and

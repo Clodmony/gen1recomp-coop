@@ -226,19 +226,33 @@ function Session.nextMove(last, cur, resync)
   end
   local map = tostring(cur.mapId)
   local facing = cur.facing or "down"
+  local travel = cur.travel or "walk"
   if last and last.map == map and last.x == cur.x and last.y == cur.y
-     and last.facing == facing and not resync then
+     and last.facing == facing and last.travel == travel and not resync then
     return nil
   end
   local warp = not last or last.map ~= map
     or math.abs(last.x - cur.x) + math.abs(last.y - cur.y) > 2 or resync and true or false
-  return { map = map, x = cur.x, y = cur.y, facing = facing, warp = warp }
+  return { map = map, x = cur.x, y = cur.y, facing = facing, warp = warp, travel = travel }
+end
+
+-- This player's cell as the others see it: the cell a step heads for, so
+-- their screens ease it while this one walks it (#15), and how the player
+-- travels (walk, run, bike, surf); nil without an overworld.
+function Session.position(game)
+  local ow = require("src.world.WorldAPI").new(game):overworld()
+  local p = ow and ow.player
+  if not p then return nil end
+  local travel = p.onBike and "bike" or p.surfing and "surf" or p.running and "run" or "walk"
+  if game.save and game.save.onBike and not p.surfing then travel = "bike" end
+  local x, y = p.cellX, p.cellY
+  if p.moving and p.targetX then x, y = p.targetX, p.targetY end
+  return { mapId = ow.map.id, x = x, y = y, facing = p.facing, travel = travel }
 end
 
 function Session:_report(game)
-  local WorldAPI = require("src.world.WorldAPI")
-  local m = Session.nextMove(self.last, WorldAPI.new(game):current(), self.resync)
-  if m and self.client:move(m.map, m.x, m.y, m.facing, m.warp) then
+  local m = Session.nextMove(self.last, Session.position(game), self.resync)
+  if m and self.client:move(m.map, m.x, m.y, m.facing, m.warp, m.travel) then
     self.last = m
     self.resync = false
   end
@@ -376,6 +390,16 @@ function Session:leave(notice)
   self.status = "ended"
   self:_stop()
   if self.inGame and notice then Session.writeReturn(notice, self.cartridge.game) end
+  -- a game that left (the CO-OP menu's LEAVE SESSION) goes back to the
+  -- launcher too (#15)
+  if self.inGame then Session.launcherWanted = true end
+end
+
+-- true once, after a running game left its session
+function Session.takeLauncher()
+  local want = Session.launcherWanted
+  Session.launcherWanted = nil
+  return want == true
 end
 
 -- A note for the co-op screen when the launcher opens again after a session
@@ -406,6 +430,7 @@ end
 
 -- the running session, every frame (main.lua's hook and the launcher)
 function Session.tick(dt, game)
+  if game and Session.takeLauncher() then return "launcher" end
   local s = Session.current
   if not s then return nil end
   return s:update(dt, game)

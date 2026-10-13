@@ -137,7 +137,7 @@ do
   -- nothing it sends is read any more, and its link closes after the grace
   local seqBefore = p.lastSeq
   flooder.conn:send({ type = "move", seq = seqBefore + 1, map = "ROUTE_1", x = 5, y = 5,
-                      facing = "up", warp = true })
+                      facing = "up", warp = true, travel = "walk" })
   for _ = 1, 90 do
     walker:move("ROUTE_1", x, 10, "right", false)
     frame()

@@ -460,6 +460,8 @@ function TownMap:draw()
       love.graphics.setColor(1, 1, 1, 1)
       return
     end
+    -- co-op (#15): the partners' icons, under the player's own
+    require("src.coop.game.TownMapMarks").draw(self, markerXY)
     -- engine/items/town_map.asm:347; player marker is static in both Gen 1 and 2
     if self.playerLoc then
       local x, y = markerXY(self.playerLoc)

@@ -89,6 +89,7 @@ end
 function Dev.update(dt, game)
   if not game then return nil end
   if not Dev.config then return Session.tick(dt, game) end
+  if Session.takeLauncher() then return "launcher" end
   if not Dev.session then Dev.start() end
   local s = Dev.session
   if s.kind == "join" and s.status == "probed" then s:join() end
