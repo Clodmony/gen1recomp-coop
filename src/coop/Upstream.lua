@@ -3,7 +3,7 @@
 -- chainload upstream's payload over the fork (src/update); cloud sync talks
 -- to upstream's sync server for a device linked in upstream's launcher, which
 -- the fork has no screen for (src/sync).  main.lua calls Upstream.install at
--- boot and filters a launch request's tasks through Upstream.launchTasks.
+-- boot and hands the pre-launch screen's options through Upstream.prelaunch.
 -- See docs/coop/launcher.md.
 
 local Upstream = {}
@@ -36,6 +36,12 @@ function Upstream.launchTasks(tasks)
   if not Upstream.UPDATER then out.update = false end
   if not Upstream.CLOUD_SYNC then out.sync = false end
   return out
+end
+
+-- src/core/Prelaunch's options with their tasks filtered
+function Upstream.prelaunch(opts)
+  opts.tasks = Upstream.launchTasks(opts.tasks)
+  return opts
 end
 
 return Upstream

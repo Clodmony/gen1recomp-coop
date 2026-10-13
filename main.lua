@@ -853,9 +853,10 @@ local function startLaunchRequest(request)
     end)
   end
 
-  Prelaunch = require("src.core.Prelaunch").new({
+  -- co-op (#26): no update check or sync before the game (src/coop/Upstream.lua)
+  Prelaunch = require("src.core.Prelaunch").new(require("src.coop.Upstream").prelaunch({
     version = version,
-    tasks = require("src.coop.Upstream").launchTasks(request.tasks), -- co-op (#26)
+    tasks = request.tasks or {},
     done = function(outcome)
       if outcome == "restart" then return end
       Prelaunch = nil
@@ -865,7 +866,7 @@ local function startLaunchRequest(request)
       end
       bootAfterMods()
     end,
-  })
+  }))
   if not Prelaunch then bootAfterMods() end
   return true
 end
