@@ -265,10 +265,15 @@ function Presence.step(game)
   Notices.step()
 end
 
--- the overworld's UI pass (OverworldState:drawUI): the arrows, the notices
-function Presence.drawUI(game, ow)
+-- the overworld's world pass (OverworldState:draw): the arrows
+function Presence.drawWorld(game, ow)
   if not Presence.state then return end
   Arrow.draw(game, ow, Presence.partners(), Presence.frame)
+end
+
+-- the overworld's UI pass (OverworldState:drawUI): the notices
+function Presence.drawUI()
+  if not Presence.state then return end
   Notices.draw()
 end
 

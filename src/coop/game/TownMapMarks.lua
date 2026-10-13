@@ -42,7 +42,8 @@ end
 function TownMapMarks.draw(screen, markerXY)
   if screen.nestSpecies then return end
   local PaletteFX = require("src.render.PaletteFX")
-  for _, m in ipairs(TownMapMarks.marks(screen.byMap)) do
+  local marks = TownMapMarks.marks(screen.byMap)
+  for _, m in ipairs(marks) do
     local x, y = markerXY(m.loc)
     local img, quad = icon(screen.game and screen.game.data, m.place)
     love.graphics.setColor(1, 1, 1, 1)
@@ -54,6 +55,19 @@ function TownMapMarks.draw(screen, markerXY)
       love.graphics.setColor(Colors.rgb(m.place))
       love.graphics.rectangle("fill", x + 1, y + 1, 6, 6)
       love.graphics.setColor(1, 1, 1, 1)
+    end
+  end
+  -- the player's own marker stays on top: in the modes where TownMap does
+  -- not replay it over the palette zone itself, replay it after the icons
+  -- that share its place
+  local own = screen.playerLoc
+  if own and screen.playerSheet and not (PaletteFX.usesSpriteObp() or PaletteFX.usesGbcPack()) then
+    for _, m in ipairs(marks) do
+      if m.loc == own then
+        local x, y = markerXY(own)
+        PaletteFX.markUiSpriteRedraw(screen.playerSheet, screen.playerQuad, x - 4, y - 3)
+        break
+      end
     end
   end
 end

@@ -5983,6 +5983,8 @@ end
 function OverworldState:draw()
   Game.renderer:beginWorldPass()
   if not self:drawWorldFaded() then self:drawWorld() end
+  -- co-op (#15): the partner arrows, on the world's edges, under the UI
+  require("src.coop.game.Presence").drawWorld(Game, self)
   Game.renderer:endWorldPass()
   self:drawUI()
 end
@@ -6848,7 +6850,7 @@ end
 
 -- screen-space overlays: drawn to the UI canvas at normal scale
 function OverworldState:drawUI()
-  -- co-op (#15): the partner arrows and the notices, under every box and menu
+  -- co-op (#15): the notices, under every box and menu
   require("src.coop.game.Presence").drawUI(Game, self)
   -- engine/events/prize_menu.asm:24-28
   if self.prizeWindow then
