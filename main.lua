@@ -855,7 +855,7 @@ local function startLaunchRequest(request)
 
   Prelaunch = require("src.core.Prelaunch").new({
     version = version,
-    tasks = request.tasks or {},
+    tasks = require("src.coop.Upstream").launchTasks(request.tasks), -- co-op (#26)
     done = function(outcome)
       if outcome == "restart" then return end
       Prelaunch = nil
@@ -897,8 +897,11 @@ function love.load(args)
   -- Self-updater boot shell: a fused build may mount and chainload a newer
   -- downloaded payload here.  True means it took over, so we must stop.  A
   -- dev / source checkout no-ops (see src/update/Boot.lua).
+  -- co-op (#26): upstream's updater and cloud sync stay off (src/coop/Upstream.lua)
+  local Upstream = require("src.coop.Upstream")
+  Upstream.install()
   local Boot = require("src.update.Boot")
-  if Boot.run(args) then return end
+  if Upstream.updaterAllowed() and Boot.run(args) then return end
 
   local savePath
   for i, a in ipairs(args or {}) do

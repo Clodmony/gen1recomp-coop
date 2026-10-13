@@ -22,7 +22,7 @@ function love.conf(t)
   _G.POKEPORT_DISPLAY_COMPANION = companion
 
   if companion then
-    t.identity = "pokemon-love2d-companion"
+    t.identity = "gen1recomp-coop-companion" -- co-op (#26): the fork's own folders
     t.window.title = "gen1recomp Secondary Display"
     t.window.width = 640
     t.window.height = 576
@@ -35,12 +35,12 @@ function love.conf(t)
     -- folder.  A private editor identity would point love.filesystem at an
     -- empty directory in a packaged build, so `--editor` could not find
     -- data/generated at all (SaveIO.defaultPath already assumed this name).
-    t.identity = os.getenv("POKEPORT_IDENTITY") or "pokemon-love2d"
+    t.identity = os.getenv("POKEPORT_IDENTITY") or "gen1recomp-coop" -- co-op (#26)
     t.window.title = "Pokemon Save Editor"
     t.window.width = 1280
     t.window.height = 800
   else
-    t.identity = os.getenv("POKEPORT_IDENTITY") or "pokemon-love2d"
+    t.identity = os.getenv("POKEPORT_IDENTITY") or "gen1recomp-coop" -- co-op (#26)
     -- Version.lua has zero requires, so it is loadable this early; fall
     -- back to the plain title if the source is not mounted yet
     local ok, Version = pcall(require, "src.core.Version")

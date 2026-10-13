@@ -24,7 +24,7 @@ end
 function SaveIO.defaultPath()
   -- same override conf.lua honors, so a mod-dev profile edits the save it
   -- actually plays
-  local identity = os.getenv("POKEPORT_IDENTITY") or "pokemon-love2d"
+  local identity = os.getenv("POKEPORT_IDENTITY") or "gen1recomp-coop" -- co-op (#26)
   local home = os.getenv("HOME") or os.getenv("USERPROFILE") or ""
   local uname = io.popen and io.popen("uname -s 2>/dev/null")
   local sys = uname and uname:read("*l") or ""
