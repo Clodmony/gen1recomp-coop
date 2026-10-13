@@ -28,6 +28,9 @@ Read before working:
 - [docs/coop/session.md](docs/coop/session.md): the session core every co-op
   feature builds on (host, client, protocol, transports, logs, the
   `--coop-host`/`--coop-join` development entry).
+- [docs/coop/presence.md](docs/coop/presence.md): what a session shows in
+  the game (partners, arrow, CO-OP menu, notices, run) and its hooks in
+  upstream files.
 
 ## Hard rules
 
