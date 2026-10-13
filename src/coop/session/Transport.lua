@@ -16,7 +16,10 @@
 -- Both kinds carry JSON text (src/link/Json.lua); a loopback message is
 -- encoded and decoded like a network one, so a test over loopback sees what
 -- a peer would.  A message longer than Protocol.MAX_MESSAGE or not valid
--- JSON is dropped and counted in conn.dropped.  Upstream's src/link/Net.lua
+-- JSON is dropped and counted in conn.dropped.  Arriving text waits on the
+-- link undecoded and poll decodes it, all of it or as much as a budget
+-- allows, so the host can hold one link to a share of each frame (#32);
+-- conn.receivedBytes and conn.receivedCount count what arrived.  Upstream's src/link/Net.lua
 -- pairs exactly two ends and caps a message at 256 KB, so co-op has its own.
 
 local Json = require("src.link.Json")
@@ -46,13 +49,15 @@ local function encode(msg)
   return nil
 end
 
-local function decodeInto(conn, text)
-  local msg = Json.decode(text, Protocol.MAX_MESSAGE)
-  if type(msg) == "table" then
-    conn.inbox[#conn.inbox + 1] = msg
-  else
+-- arriving text waits on the link; poll decodes it
+local function arrive(conn, text)
+  conn.receivedBytes = conn.receivedBytes + #text
+  conn.receivedCount = conn.receivedCount + 1
+  if #text > Protocol.MAX_MESSAGE then
     conn.dropped = conn.dropped + 1
+    return
   end
+  conn.wire[#conn.wire + 1] = text
 end
 
 -- one end of a link ------------------------------------------------------
@@ -62,22 +67,47 @@ Conn.__index = Conn
 
 local function newConn(kind)
   return setmetatable({
-    kind = kind, inbox = {}, dropped = 0, closed = false, error = nil,
-    address = nil, sent = 0,
+    kind = kind, wire = {}, dropped = 0, closed = false, error = nil,
+    address = nil, sent = 0, receivedBytes = 0, receivedCount = 0,
   }, Conn)
 end
 
-function Conn:poll()
-  local msgs = self.inbox
-  self.inbox = {}
-  return msgs
+-- The messages that arrived, decoded.  With a budget ({ bytes, messages })
+-- it stops before the message that would go over either, but always takes
+-- one; the rest waits for the next poll.
+function Conn:poll(budget)
+  local wire, out = self.wire, {}
+  local i, bytes = 1, 0
+  while i <= #wire do
+    local text = wire[i]
+    if budget and i > 1 and (bytes + #text > budget.bytes or i > budget.messages) then
+      break
+    end
+    bytes = bytes + #text
+    local msg = Json.decode(text, Protocol.MAX_MESSAGE)
+    if type(msg) == "table" then
+      out[#out + 1] = msg
+    else
+      self.dropped = self.dropped + 1
+    end
+    i = i + 1
+  end
+  local rest = {}
+  for j = i, #wire do rest[#rest + 1] = wire[j] end
+  self.wire = rest
+  return out
+end
+
+-- the undecoded text waiting on the link, dropped (a flooding link)
+function Conn:discard()
+  self.wire = {}
 end
 
 -- loopback ---------------------------------------------------------------
 
 function Conn:_loopSend(text)
   local other = self.other
-  if other and not other.closed then decodeInto(other, text) end
+  if other and not other.closed then arrive(other, text) end
 end
 
 -- sends one message; false when it is too big to encode or the link is gone
@@ -200,7 +230,7 @@ function Listener:update()
       self.pending[#self.pending + 1] = conn
     elseif event.type == "receive" then
       local conn = self.conns[key]
-      if conn and not conn.closed then decodeInto(conn, event.data) end
+      if conn and not conn.closed then arrive(conn, event.data) end
     elseif event.type == "disconnect" then
       local conn = self.conns[key]
       if conn then conn.closed = true end
@@ -300,7 +330,7 @@ function Conn:_serviceClient()
       self.outbox = {}
       for _, text in ipairs(queued) do self:sendRaw(text) end
     elseif event.type == "receive" then
-      decodeInto(self, event.data)
+      arrive(self, event.data)
     elseif event.type == "disconnect" then
       if self.connecting then self.error = "no answer from " .. self.address end
       self.closed = true

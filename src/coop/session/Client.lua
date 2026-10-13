@@ -13,11 +13,23 @@
 --
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
+--
+-- With opts.log, a SessionLog that shares (#31), the client sends its
+-- device's own lines in a `log` batch every SessionLog.SHARE_INTERVAL
+-- seconds and a last one before its bye, and stores the other devices'
+-- lines the host passes on.  One link per device carries the log: a second
+-- seat of the same device gets no log.
 
 local Protocol = require("src.coop.session.Protocol")
+local SessionLog = require("src.coop.session.SessionLog")
 
 local Client = {}
 Client.__index = Client
+
+local function defaultClock()
+  if love and love.timer and love.timer.getTime then return love.timer.getTime() end
+  return os.clock()
+end
 
 function Client.new(conn, opts)
   opts = opts or {}
@@ -34,6 +46,7 @@ function Client.new(conn, opts)
     rejections = {}, -- { seq, reason } for intentions the host refused
     dropped = 0,
     onWelcome = opts.onWelcome,
+    log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
   }, Client)
 end
 
@@ -49,9 +62,14 @@ function Client:probe()
   self.conn:send(self:_identity("probe"))
 end
 
+function Client:sharesLog()
+  return self.log ~= nil and self.log.share == true
+end
+
 function Client:join()
   local hello = self:_identity("hello")
   hello.device, hello.seat, hello.via = self.device, self.seat, self.via
+  hello.logs = { share = self:sharesLog() }
   self.status = "joining"
   self.conn:send(hello)
 end
@@ -70,8 +88,26 @@ function Client:move(map, x, y, facing, warp)
                      facing = facing, warp = warp and true or false })
 end
 
+-- this device's lines since the last batch, every SHARE_INTERVAL seconds
+-- (or `now`); true when a batch went out
+function Client:shareLog(now)
+  if self.status ~= "joined" or not self:sharesLog() then return false end
+  local t = self.clock()
+  if not now and self.sharedAt and t - self.sharedAt < SessionLog.SHARE_INTERVAL then
+    return false
+  end
+  self.sharedAt = t
+  local lines = self.log:take()
+  if #lines == 0 then return false end
+  self.conn:send({ type = "log", lines = lines })
+  return true
+end
+
 function Client:leave()
-  if self.status == "joined" then self:send({ type = "bye" }) end
+  if self.status == "joined" then
+    self:shareLog(true)
+    self:send({ type = "bye" })
+  end
   self.conn:close()
   self.status = "closed"
 end
@@ -90,8 +126,18 @@ function Client:_handle(msg)
     if self.onWelcome then self.onWelcome(self, msg) end
   elseif t == "state" then
     self.state = msg
+  elseif t == "log" then
+    -- other devices' lines; this device's own never come back
+    if self.log then
+      local lines = {}
+      for _, line in ipairs(msg.lines) do
+        if line.device ~= self.device then lines[#lines + 1] = line end
+      end
+      self.log:writeRelayed(lines, "host")
+    end
   elseif t == "rejected" then
-    if msg.seq == -1 and self.status ~= "joined" then
+    -- a refused hello, or a joined link the host drops (a flood)
+    if msg.seq == -1 and (self.status ~= "joined" or msg.reason == "flood") then
       self.status, self.reason = "refused", msg.reason
     else
       self.rejections[#self.rejections + 1] = { seq = msg.seq, reason = msg.reason }
@@ -112,6 +158,7 @@ function Client:update()
       self.dropped = self.dropped + 1
     end
   end
+  self:shareLog()
   if self.conn.closed and self.status ~= "refused" and self.status ~= "ended" then
     if self.status ~= "closed" then self.reason = self.conn.error end
     self.status = "closed"

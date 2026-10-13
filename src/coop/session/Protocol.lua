@@ -14,8 +14,9 @@
 local Protocol = {}
 
 -- raised whenever a message's shape or meaning changes; a peer of another
--- version is refused with protocol_mismatch (design A1.6)
-Protocol.VERSION = 1
+-- version is refused with protocol_mismatch (design A1.6).  2: shared session
+-- logs (#31) and the flood refusal (#32).
+Protocol.VERSION = 2
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -30,11 +31,20 @@ Protocol.MAX_KNOWN = 64
 Protocol.MAX_SEQ = 2 ^ 53 - 1
 Protocol.MAX_CELL = 255
 
+-- shared session logs (#31, design A1.14): a batch holds at most this many
+-- lines; a line's data is plain JSON this deep, with tables this long and
+-- text this long (the sender leaves out the data of a line over 8 KB)
+Protocol.MAX_LOG_LINES = 1024
+Protocol.MAX_LOG_KIND = 40
+Protocol.MAX_LOG_DEPTH = 8
+Protocol.MAX_LOG_ENTRIES = 256
+Protocol.MAX_LOG_TEXT = 8 * 1024
+
 -- refusal reasons the host sends in `rejected` and in a probe's `refused`
 Protocol.REASONS = {
   protocol_mismatch = true, content_mismatch = true, duplicate = true,
   hello_first = true, already_joined = true, bad_step = true,
-  session_full = true, shutting_down = true,
+  session_full = true, shutting_down = true, flood = true,
 }
 
 local FACINGS = { up = true, down = true, left = true, right = true }
@@ -175,6 +185,39 @@ local function record(schema, opt)
   end
 end
 
+-- a log line's data: plain JSON (no NaN or infinity), bounded in depth, table
+-- length and text length; keys are text or list indices
+local function plain(v, depth)
+  depth = depth or 1
+  local t = type(v)
+  if t == "boolean" then return v end
+  if t == "number" then
+    if not finite(v) then return nil, "not finite" end
+    return v
+  end
+  if t == "string" then
+    if #v > Protocol.MAX_LOG_TEXT then return nil, "too long" end
+    return v
+  end
+  if t ~= "table" then return nil, "not plain" end
+  if depth > Protocol.MAX_LOG_DEPTH then return nil, "too deep" end
+  local out, n = {}, 0
+  for k, val in pairs(v) do
+    n = n + 1
+    if n > Protocol.MAX_LOG_ENTRIES then return nil, "too many entries" end
+    if type(k) == "string" then
+      if #k > 64 then return nil, "key too long" end
+    elseif not (finite(k) and k == math.floor(k) and k >= 1) then
+      return nil, "bad key"
+    end
+    local clean, why = plain(val, depth + 1)
+    if clean == nil then return nil, why end
+    out[k] = clean
+  end
+  return out
+end
+Protocol.plain = plain
+
 local version = int(0, 65535)
 local known = mapOf(Protocol.campaignId, Protocol.playerId, Protocol.MAX_KNOWN)
 
@@ -211,6 +254,20 @@ local function extend(base, extra)
   return out
 end
 
+-- one session log line (src/coop/session/SessionLog.lua): `n` numbers a
+-- device's own lines; a line passed on is stored with `relay` added, which
+-- is never sent (design A1.14)
+local logLine = record({
+  t = int(0, Protocol.MAX_SEQ), frame = int(0, Protocol.MAX_SEQ),
+  device = Protocol.deviceId, n = int(1, Protocol.MAX_SEQ),
+  src = enum({ host = true, client = true, device = true }),
+  kind = text(Protocol.MAX_LOG_KIND),
+}, { name = name, seat = int(1, 2), player = Protocol.playerId, data = plain })
+
+local logBatch = record(withType("log", {
+  lines = listOf(logLine, Protocol.MAX_LOG_LINES),
+}))
+
 -- what the host accepts from a client ------------------------------------
 
 local identity = {
@@ -222,9 +279,10 @@ Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
   probe = record(withType("probe", identity), { known = known }),
+  -- logs: whether this link carries the device's shared log lines (#31)
   hello = record(withType("hello", extend(identity, {
     device = Protocol.deviceId, seat = int(1, 2),
-  })), { known = known, via = text(64) }),
+  })), { known = known, via = text(64), logs = record({ share = bool }) }),
   -- the client's own position; warp is true when its world changed map or
   -- jumped (a warp, a map connection, a fly)
   move = record(withType("move", {
@@ -233,6 +291,8 @@ Protocol.TO_HOST = {
   })),
   -- leaving on purpose; a dropped link leaves the same way
   bye = record(withType("bye", { seq = seq })),
+  -- the device's own session log lines since its last batch (#31)
+  log = logBatch,
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -256,6 +316,8 @@ Protocol.TO_CLIENT = {
     seq = int(-1, Protocol.MAX_SEQ), reason = text(Protocol.MAX_REASON),
   })),
   ended = record(withType("ended", { reason = text(Protocol.MAX_REASON) })),
+  -- other devices' session log lines, passed on once by the host (#31)
+  log = logBatch,
 }
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))
