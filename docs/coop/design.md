@@ -152,7 +152,9 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
     device with a 256 KB backlog for late joiners; relayed lines are never sent
     on. Logs contain names and addresses: never posted publicly (D59, play
     §Logs). Re-think for LÖVE's save directory; in split-screen one process
-    holds both players' lines. The local logs are #10; sharing them is #31.
+    holds both players' lines. The local logs are #10, sharing them #31
+    ([session.md](session.md)): the hello's `logs` carries only `share`, the
+    hello's `device` already names the device.
 15. **skip** Godot `var_to_bytes` encoding and `ENetMultiplayerPeer` raw packets
     (D11): engine-specific; the target already has JSON over ENet.
 

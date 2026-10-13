@@ -1,5 +1,6 @@
 -- The co-op development entry's arguments (#10): --coop-host[=PORT],
--- --coop-join=ADDRESS, --coop-name=NAME and their POKEPORT_COOP_* fallbacks.
+-- --coop-join=ADDRESS, --coop-name=NAME, --coop-logs=off (#31) and their
+-- POKEPORT_COOP_* fallbacks.
 --   luajit tests/coop/session_dev_entry_test.lua
 
 package.path = "./?.lua;./?/init.lua;" .. package.path
@@ -31,6 +32,11 @@ eq(c.mode, "join", "POKEPORT_COOP_JOIN joins")
 eq(c.name, "BLUE", "POKEPORT_COOP_NAME names")
 c = Dev.parse({ "--coop-host=1234" }, env({ POKEPORT_COOP_JOIN = "127.0.0.1" }))
 eq(c.mode, "host", "an argument wins over the environment")
+eq(c.shareLogs, true, "the session log is shared by default (#31)")
+c = Dev.parse({ "--coop-join=10.0.0.2", "--coop-logs=off" }, none)
+eq(c.shareLogs, false, "--coop-logs=off keeps it on this device")
+c = Dev.parse({ "--coop-host" }, env({ POKEPORT_COOP_LOGS = "0" }))
+eq(c.shareLogs, false, "and POKEPORT_COOP_LOGS=0")
 
 -- what a game's position becomes on the wire
 local function cell(map, x, y, facing) return { mapId = map, x = x, y = y, facing = facing } end

@@ -1,7 +1,8 @@
 -- The co-op session core over real ENet sockets on this machine (#10), with
 -- a loopback seat on the same host (G3): join, move, change maps, leave by
 -- bye and by a dropped link, rejoin; protocol and cartridge refusals; 2 MiB
--- messages; broken JSON; the LAN beacon on 127.0.0.1.  lua-enet ships with
+-- messages; broken JSON; shared session logs (#31); a flooding link dropped
+-- while another player moves (#32); the LAN beacon on 127.0.0.1.  lua-enet ships with
 -- LÖVE, so this suite runs under LÖVE, without a window:
 --   love tests/coop/enet
 -- It uses its own ports (never the game's 24680/24681) and sends nothing
@@ -17,6 +18,7 @@ local Protocol = require("src.coop.session.Protocol")
 local Host = require("src.coop.session.Host")
 local Client = require("src.coop.session.Client")
 local Beacon = require("src.coop.session.Beacon")
+local SessionLog = require("src.coop.session.SessionLog")
 
 local PORT = 34680 + math.floor(love.timer.getTime() * 1000) % 500
 local BEACON_PORT = PORT + 1000
@@ -200,6 +202,70 @@ local function run()
   check(lost.closed, "a dial with nobody listening closes")
   check(tostring(lost.error):find("no answer", 1, true) ~= nil,
     "and says no answer: " .. tostring(lost.error))
+
+  -- shared logs and a flood over ENet, on a host of their own
+  do
+    local function memLog(device)
+      local stored = {}
+      local fs = {
+        mkdir = function() end, list = function() return {} end,
+        size = function() return 0 end, remove = function() end,
+        open = function()
+          return { write = function(text) stored[#stored + 1] = text end,
+                   flush = function() end, close = function() end }
+        end,
+      }
+      local log = SessionLog.open({ fs = fs, device = device, name = device, share = true })
+      return log, stored
+    end
+    local h = Host.new({ campaign = { id = CAMPAIGN, title = "LIMITS" },
+                         cartridge = { game = "red", sha1 = SHA }, port = PORT + 3 })
+    local l3 = Transport.listen(PORT + 3)
+    check(l3 ~= nil, "a third listener opens")
+    h:serve(l3)
+    local function dial(name, device, log)
+      return Client.new(Transport.dial("127.0.0.1:" .. (PORT + 3)), {
+        name = name, game = "red", sha1 = SHA, device = device, seat = 1, build = "test",
+        log = log })
+    end
+    local logA = memLog("a1")
+    local logB, storedB = memLog("b1")
+    local ca, cb = dial("ANNA", "a1", logA), dial("BEN", "b1", logB)
+    ca:join(); cb:join()
+    check(pumpUntil(h, { ca, cb }, function()
+      return ca.status == "joined" and cb.status == "joined"
+    end), "two sharing ENet players join")
+    logA:write("client", "over_enet", { n = 1 })
+    check(pumpUntil(h, { ca, cb }, function()
+      for _, text in ipairs(storedB) do
+        if text:find('"over_enet"', 1, true) and text:find('"relay"', 1, true) then return true end
+      end
+      return false
+    end, SessionLog.SHARE_INTERVAL + 3), "A's log line reaches B over ENet")
+
+    -- B floods with 100 KB messages while A moves
+    ca:move("ROUTE_1", 0, 10, "right", true)
+    local pad = ("f"):rep(100 * 1024)
+    local x, missed, moves = 0, 0, 0
+    local deadline = love.timer.getTime() + 15
+    while cb.status == "joined" and love.timer.getTime() < deadline do
+      for _ = 1, 20 do cb.conn:send({ type = "move", seq = 1, pad = pad }) end
+      x = 1 - x
+      ca:move("ROUTE_1", x, 10, "right", false)
+      for _ = 1, 3 do -- a few frames for the move to arrive
+        h:update(); ca:update(); cb:update()
+        love.timer.sleep(0.005)
+      end
+      moves = moves + 1
+      if h:player(ca.player).x ~= x then missed = missed + 1 end
+    end
+    eq(cb.reason, "flood", "the flooding ENet player is dropped with the reason flood")
+    check(missed <= 1, ("A's moves went through during the flood (%d of %d late)")
+      :format(missed, moves))
+    eq(ca.status, "joined", "A plays on")
+    h:shutdown("host_quit")
+    pumpUntil(h, { ca, cb }, function() return h.status == "ended" end, Host.GRACE + 2)
+  end
 
   -- the LAN beacon, on 127.0.0.1 only
   check(Beacon.available(), "luasocket is there under LÖVE")
