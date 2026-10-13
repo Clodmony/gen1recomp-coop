@@ -1,7 +1,9 @@
 -- The fork's own launcher (#3, licence term 2 of upstream's LICENSE.MD): a
 -- Game Boy style menu at the game's 160x144 resolution that picks Red, Blue
 -- or Yellow, imports its ROM, continues or starts a game and shows the credit
--- line term 1 asks for on every screen.
+-- line term 1 asks for on every screen.  Its co-op screens (#12) host and
+-- join sessions (CoopMenu.lua); a session started here keeps running into
+-- the game.
 --
 -- main.lua drives it through the same calls it makes on any launcher object
 -- (update, draw and the input callbacks), so the hooks there stay small.
@@ -13,6 +15,8 @@ local GameVersion = require("src.core.GameVersion")
 local GamepadMap = require("src.core.GamepadMap")
 local Menu = require("src.coop.launcher.Menu")
 local RomImport = require("src.coop.launcher.RomImport")
+local CoopSettings = require("src.coop.launcher.CoopSettings")
+local Session = require("src.coop.session.Session")
 
 local Launcher = {}
 Launcher.__index = Launcher
@@ -90,17 +94,96 @@ function Launcher.new(onBoot, opts)
   }, Launcher)
   local initial = opts.initialTab
   if not RomImport.isGen1(initial) then initial = nil end
+  -- co-op (#12): the cartridge last picked for co-op
+  if not initial then
+    local ok, settings = pcall(self._coopSettings, self)
+    if ok and RomImport.isGen1(settings.pick) then initial = settings.pick end
+  end
   self.menu = Menu.new({
     ready = function(v) return self:isReady(v) end,
     saveInfo = function(v) return self:saveInfo(v) end,
     canQuit = not mobile(),
     canType = not mobile(),
     initial = initial,
+    coop = function(v) return self:_coopEnv(v) end,
   })
+  self:_coopReturn()
   if opts.notice then self.menu:notify(opts.notice) end
   self:_loadFont()
   Launcher.current = self
   return self
+end
+
+-- ------------------------------------------------------------ co-op (#12)
+
+function Launcher:_coopSettings()
+  if not self.coopSettings then self.coopSettings = CoopSettings.load() end
+  return self.coopSettings
+end
+
+-- After a session: the solo save slots come back, and the co-op screen
+-- says why the session ended.
+function Launcher:_coopReturn()
+  if Session.current then return end
+  local okSettings, settings = pcall(self._coopSettings, self)
+  if okSettings then pcall(settings.restoreSlots, settings, require("src.core.SaveData")) end
+  local note = Session.takeReturn()
+  if note then
+    local version = note.version
+    if version and self:isReady(version) then
+      self.menu:openCoop(version, note.notice)
+    else
+      self.menu:notify(note.notice)
+    end
+  end
+end
+
+-- what the co-op screens reach: this device's settings and campaigns, the
+-- session, the LAN beacon and this device's addresses
+function Launcher:_coopEnv(version)
+  local settings = self:_coopSettings()
+  settings:picked(version)
+  local Campaigns = require("src.coop.Campaigns")
+  local launcher = self
+  return {
+    version = version,
+    ready = function(v) return launcher:isReady(v) end,
+    settings = settings,
+    campaigns = Campaigns,
+    canOpenLogs = not mobile() and love.system ~= nil and love.system.openURL ~= nil,
+    addresses = function() return require("src.coop.session.Addresses").mine() end,
+    nearby = function()
+      if not launcher.nearby and not launcher.nearbyError then
+        local listener, why = require("src.coop.session.Beacon").listener()
+        launcher.nearby, launcher.nearbyError = listener, why
+      end
+      return launcher.nearby, launcher.nearbyError
+    end,
+    closeNearby = function()
+      if launcher.nearby then launcher.nearby:close() end
+      launcher.nearby, launcher.nearbyError = nil, nil
+    end,
+    host = function(campaign, name, v)
+      return Session.startHost({
+        campaign = campaign, cartridge = Session.cartridge(v), name = name,
+        shareLogs = settings.shareLogs,
+        onRoster = function(roster) Campaigns.record(campaign.id, roster) end,
+      })
+    end,
+    dial = function(address, v, name)
+      return Session.startDial({ address = address, cartridge = Session.cartridge(v),
+                                 name = name, shareLogs = settings.shareLogs })
+    end,
+  }
+end
+
+function Launcher:_openLogs()
+  local fs = love.filesystem
+  fs.createDirectory("coop/logs")
+  local dir = fs.getSaveDirectory() .. "/coop/logs"
+  if not love.system.openURL("file://" .. dir) then
+    self.menu:notify("The logs are in " .. dir)
+  end
 end
 
 function Launcher:isReady(version)
@@ -166,6 +249,18 @@ function Launcher:_run(command)
       if id then SaveData.setActiveSlot(command.version, id) end
     end
     self:_boot(command.version)
+  elseif command.kind == "coop_enter" then
+    -- the campaign's own save slot on this device (until campaign files, #13)
+    local SaveData = require("src.core.SaveData")
+    self:_coopSettings():enterSlot(SaveData, command.version, command.campaign.id,
+      command.campaign.title)
+    if self.nearby then self.nearby:close() end
+    self.nearby = nil
+    self:_boot(command.version)
+  elseif command.kind == "copy" then
+    if love.system.setClipboardText then love.system.setClipboardText(command.text) end
+  elseif command.kind == "open_logs" then
+    self:_openLogs()
   end
 end
 
@@ -231,6 +326,9 @@ function Launcher:update(dt)
   self.swallowText = false
   self.clock = self.clock + (dt or 0)
   self:_pollJob()
+  -- co-op (#12): the session runs while the launcher shows it
+  Session.tick(dt, nil)
+  self:_run(self.menu:update(dt))
 end
 
 -- One string at a text cell; every launcher string goes through here.
@@ -280,10 +378,57 @@ function Launcher:_drawItems(items, cursor)
   end
 end
 
+-- the text entry's grid: characters two columns apart from column 2, the
+-- special keys at fixed columns on the last row (#12)
+local KEYPAD_ROW = 4
+local KEYPAD_SPECIAL_ROW = 10
+local KEYPAD_SPECIAL_COL = { SPACE = 2, DEL = 9, END = 15 }
+
+local function keypadCell(rows, r, c)
+  if r == #rows then return KEYPAD_SPECIAL_COL[rows[r][c]] or 2, KEYPAD_SPECIAL_ROW end
+  return 2 + (c - 1) * 2, KEYPAD_ROW + r - 1
+end
+
+function Launcher:_drawCoop(coop)
+  local v = coop:view()
+  self:_centered(v.title, 0)
+  self:_box(0, 1, COLS, 11)
+  if v.keypad then
+    local k = v.keypad
+    -- the field: the text, then a line for each place left (the cartridge
+    -- font has no "_")
+    local shown = k.text
+    if #shown > COLS - 3 then shown = shown:sub(-(COLS - 3)) end
+    self:_text(shown, 2, 2)
+    local blank = self.cartFont and "─" or "_"
+    for i = #shown + 1, math.min(k.max, COLS - 3) do self:_text(blank, 1 + i, 2) end
+    for r, row in ipairs(k.rows) do
+      for c, key in ipairs(row) do
+        local col, line = keypadCell(k.rows, r, c)
+        self:_text(key, col, line)
+        if r == k.row and c == k.col then self:_text(self:_cursorGlyph(), col - 1, line) end
+      end
+    end
+  else
+    for _, l in ipairs(v.lines) do self:_text(l.text, l.col, l.row) end
+    for _, it in ipairs(v.items) do
+      if it.index == v.cursor then self:_text(self:_cursorGlyph(), 1, it.row) end
+      self:_text(it.label, 2, it.row)
+      if it.detail then self:_text(it.detail, COLS - 1 - #it.detail, it.row) end
+      if it.value then self:_text(it.value, 3, it.row + 1) end
+    end
+    if v.more then self:_text(self:_moreGlyph(), COLS - 2, 10) end
+  end
+  return coop.notice
+end
+
 function Launcher:_drawScreen()
   local menu = self.menu
   local screen = menu.screen
-  if screen == "title" then
+  local notice = menu.notice
+  if screen == "coop" and menu.coop then
+    notice = self:_drawCoop(menu.coop)
+  elseif screen == "title" then
     self:_centered(Menu.TITLE, 0)
     self:_box(0, 1, COLS, 11)
     self:_drawItems(menu:items(), menu.cursor)
@@ -334,9 +479,9 @@ function Launcher:_drawScreen()
     end
     if menu.scroll + visible < #lines then self:_text(self:_moreGlyph(), COLS - 2, 10) end
   end
-  if menu.notice then
+  if notice then
     self:_box(0, 3, COLS, 7)
-    for i, line in ipairs(Menu.wrap(menu.notice, COLS - 2)) do
+    for i, line in ipairs(Menu.wrap(notice, COLS - 2)) do
       if i <= 5 then self:_text(line, 1, 3 + i) end
     end
   end
@@ -381,6 +526,21 @@ end
 
 function Launcher:keypressed(key)
   local menu = self.menu
+  -- co-op (#12): a text field types; arrows still move on its grid
+  local coop = menu.screen == "coop" and menu.coop
+  if coop and coop:typing() then
+    local ctrl = love.keyboard and love.keyboard.isDown
+      and love.keyboard.isDown("lctrl", "rctrl", "lgui", "rgui")
+    if key == "v" and ctrl and love.system.getClipboardText then
+      coop:text((love.system.getClipboardText() or ""):gsub("[\r\n]", ""))
+    elseif key == "backspace" then coop:erase()
+    elseif key == "return" or key == "kpenter" then self:press("start")
+    elseif key == "escape" then coop:cancelEntry()
+    elseif key == "up" or key == "down" or key == "left" or key == "right" then
+      self:press(key)
+    end
+    return
+  end
   if menu.screen == "import" and menu.canType and not menu.notice then
     local ctrl = love.keyboard and love.keyboard.isDown
       and love.keyboard.isDown("lctrl", "rctrl", "lgui", "rgui")
@@ -398,6 +558,7 @@ function Launcher:keypressed(key)
   self:press(action)
   -- the key that opened the path field also arrives as text: drop it
   if menu.screen == "import" then self.swallowText = true end
+  if menu.screen == "coop" and menu.coop and menu.coop:typing() then self.swallowText = true end
 end
 
 function Launcher:textinput(t)
@@ -463,10 +624,37 @@ function Launcher:_rowAt(row)
   return nil
 end
 
+-- a tap on a co-op screen: a row picks it, a key of the text entry types it
+function Launcher:_tapCoop(coop, col, row)
+  if coop.notice then return self:press("a") end
+  local v = coop:view()
+  if v.keypad then
+    local k = v.keypad
+    for r, keys in ipairs(k.rows) do
+      for c, key in ipairs(keys) do
+        local kc, kr = keypadCell(k.rows, r, c)
+        if row == kr and col >= kc - 1 and col < kc + math.max(2, #key) then
+          coop.entry.keypad:pick(r, c)
+          return self:press("a")
+        end
+      end
+    end
+    return
+  end
+  for _, it in ipairs(v.items) do
+    if it.row == row or (it.value and it.row + 1 == row) then
+      if it.enabled == false then return end
+      coop.cursor = it.index
+      return self:press("a")
+    end
+  end
+end
+
 function Launcher:_tap(x, y)
   local menu = self.menu
-  local _, row = self:_cell(x, y)
+  local col, row = self:_cell(x, y)
   if not row then return end
+  if menu.screen == "coop" and menu.coop then return self:_tapCoop(menu.coop, col, row) end
   if menu.notice or menu.screen == "credits" then return self:press("a") end
   if menu.screen == "import" then
     if row == 10 then self:press("b") end
@@ -490,6 +678,16 @@ function Launcher:mousereleased() end
 function Launcher:mousemoved(x, y, _, _, istouch)
   if istouch then return end
   local menu = self.menu
+  if menu.screen == "coop" and menu.coop and not menu.coop.notice then
+    local _, row = self:_cell(x, y)
+    for _, it in ipairs(menu.coop:view().items) do
+      if row and (it.row == row or (it.value and it.row + 1 == row))
+          and it.enabled ~= false then
+        menu.coop.cursor = it.index
+      end
+    end
+    return
+  end
   if menu.notice or (menu.screen ~= "title" and menu.screen ~= "game") then return end
   local _, row = self:_cell(x, y)
   local index = self:_rowAt(row)

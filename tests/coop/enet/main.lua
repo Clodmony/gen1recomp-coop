@@ -2,7 +2,8 @@
 -- a loopback seat on the same host (G3): join, move, change maps, leave by
 -- bye and by a dropped link, rejoin; protocol and cartridge refusals; 2 MiB
 -- messages; broken JSON; shared session logs (#31); a flooding link dropped
--- while another player moves (#32); the LAN beacon on 127.0.0.1.  lua-enet ships with
+-- while another player moves (#32); the LAN beacon on 127.0.0.1; a partner
+-- who dials before the host listens is found by the retries (#12).  lua-enet ships with
 -- LÖVE, so this suite runs under LÖVE, without a window:
 --   love tests/coop/enet
 -- It uses its own ports (never the game's 24680/24681) and sends nothing
@@ -18,6 +19,8 @@ local Protocol = require("src.coop.session.Protocol")
 local Host = require("src.coop.session.Host")
 local Client = require("src.coop.session.Client")
 local Beacon = require("src.coop.session.Beacon")
+local Session = require("src.coop.session.Session")
+local Identity = require("src.coop.session.Identity")
 local SessionLog = require("src.coop.session.SessionLog")
 
 local PORT = 34680 + math.floor(love.timer.getTime() * 1000) % 500
@@ -266,6 +269,45 @@ local function run()
     h:shutdown("host_quit")
     pumpUntil(h, { ca, cb }, function() return h.status == "ended" end, Host.GRACE + 2)
   end
+
+  -- the launcher's session (#12): the partner presses Join before the host
+  -- listens; the dial keeps trying and finds the host once it is up
+  local function memoryIdentity()
+    local text
+    return Identity.load({ read = function() return text end,
+                           write = function(t) text = t end })
+  end
+  local latePort = PORT + 2
+  local partner = Session.startDial({ address = "127.0.0.1:" .. latePort, name = "ASH",
+    cartridge = { game = "red", sha1 = SHA }, identity = memoryIdentity(), log = false })
+  deadline = love.timer.getTime() + 1
+  while love.timer.getTime() < deadline do partner:update(0.01); love.timer.sleep(0.01) end
+  check(partner.status == "dialling" or partner.status == "waiting",
+    "nobody listens yet: still dialling (" .. partner.status .. ")")
+  local late = Session.startHost({ campaign = { id = CAMPAIGN, title = "LATE" },
+    cartridge = { game = "red", sha1 = SHA }, name = "RED", port = latePort,
+    identity = memoryIdentity(), log = false, beacon = false })
+  check(late.listening, "the host opens its port a second later")
+  deadline = love.timer.getTime() + 12
+  while partner.status ~= "probed" and love.timer.getTime() < deadline do
+    late:update(0.01); partner:update(0.01); love.timer.sleep(0.005)
+  end
+  eq(partner.status, "probed", "the partner's dial finds the late host")
+  eq(partner.lobby and partner.lobby.title, "LATE", "and reads its lobby")
+  partner:join()
+  deadline = love.timer.getTime() + 3
+  while partner.status ~= "joined" and love.timer.getTime() < deadline do
+    late:update(0.01); partner:update(0.01); love.timer.sleep(0.005)
+  end
+  eq(partner.status, "joined", "and joins")
+  eq(late:partners(), 1, "the host counts one partner")
+  late:leave(nil)
+  deadline = love.timer.getTime() + 3
+  while partner.status == "joined" and love.timer.getTime() < deadline do
+    partner:update(0.01); love.timer.sleep(0.005)
+  end
+  eq(partner.status, "ended", "the host's STOP reaches the partner")
+  eq(partner.reason, "host_quit", "as the host closing the session")
 
   -- the LAN beacon, on 127.0.0.1 only
   check(Beacon.available(), "luasocket is there under LÖVE")
