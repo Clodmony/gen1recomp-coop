@@ -912,6 +912,8 @@ function love.load(args)
       speedOverride = tonumber(args[i + 1])
     end
   end
+  -- co-op (#10): --coop-host / --coop-join, the development entry to a session
+  require("src.coop.session.Dev").configure(args)
   love.graphics.setDefaultFilter("nearest", "nearest")
   pcall(function() require("src.core.GamepadMap").initGamepadMappings() end)
   -- NX: handheld 720p / docked 1080p. Runs for every boot path (launcher,
@@ -1106,6 +1108,7 @@ function love.update(dt)
     return Importer:update(dt)
   end
   if not Game then return end
+  require("src.coop.session.Dev").update(dt, Game) -- co-op (#10)
 
   -- Scripted runs (autopilot / POKEPORT_DRIVER) observe and act exactly
   -- once per Game:update, so they must keep a 1:1 relationship with the
@@ -1687,6 +1690,9 @@ function love.textinput(text)
 end
 
 function love.quit()
+  -- co-op (#10): a running session tells the others (no require on quit)
+  local coopDev = package.loaded["src.coop.session.Dev"]
+  if coopDev then coopDev.shutdown() end
   if launcherSplash then launcherSplash:release(); launcherSplash = nil end
   if Importer and Importer._themeVideo then
     pcall(Importer._themeVideo.release, Importer._themeVideo)

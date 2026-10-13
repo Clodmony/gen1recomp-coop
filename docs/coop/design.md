@@ -136,8 +136,8 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
     per device; optional (the address path is complete without it); mDNS was
     rejected (D103, arch). Check against upstream's own LAN link discovery and
     iOS's multicast entitlement.
-12. **adapt** Default game port UDP 24680, `:port` may be typed (play). Use whatever
-    port upstream's ENet link uses unless it clashes.
+12. **adapt** Default game port UDP 24680, `:port` may be typed (play). The
+    co-op ports stay apart from upstream's link port 7777 (G8).
 13. **adapt** Internet play in the source is a VPN or a forwarded port only, no
     relay (play §Playing over the internet; #51 open). Upstream has an external
     TCP relay; co-op does not use it (G5).
@@ -152,7 +152,7 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
     device with a 256 KB backlog for late joiners; relayed lines are never sent
     on. Logs contain names and addresses: never posted publicly (D59, play
     §Logs). Re-think for LÖVE's save directory; in split-screen one process
-    holds both players' lines.
+    holds both players' lines. The local logs are #10; sharing them is #31.
 15. **skip** Godot `var_to_bytes` encoding and `ENetMultiplayerPeer` raw packets
     (D11): engine-specific; the target already has JSON over ENet.
 
@@ -949,7 +949,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 
 | Area | Issue |
 |---|---|
-| A1 Session and connection core | #10 |
+| A1 Session and connection core | #10 (done: [session.md](session.md)); log sharing #31, flood limits #32 |
 | A2 Launcher co-op flow | #12 (after the launcher shell #3) |
 | A3 Campaign state, saves and persistence | #13 |
 | A4 New players and the opening | #22 |
@@ -993,3 +993,8 @@ sibling's D-numbers.
   sibling fork (D95, D102): own game ids, German only with German, the
   cartridge's own words and layouts. Upstream accepts only the English dumps
   today, so import support comes first (#25).
+- **G8. Co-op has its own ports** (#10, 2026-10-13): the game port is UDP
+  24680 and the LAN beacon UDP 24681, as in the sibling fork, instead of
+  upstream's link port 7777. A co-op host and upstream's own link (a Cable
+  Club cable, for example) could otherwise not run in one process. The
+  session core is in [session.md](session.md).
