@@ -17,7 +17,9 @@ over ENet. One host serves both kinds at once (G3).
   reuses upstream's `Json.lua`.
 - `Host.lua`: the host. It handles probe and hello, identity, sequence
   numbers, the step check, leaving, rejoining, the state each player is
-  sent, and shutdown.
+  sent, and shutdown. It can start with a campaign's known players
+  (`players`, disconnected until they come back), and `roster()` lists every
+  player with the address they dialled, for the campaign card.
 - `Client.lua`: one player's link. It sends numbered intentions and keeps
   the last lobby view and state.
 - `Identity.lua`: what a device remembers (`coop/identity.json` in the save
@@ -27,8 +29,11 @@ over ENet. One host serves both kinds at once (G3).
 - `Beacon.lua`: LAN discovery over UDP.
 - `Random.lua`: device, player and campaign ids from the system's random
   source.
-- `Dev.lua`: the development entry, until the launcher's co-op screens
-  (#12).
+- `Session.lua`: the session this process takes part in (see *The running
+  session*).
+- `Addresses.lua`: this device's addresses by kind (VPN, home, public) and
+  the checklist for an address nobody answered on.
+- `Dev.lua`: the development entry for scripted runs.
 
 ## Protocol
 
@@ -133,10 +138,11 @@ the shutdown and its end state. The newest 30 files are kept, at most
 256 MB. Logs contain names and addresses: they go to the other players of
 the session and are never posted publicly.
 
-**Sharing** (#31, design A1.14) is on by default; `--coop-logs=off` (or
-`POKEPORT_COOP_LOGS=off`) keeps a device's lines on that device until the
-launcher has a setting for it (#12). Each line a device writes carries `n`,
-its number on that device.
+**Sharing** (#31, design A1.14) is on by default; SHARE LOGS OFF on the
+launcher's co-op LOGS screen (#12), or `--coop-logs=off` (or
+`POKEPORT_COOP_LOGS=off`) for the development entry, keeps a device's lines
+on that device. Each line a device writes carries `n`, its number on that
+device.
 
 - A joined client that shares sends its own new lines every 2 s
   (`SessionLog.SHARE_INTERVAL`) in a `log` batch, and a last batch before
@@ -160,10 +166,35 @@ its number on that device.
 - A log's last line (`close`) counts the lines sent, received and not
   sent.
 
+## The running session
+
+`Session.lua` holds the one session of a process (`Session.current`). The
+launcher's co-op screens start it ([launcher.md](launcher.md)), and it keeps
+running from the launcher into the game:
+
+- `Session.startHost` runs the host in-process on a loopback hub, opens UDP
+  24680 and the beacon, and its own player dials the hub. A busy port leaves
+  a host only this device can join.
+- `Session.startDial` probes the address first. While nobody answers it
+  tries again every `Session.RETRY` (3 s) for `Session.DIAL_FOR` (60 s), then
+  stays `unreachable` until tried again; partners often press Join first. An
+  ENet dial that gets no answer gives up after 5 s, so an attempt that hangs
+  is followed at once by the next. A probe answer with a refusal ends the
+  dial as `refused`; otherwise `join(name)` sends the hello on the same link.
+- Each frame, main.lua's hook and the launcher call `Session.tick`. Once a
+  game runs, the player's cell goes to the host as it changes, and the
+  console prints who joined, left and changed maps. Nothing of the other
+  players is drawn yet (#15).
+- A session that ends under the game (the host stopped it, the link was
+  lost) makes main.lua go back to the launcher; leaving on purpose (the game
+  window closed, `love.quit`) sends a bye or ends the session for everyone.
+  Either way `coop/return.json` in the save folder carries the reason, and
+  the launcher shows it on the co-op screen if it opens within two minutes.
+
 ## Development entry
 
-Until the launcher's co-op screens exist (#12), a game joins a session from
-the command line:
+For scripted runs, a game can host or join a session from the command line,
+past the launcher's screens:
 
 ```bash
 love . --coop-host[=PORT] [--coop-name=NAME] [--coop-logs=off]  # host on UDP PORT (24680)
@@ -171,18 +202,16 @@ love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME] [--coop-logs=off]
 ```
 
 Scripted runs can use `POKEPORT_COOP_HOST=PORT`, `POKEPORT_COOP_JOIN=ADDRESS`,
-`POKEPORT_COOP_NAME=NAME` and `POKEPORT_COOP_LOGS=off` instead. Once a game is running, the host side
-opens the port, starts the beacon, and its own player dials it over
-loopback. Each player's cell is sent as it changes. A step through a map
-connection shows a cell off the map for one frame, which is skipped; the
-settled cell on the next map goes out as the map change. The console prints
-who joined, left and changed maps. Nothing of the other players is drawn
-yet (#15). Each session uses a new campaign id, since campaign files are
-#13.
+`POKEPORT_COOP_NAME=NAME` and `POKEPORT_COOP_LOGS=off` instead. Once a game
+is running, the host side hosts a new campaign (a new id each time) and the
+join side dials the address and joins as soon as the host answers. A step
+through a map connection shows a cell off the map for one frame, which is
+skipped; the settled cell on the next map goes out as the map change.
 
 `main.lua` has three marked hooks: `Dev.configure(args)` in `love.load`,
-`Dev.update` once a game runs, and `Dev.shutdown` in `love.quit`, which sends
-a bye or ends the session.
+`Dev.update` once a game runs (it ticks the session the launcher started,
+and goes back to the launcher when it ends), and `Session.shutdown` in
+`love.quit`, which sends a bye or ends the session.
 
 ## Checked
 
@@ -202,7 +231,8 @@ The run found three faults, now fixed and tested:
 - the log's `frame` was always 0.
 
 Two machines on a LAN, the beacon across machines, Windows, macOS and mobile
-have not been run.
+have not been run. The launcher's co-op screens were run the same way
+(#12); [launcher.md](launcher.md) says what was run.
 
 ## Tests
 
@@ -235,6 +265,9 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   through in every frame.
 - `tests/coop/session_dev_entry_test.lua`: the entry's arguments, addresses,
   and the moves a game's position becomes.
+- `tests/coop/launcher_coop_test.lua` (#12): the running session as the
+  launcher's co-op screens use it, over loopback; see
+  [launcher.md](launcher.md).
 - `tests/coop/enet/` runs under LÖVE without a window (`love tests/coop/enet`),
   since plain luajit has no lua-enet:
   - a loopback seat and two ENet players on one host;
@@ -245,6 +278,8 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   - a log line from one ENet player to another, and a flooding ENet
     player dropped while another one moves;
   - a dial with nobody listening;
+  - a partner who dials before the host listens, found by the retries
+    (#12), and the host's STOP reaching them;
   - the beacon on 127.0.0.1.
 
   It uses its own ports. `scripts/test.sh` runs it when `love` is on PATH,
