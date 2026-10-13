@@ -1104,6 +1104,8 @@ function love.update(dt)
         love.event.quit()
         return
       end
+      -- co-op (#28): the driver booted a game, which closed the launcher
+      if not Importer then return end
     end
     return Importer:update(dt)
   end
