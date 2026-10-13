@@ -2,6 +2,10 @@
 -- an 8x8 arrow in their colour, blinking, on the screen's edge two pixels
 -- in, drawn over the map and under every box and menu, and only while the
 -- player walks about (no menu, script, battle or screen of their own up).
+-- It is drawn in the world pass, on the edges of the map the player sees
+-- (the view is wider than the 160x144 UI on a wide window), and replayed
+-- after the palette zones like the sprites, so it keeps its colour in every
+-- COLORS mode.
 --
 -- Where it points comes from a breadth-first search of the maps from the
 -- player's (Arrow.route, cached per map pair and last map):
@@ -280,7 +284,8 @@ function Arrow.walking(game, ow)
   return true
 end
 
--- The arrows to show now: { { x, y, dir, place, id } } on a W x H screen.
+-- The arrows to show now: { { x, y, dir, place, id } } on the W x H view
+-- of the world (camera pixels).
 -- partners: Presence.partners(); game/ow: the running game and overworld.
 function Arrow.arrows(game, ow, partners, W, H)
   local out = {}
@@ -293,11 +298,8 @@ function Arrow.arrows(game, ow, partners, W, H)
   local tilesets = FieldDefaults.field(data, "outsideTilesets")
   local function outside(def) return Map.isOutside(def, tilesets) end
   local cam = ow.camera or { x = 0, y = 0 }
-  local vw, vh = W, H
-  if game.renderer and game.renderer.worldViewSize then vw, vh = game.renderer:worldViewSize() end
-  local sx, sy = W / vw, H / vh
   local p = ow.player
-  local from = { x = (p.px - cam.x + 8) * sx, y = (p.py - cam.y + 8) * sy }
+  local from = { x = (p.px - cam.x + 8), y = (p.py - cam.y + 8) }
   local last = ow.lastOutdoor and ow.lastOutdoor.id
   local towns = data.field and data.field.townMap and data.field.townMap.locations or {}
   for _, partner in ipairs(partners) do
@@ -305,18 +307,18 @@ function Arrow.arrows(game, ow, partners, W, H)
       local target
       local actor = partner.actor
       if actor and actor.visible then
-        target = { kind = "exact", x = (actor.px - cam.x + 8) * sx, y = (actor.py - cam.y + 8) * sy }
+        target = { kind = "exact", x = (actor.px - cam.x + 8), y = (actor.py - cam.y + 8) }
       elseif maps[ow.map.id] and maps[partner.map] then
         local route = Arrow.route(maps, ow.map.id, partner.map, last, outside)
         if route.kind == "exact" then
           target = { kind = "exact",
-                     x = (partner.x * 16 + route.ox - cam.x + 8) * sx,
-                     y = (partner.y * 16 + route.oy - cam.y + 8) * sy }
+                     x = (partner.x * 16 + route.ox - cam.x + 8),
+                     y = (partner.y * 16 + route.oy - cam.y + 8) }
         elseif route.kind == "door" then
           local cells = ow.map.isWalkableCell and Arrow.reachable(ow.map, p.cellX, p.cellY)
           local d = Arrow.pickDoor(route, partner, { x = p.cellX, y = p.cellY }, cells, ow.map.id)
           if d then
-            target = { kind = "door", x = (d.x * 16 - cam.x + 8) * sx, y = (d.y * 16 - cam.y + 8) * sy }
+            target = { kind = "door", x = (d.x * 16 - cam.x + 8), y = (d.y * 16 - cam.y + 8) }
           end
         end
       end
@@ -335,34 +337,55 @@ function Arrow.arrows(game, ow, partners, W, H)
 end
 
 -- the arrow shape pointing right, in an 8x8 box
-local SHAPE = { 0, 2, 4, 2, 4, 0, 8, 4, 4, 8, 4, 6, 0, 6 }
+local SHAPE = { 0.5, 2.5, 3.5, 2.5, 3.5, 0.5, 7.5, 4, 3.5, 7.5, 3.5, 5.5, 0.5, 5.5 }
 
-function Arrow.drawOne(a)
+-- one arrow as an image, per colour and direction (made once)
+Arrow.images = {}
+function Arrow.image(place, dir)
+  local key = tostring(place) .. dir
+  local img = Arrow.images[key]
+  if img ~= nil then return img or nil end
   local g = love.graphics
-  if not (g.push and g.translate and g.rotate and g.polygon) then return end
-  local index = 0
-  for i, d in ipairs(DIRS) do
-    if d == a.dir then index = i - 1 end
-  end
-  g.push()
-  g.translate(a.x + 4, a.y + 4)
-  g.rotate(index * math.pi / 4)
-  g.translate(-4, -4)
-  g.setColor(Colors.rgb(a.place or 1))
-  g.polygon("fill", SHAPE)
-  g.setColor(Colors.outline())
-  g.setLineWidth(1)
-  g.polygon("line", SHAPE)
-  g.pop()
-  g.setColor(1, 1, 1, 1)
+  local ok, made = pcall(function()
+    local index = 0
+    for i, d in ipairs(DIRS) do
+      if d == dir then index = i - 1 end
+    end
+    local canvas = g.newCanvas(8, 8)
+    g.push("all")
+    g.setCanvas(canvas)
+    g.clear(0, 0, 0, 0)
+    g.origin()
+    g.translate(4, 4)
+    g.rotate(index * math.pi / 4)
+    g.translate(-4, -4)
+    g.setColor(Colors.rgb(place or 1))
+    g.polygon("fill", SHAPE)
+    g.setColor(Colors.outline())
+    g.setLineWidth(1)
+    g.polygon("line", SHAPE)
+    g.pop()
+    return canvas
+  end)
+  Arrow.images[key] = ok and made or false
+  return ok and made or nil
 end
 
--- the overworld's UI pass: the blinking arrows
+function Arrow.drawOne(a)
+  local img = Arrow.image(a.place or 1, a.dir)
+  if not img then return end
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.draw(img, a.x, a.y)
+  -- over the palette zones in every COLORS mode, like the sprites
+  require("src.render.PaletteFX").markSpriteRedraw(img, nil, a.x, a.y)
+end
+
+-- the overworld's world pass: the blinking arrows on the view's edges
 function Arrow.draw(game, ow, partners, frame)
   if (frame or 0) % Arrow.BLINK >= Arrow.BLINK_ON then return end
   local W, H = 160, 144
-  if game.renderer and game.renderer.uiSize then
-    local w, h = game.renderer:uiSize()
+  if game.renderer and game.renderer.worldViewSize then
+    local w, h = game.renderer:worldViewSize()
     W, H = w or W, h or H
   end
   for _, a in ipairs(Arrow.arrows(game, ow, partners, W, H)) do Arrow.drawOne(a) end

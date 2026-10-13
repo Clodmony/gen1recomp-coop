@@ -52,11 +52,9 @@ function CoopMenu.lines(game, s, address)
     or s.lobby and s.lobby.title or "CO-OP"
   local lines = { tostring(title):upper():sub(1, 18) }
   if s.kind == "host" then lines[#lines + 1] = "IP " .. (address or "?") end
+  lines[#lines + 1] = ""
   local partners = Presence.partners()
-  if #partners == 0 then
-    lines[#lines + 1] = ""
-    lines[#lines + 1] = Strings("NO PARTNERS YET")
-  end
+  if #partners == 0 then lines[#lines + 1] = Strings("NO PARTNERS YET") end
   local room = 9 - #lines
   for i, p in ipairs(partners) do
     if room < 2 then

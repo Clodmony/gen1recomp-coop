@@ -317,8 +317,9 @@ Game.save.inventory.TOWN_MAP = nil
 local lines = CoopMenu.lines(Game, s, "10.0.0.5")
 eq(lines[1], "FIX CO-OP", "the box names the campaign")
 eq(lines[2], "IP 10.0.0.5", "the host shows its address")
-eq(lines[3], "BLUE", "each partner")
-eq(lines[4], " FIX TOWN", "and where they are")
+eq(lines[3], "", "a blank line under the heading")
+eq(lines[4], "BLUE", "each partner")
+eq(lines[5], " FIX TOWN", "and where they are")
 
 -- TOWN MAP marks
 local marks = Marks.marks({ FIX_TOWN = { x = 4, y = 4 }, FIX_ROUTE = { x = 4, y = 3 } })
