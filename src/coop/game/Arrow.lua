@@ -351,7 +351,7 @@ function Arrow.image(place, dir)
     for i, d in ipairs(DIRS) do
       if d == dir then index = i - 1 end
     end
-    local canvas = g.newCanvas(8, 8)
+    local canvas = g.newCanvas(8, 8, { dpiscale = 1 })
     g.push("all")
     g.setCanvas(canvas)
     g.clear(0, 0, 0, 0)
