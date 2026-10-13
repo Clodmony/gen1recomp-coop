@@ -142,6 +142,9 @@ function StartMenu.new(game)
     Screens.push(game, "OptionsMenu", { onCancel = reopen })
   end })
 
+  -- co-op (#15): CO-OP, only in a co-op session (src/coop/game/CoopMenu.lua)
+  require("src.coop.game.CoopMenu").startRow(game, items, reopen)
+
   -- the manager's pause-menu entry (18-mod-manager-ux): gated on at least
   -- one discovered mod so a vanilla install's menu is unchanged
   local status = game.modStatus

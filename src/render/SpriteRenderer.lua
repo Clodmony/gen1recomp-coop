@@ -437,6 +437,11 @@ function SpriteRenderer:draw(px, py, camX, camY, facing, walkPhase, stepFlip,
   -- is recorded below once the final frame/height is known.
   if liveTrueColor(self.def) then
     image = self.image
+  elseif self.coopColors then
+    -- co-op (#15): a player's colour (src/coop/game/Colors.lua) in every
+    -- COLORS mode, replayed over the zone pass like OG RED's sprites
+    image = getObpImage(self.def.image, self.coopColors, self.coopGroup or "coop")
+    redraw = PaletteFX.spriteRedrawPassActive()
   elseif self.objColors then
     -- Gen 2: the palette came from the caller (setObjPalette).  Like RED++
     -- this bakes to a true-color, real-alpha image and there is no BG zone

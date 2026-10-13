@@ -93,7 +93,7 @@ c:join()
 for _ = 1, 3 do host:update(); c:update() end
 c:move("PALLET_TOWN", 1, 1, "up", true)
 c.conn:send({ type = "move", seq = 1, map = "PALLET_TOWN", x = 1, y = 2,
-              facing = "up", warp = false })
+              facing = "up", warp = false, travel = "walk" })
 c.conn:send({ type = "move", seq = "x" })
 for _ = 1, 3 do host:update(); c:update() end
 host:shutdown("host_quit")
