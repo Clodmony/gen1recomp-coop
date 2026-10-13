@@ -805,6 +805,12 @@ rival's name and how a new player starts (#22); the split-screen entry
 
 ### A14. Presence, finding the partner, the CO-OP menu and the run button
 
+In place (#15, [presence.md](presence.md)), with what a session without
+battles supports. Left for #34: the "!" where a battle started, who is not
+drawn in a battle, the opening or the Cable Club, the menu's fight, join,
+battle and trade rows, "in a battle", "in the opening" and the last save,
+the battle notice, and SELECT in a co-op battle.
+
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
    through (D19, D53). The target's Collision has passable entities (Yellow's
@@ -969,7 +975,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
 | A12 Friend battles and trades | #23 |
 | A13 Red + Blue mixing, Yellow | #9 |
-| A14 Presence, finding the partner, CO-OP menu, run button | #15 |
+| A14 Presence, finding the partner, CO-OP menu, run button | #15 ([presence.md](presence.md)); the battle, opening, friend battle and campaign file parts #34 |
 | A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
 | Local split-screen (the sibling's open #53) | #11 |
 
@@ -1020,3 +1026,9 @@ sibling's D-numbers.
   started on, the players seen and the address a partner used last. The
   campaign files of #13 replace the per-device slots with the host's
   campaign state.
+- **G11. Colours by place** (#15, default proposed 2026-10-14, the owner
+  may change it). Each player wears the colour of their place in the
+  session, the host's player first: red, blue, green, purple, orange, teal,
+  pink, brown, then again. A colour is an OBJ palette (white, skin, the
+  colour, a dark outline) that reads on every Gen 1 COLORS mode. This
+  player wears theirs too, so a player has one colour in every window.

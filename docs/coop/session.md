@@ -24,7 +24,8 @@ over ENet. One host serves both kinds at once (G3).
   the last lobby view and state.
 - `Identity.lua`: what a device remembers (`coop/identity.json` in the save
   folder): its random id, and per host address and seat, its player in each
-  campaign.
+  campaign, the newest 64 (`Protocol.MAX_KNOWN`, the most a hello carries;
+  #15).
 - `SessionLog.lua`: one JSON-lines log per session per device.
 - `Beacon.lua`: LAN discovery over UDP.
 - `Random.lua`: device, player and campaign ids from the system's random
@@ -37,8 +38,8 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 2 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
-#32). Every message is a JSON object with a `type`. Every field from the
+Version 3 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+#32; 3 added how a player travels, #15). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -48,7 +49,7 @@ checks what the host sends.
 |---|---|
 | `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
 | `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log) |
-| `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped) |
+| `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped), `travel` (`walk`, `run`, `bike`, `surf`) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
 
@@ -56,7 +57,7 @@ checks what the host sends.
 |---|---|
 | `probe` | the lobby view (`kind`, `protocol`, `build`, `campaign`, `title`, `game`, `sha1`, `host`, `players` with `name`, `game`, `connected`), `refused` (empty, `protocol_mismatch` or `content_mismatch`), `you` (the player this device or name would get back) and `port` |
 | `welcome` | `protocol`, `player`, `campaign`, `last_seq` |
-| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing` once known), `you`, `last_seq`, `nearby` (connected players on your map) |
+| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map) |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
@@ -182,9 +183,14 @@ running from the launcher into the game:
   is followed at once by the next. A probe answer with a refusal ends the
   dial as `refused`; otherwise `join(name)` sends the hello on the same link.
 - Each frame, main.lua's hook and the launcher call `Session.tick`. Once a
-  game runs, the player's cell goes to the host as it changes, and the
-  console prints who joined, left and changed maps. Nothing of the other
-  players is drawn yet (#15).
+  game runs, the player's cell goes to the host as it changes: the cell a
+  step heads for, so the other screens ease it while it is walked, with how
+  the player travels (`Session.position`). The console prints who joined,
+  left and changed maps. The game draws the other players
+  ([presence.md](presence.md), #15).
+- Leaving from the game (the CO-OP menu's LEAVE SESSION) ends the session
+  the same way and takes the game back to the launcher
+  (`Session.takeLauncher`).
 - A session that ends under the game (the host stopped it, the link was
   lost) makes main.lua go back to the launcher; leaving on purpose (the game
   window closed, `love.quit`) sends a bye or ends the session for everyone.
@@ -251,8 +257,9 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   nested, extra; broken JSON), `log` included. A malformed message is
   dropped, counted and changes nothing; nothing raises; a kept message holds
   only its schema's fields; the fuzz's pace is no flood.
-- `tests/coop/session_identity_log_test.lua`: the device identity store,
-  random ids across processes, the host's log lines and log rotation.
+- `tests/coop/session_identity_log_test.lua`: the device identity store and
+  its 64 campaigns per seat, random ids across processes, the host's log
+  lines and log rotation.
 - `tests/coop/session_logs_test.lua` (#31): three sharing devices and the
   host; lines reach the others through the host, the backlog for late
   joiners and its 256 KB cap, the 8 KB line and 64 KB batch caps, no line
@@ -268,6 +275,8 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
 - `tests/coop/launcher_coop_test.lua` (#12): the running session as the
   launcher's co-op screens use it, over loopback; see
   [launcher.md](launcher.md).
+- `tests/coop/presence_test.lua` (#15): the partners in a running game;
+  see [presence.md](presence.md).
 - `tests/coop/enet/` runs under LÖVE without a window (`love tests/coop/enet`),
   since plain luajit has no lua-enet:
   - a loopback seat and two ENet players on one host;
