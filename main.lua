@@ -853,7 +853,8 @@ local function startLaunchRequest(request)
     end)
   end
 
-  Prelaunch = require("src.core.Prelaunch").new({
+  -- co-op (#26): no update check or sync before the game (src/coop/Upstream.lua)
+  Prelaunch = require("src.core.Prelaunch").new(require("src.coop.Upstream").prelaunch({
     version = version,
     tasks = request.tasks or {},
     done = function(outcome)
@@ -865,7 +866,7 @@ local function startLaunchRequest(request)
       end
       bootAfterMods()
     end,
-  })
+  }))
   if not Prelaunch then bootAfterMods() end
   return true
 end
@@ -897,8 +898,11 @@ function love.load(args)
   -- Self-updater boot shell: a fused build may mount and chainload a newer
   -- downloaded payload here.  True means it took over, so we must stop.  A
   -- dev / source checkout no-ops (see src/update/Boot.lua).
+  -- co-op (#26): upstream's updater and cloud sync stay off (src/coop/Upstream.lua)
+  local Upstream = require("src.coop.Upstream")
+  Upstream.install()
   local Boot = require("src.update.Boot")
-  if Boot.run(args) then return end
+  if Upstream.updaterAllowed() and Boot.run(args) then return end
 
   local savePath
   for i, a in ipairs(args or {}) do
@@ -1104,6 +1108,8 @@ function love.update(dt)
         love.event.quit()
         return
       end
+      -- co-op (#28): the driver booted a game, which closed the launcher
+      if not Importer then return end
     end
     return Importer:update(dt)
   end

@@ -65,6 +65,38 @@ the save editor, the skin studio, the touch-controls editor, the Box, carts and
 the other games. Settings, controls, save slots, mobile and the co-op screens
 are #4 to #7 and #12.
 
+## Save folder and upstream services
+
+The fork keeps its saves, options, imported ROM caches and mods in its own
+LÖVE save folder, identity `gen1recomp-coop` (`conf.lua`, decision G9 in
+[design.md](design.md)); upstream uses `pokemon-love2d`, so an upstream
+install on the same machine and the fork never read or write each other's
+files. `POKEPORT_IDENTITY` still overrides the name, and the second display
+(`--display-companion`) uses `gen1recomp-coop-companion`.
+
+| System  | The fork's folder                                   | Upstream's folder                                 |
+| ------- | --------------------------------------------------- | ------------------------------------------------- |
+| Linux   | `~/.local/share/love/gen1recomp-coop/`              | `~/.local/share/love/pokemon-love2d/`             |
+| macOS   | `~/Library/Application Support/LOVE/gen1recomp-coop/` | `~/Library/Application Support/LOVE/pokemon-love2d/` |
+| Windows | `%APPDATA%\LOVE\gen1recomp-coop\`                   | `%APPDATA%\LOVE\pokemon-love2d\`                  |
+
+To play an upstream save in the fork, close both games and copy everything
+in upstream's folder into the fork's (create it if the fork has not run yet).
+Copy the whole folder rather than single files: `options.lua` holds the save
+slot list next to the settings, the saves are `saves/` and `save*.lua`, and
+the imported ROM caches come along, so the games need no new import. The fork
+has no import screen for this yet; #6 (save management) may add one.
+
+Upstream's self-updater and cloud sync are off on the fork's path
+(`src/coop/Upstream.lua`, #26). The updater asks upstream's releases and, in a
+packaged build, would download and run upstream's game over the fork; cloud
+sync talks to upstream's sync server for a device linked in upstream's
+launcher. `main.lua` never runs the updater's boot shell, a launch request's
+`--update` and `--sync` are dropped before the pre-launch screen, and
+`SyncEngine.shared()` answers nil, so the game's save, focus and resume hooks
+send nothing. Upstream's online features (Union Room, trades over its relay)
+are not affected.
+
 ## Checked
 
 Run on Linux desktop (LÖVE 11.5) with a US Red ROM, driven through
@@ -79,4 +111,8 @@ Windows, macOS and mobile have not been run.
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
 coop-ci): `launcher_menu_test.lua` drives the menu model and ROM checks,
-`launcher_boot_test.lua` boots `main.lua` headless on the fixture dataset.
+`launcher_boot_test.lua` boots `main.lua` headless on the fixture dataset,
+`upstream_services_test.lua` checks that no boot path reaches the updater or
+cloud sync and that `conf.lua` uses the fork's identity, and
+`driver_launcher_boot_test.lua` runs a frame driver that boots a game from the
+launcher (#28).

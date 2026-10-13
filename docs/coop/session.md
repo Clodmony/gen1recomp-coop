@@ -32,7 +32,8 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 1. Every message is a JSON object with a `type`. Every field from the
+Version 2 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+#32). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -41,9 +42,10 @@ checks what the host sends.
 | Client to host | Fields |
 |---|---|
 | `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
-| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled) |
+| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log) |
 | `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
+| `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
 
 | Host to client | Fields |
 |---|---|
@@ -52,6 +54,7 @@ checks what the host sends.
 | `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing` once known), `you`, `last_seq`, `nearby` (connected players on your map) |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
 | `ended` | `reason` |
+| `log` | `lines`: other devices' log lines, passed on once |
 
 Rules (design A1):
 
@@ -84,8 +87,24 @@ Rules (design A1):
 
 - **Size.** One message may be 2 MiB (`Protocol.MAX_MESSAGE`). A bigger
   one is not sent, and a bigger wire text is dropped. Over ENet on one
-  machine, a 2 MiB message arrived whole in about 0.15 s. Per-link limits
-  against floods are #32.
+  machine, a 2 MiB message arrived whole in 0.15 to 0.26 s.
+- **Per-link limits** (#32). Arriving text waits on its link undecoded.
+  Each frame the host decodes at most 256 KB or 64 messages of one link
+  (`Host.FRAME_BUDGET`; always at least one message) and the rest waits for
+  the next frame, so one link cannot take the frame from the others. Each
+  link has an allowance of 4 MiB and 512 messages (`Host.BURST`, two full
+  messages), refilled at 1 MiB and 120 messages a second (`Host.RATE`). A
+  link that goes over it is refused with `rejected` `flood` (seq -1): its
+  player leaves at once, nothing more it sends is read, and the link closes
+  after the grace. A client that gets `flood` while joined goes to
+  `refused`. Clients do not limit the host.
+- **Decoding cost.** Upstream's `Json.lua` decodes, in LuaJIT on one
+  desktop machine, a 2 MiB string in about 22 ms and structured data (a
+  PC-like list of records) at about 46 ms per MB. Scanning a string's plain
+  run at once instead of one character at a time halved the string case
+  but saved only about 15% on structured data, so the decoder stays
+  upstream's; the frame budget is what bounds a frame. One 2 MiB message
+  still costs one frame up to about 0.1 s.
 - **ENet.** Up to 32 peers, one reliable channel, no bandwidth cap. A dial
   that gets no answer closes after 5 s with "no answer from …".
 - **Ports** (G8). The game port is UDP 24680 and the LAN beacon UDP 24681,
@@ -111,8 +130,35 @@ folder. A line holds `t` (unix ms), `frame`, `device`, `name`, `seat`, `src`
 (host or client), `player`, `kind` and `data`. The host logs its start
 state, every message it reads, joins, new players, refusals, drops, leaves,
 the shutdown and its end state. The newest 30 files are kept, at most
-256 MB. Logs contain names and addresses: they are never posted publicly.
-Sharing lines with the other players is #31.
+256 MB. Logs contain names and addresses: they go to the other players of
+the session and are never posted publicly.
+
+**Sharing** (#31, design A1.14) is on by default; `--coop-logs=off` (or
+`POKEPORT_COOP_LOGS=off`) keeps a device's lines on that device until the
+launcher has a setting for it (#12). Each line a device writes carries `n`,
+its number on that device.
+
+- A joined client that shares sends its own new lines every 2 s
+  (`SessionLog.SHARE_INTERVAL`) in a `log` batch, and a last batch before
+  its bye. A batch is at most 64 KB and 1024 lines; a line over 8 KB goes
+  without its data (`data` becomes `omitted_bytes`); lines that do not fit
+  are counted in a `stream_dropped` line.
+- The host takes only lines of the sending link's device (the hello's
+  `device`), up to a batch, keeps them in its own log when it shares too,
+  and passes the batch on once to every other sharing device, one link per
+  device. It shares its own lines the same way, and a last batch before
+  `ended`.
+- A device stores lines from others with `relay` (`via`: the host, or on
+  the host the sending player, and `t`) and never puts them in its own
+  batches, so a line is passed on once. A device's own lines never come
+  back to it.
+- The host keeps the last 256 KB of batches (`Host.LOG_BACKLOG`); a device
+  that joins later gets the lines it missed from that backlog.
+- A device that does not share sends nothing and gets nothing; a batch it
+  sends anyway is ignored. The hosting device's own player and a second
+  seat on one device carry no log of their own: one process keeps one log.
+- A log's last line (`close`) counts the lines sent, received and not
+  sent.
 
 ## Development entry
 
@@ -120,12 +166,12 @@ Until the launcher's co-op screens exist (#12), a game joins a session from
 the command line:
 
 ```bash
-love . --coop-host[=PORT] [--coop-name=NAME]     # host on UDP PORT (24680)
-love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME]
+love . --coop-host[=PORT] [--coop-name=NAME] [--coop-logs=off]  # host on UDP PORT (24680)
+love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME] [--coop-logs=off]
 ```
 
-Scripted runs can use `POKEPORT_COOP_HOST=PORT`, `POKEPORT_COOP_JOIN=ADDRESS`
-and `POKEPORT_COOP_NAME=NAME` instead. Once a game is running, the host side
+Scripted runs can use `POKEPORT_COOP_HOST=PORT`, `POKEPORT_COOP_JOIN=ADDRESS`,
+`POKEPORT_COOP_NAME=NAME` and `POKEPORT_COOP_LOGS=off` instead. Once a game is running, the host side
 opens the port, starts the beacon, and its own player dials it over
 loopback. Each player's cell is sent as it changes. A step through a map
 connection shows a cell off the map for one frame, which is skipped; the
@@ -172,11 +218,21 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   - shutdown and 2 MiB.
 - `tests/coop/session_fuzz_test.lua [seed]`: a seeded fuzz of every message
   type in both directions (fields removed, retyped, out of range, oversized,
-  nested, extra; broken JSON). A malformed message is dropped, counted and
-  changes nothing; nothing raises; a kept message holds only its schema's
-  fields.
+  nested, extra; broken JSON), `log` included. A malformed message is
+  dropped, counted and changes nothing; nothing raises; a kept message holds
+  only its schema's fields; the fuzz's pace is no flood.
 - `tests/coop/session_identity_log_test.lua`: the device identity store,
   random ids across processes, the host's log lines and log rotation.
+- `tests/coop/session_logs_test.lua` (#31): three sharing devices and the
+  host; lines reach the others through the host, the backlog for late
+  joiners and its 256 KB cap, the 8 KB line and 64 KB batch caps, no line
+  passed on twice, forged lines of another device, a device that does not
+  share, the last lines before a bye and before `ended`.
+- `tests/coop/session_flood_test.lua` (#32): a move every frame for 20 s, a
+  2 MiB message and a backlog of small messages are no flood; a 3 MB burst
+  is decoded a budget at a time; a flood of large or of many small messages
+  is dropped with `flood` within a second while another player's move goes
+  through in every frame.
 - `tests/coop/session_dev_entry_test.lua`: the entry's arguments, addresses,
   and the moves a game's position becomes.
 - `tests/coop/enet/` runs under LÖVE without a window (`love tests/coop/enet`),
@@ -186,6 +242,8 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   - leaving by bye and by a dropped link, and rejoining;
   - protocol and cartridge refusals;
   - broken JSON and 2 MiB messages;
+  - a log line from one ENet player to another, and a flooding ENet
+    player dropped while another one moves;
   - a dial with nobody listening;
   - the beacon on 127.0.0.1.
 

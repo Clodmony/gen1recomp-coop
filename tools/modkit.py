@@ -711,7 +711,7 @@ def _generated_data_dir_ok(path):
 
 def _love_user_data_root():
     # get desktop save root
-    identity = os.environ.get("POKEPORT_IDENTITY") or "pokemon-love2d"
+    identity = os.environ.get("POKEPORT_IDENTITY") or "gen1recomp-coop"  # co-op (#26)
 
     if sys.platform == "win32":
         appdata = os.environ.get("APPDATA")

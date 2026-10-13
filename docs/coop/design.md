@@ -152,7 +152,9 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
     device with a 256 KB backlog for late joiners; relayed lines are never sent
     on. Logs contain names and addresses: never posted publicly (D59, play
     §Logs). Re-think for LÖVE's save directory; in split-screen one process
-    holds both players' lines. The local logs are #10; sharing them is #31.
+    holds both players' lines. The local logs are #10, sharing them #31
+    ([session.md](session.md)): the hello's `logs` carries only `share`, the
+    hello's `device` already names the device.
 15. **skip** Godot `var_to_bytes` encoding and `ENetMultiplayerPeer` raw packets
     (D11): engine-specific; the target already has JSON over ENet.
 
@@ -998,3 +1000,10 @@ sibling's D-numbers.
   upstream's link port 7777. A co-op host and upstream's own link (a Cable
   Club cable, for example) could otherwise not run in one process. The
   session core is in [session.md](session.md).
+- **G9. The fork has its own save folder; upstream's updater and sync are
+  off** (#26, owner, 2026-10-13). The LÖVE identity is `gen1recomp-coop`, not
+  upstream's `pokemon-love2d`, so the two never share saves, options or ROM
+  caches. Upstream saves come over by copying the folder by hand, as
+  [launcher.md](launcher.md) describes; an import in the launcher may come
+  with #6. The self-updater and cloud sync stay off until the fork wants its
+  own (`src/coop/Upstream.lua`).

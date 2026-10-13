@@ -13,9 +13,21 @@
 -- its own rules) and answers every player with the state it may see.  This
 -- issue covers joining, moving, leaving and rejoining; the campaign, world,
 -- battles and saves build on it (#13 onward).
+--
+-- Per-link limits (#32): each frame the host decodes at most FRAME_BUDGET of
+-- one link's messages (the rest waits for the next frame), so one link cannot
+-- take the frame from the others; a link that sends more than its allowance
+-- (BURST, refilled at RATE per second) is refused with `flood` and dropped.
+--
+-- Shared session logs (#31, design A1.14): a client that shares sends its
+-- device's own lines in `log` batches; the host keeps them in its log (when
+-- it shares too) and passes each batch on once to every other sharing
+-- device, keeping LOG_BACKLOG bytes of batches for a device that joins later.
 
+local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
 local Random = require("src.coop.session.Random")
+local SessionLog = require("src.coop.session.SessionLog")
 
 local Host = {}
 Host.__index = Host
@@ -24,6 +36,15 @@ Host.__index = Host
 -- reaches the client first (design A1.6); the same grace on shutdown
 Host.GRACE = 1.0
 Host.MAX_PLAYERS = 8
+
+-- per link: decoded per frame at most; arriving per second on average, with
+-- a burst on top (two 2 MiB messages); a full PC is about 256 KB, a log
+-- batch 64 KB every 2 s, a move a few dozen bytes
+Host.FRAME_BUDGET = { bytes = 256 * 1024, messages = 64 }
+Host.RATE = { bytes = 1024 * 1024, messages = 120 }
+Host.BURST = { bytes = 4 * 1024 * 1024, messages = 512 }
+
+Host.LOG_BACKLOG = 256 * 1024
 
 local function defaultClock()
   if love and love.timer and love.timer.getTime then return love.timer.getTime() end
@@ -46,6 +67,11 @@ function Host.new(opts)
     clock = opts.clock or defaultClock,
     hex = opts.hex or Random.hex,
     log = opts.log, -- a SessionLog, or nil
+    device = opts.device or (opts.log and opts.log.device), -- this device
+    frameBudget = opts.frameBudget or Host.FRAME_BUDGET,
+    rate = opts.rate or Host.RATE,
+    burst = opts.burst or Host.BURST,
+    logBacklog = {}, logBacklogBytes = 0, logBatches = 0, logDelivered = {},
     hubs = {},
     links = {},
     players = {}, -- in join order
@@ -53,7 +79,9 @@ function Host.new(opts)
     dirty = false,
     status = "running", -- running, ending, ended
     dropped = 0,
+    floods = 0,
   }, Host)
+  self.sharedAt = self.clock()
   self:_log("start", { campaign = self.campaign, cartridge = self.cartridge,
                        build = self.build, protocol = Protocol.VERSION })
   return self
@@ -121,7 +149,12 @@ end
 -- links -----------------------------------------------------------------
 
 function Host:_accept(conn)
-  local link = { conn = conn, player = nil, closeAt = nil }
+  local link = {
+    conn = conn, player = nil, closeAt = nil,
+    allowance = { bytes = self.burst.bytes, messages = self.burst.messages },
+    meteredAt = self.clock(), seenBytes = conn.receivedBytes or 0,
+    seenCount = conn.receivedCount or 0,
+  }
   self.links[#self.links + 1] = link
   self:_log("link", { address = conn.address })
 end
@@ -140,6 +173,32 @@ end
 function Host:_turnAway(link, reason)
   self:_refuse(link, -1, reason)
   link.closeAt = self.clock() + Host.GRACE
+end
+
+-- what arrived on the link since the last frame, against its allowance;
+-- false when the link went over (#32)
+function Host:_meter(link, now)
+  local conn, a = link.conn, link.allowance
+  local dt = math.max(0, now - link.meteredAt)
+  link.meteredAt = now
+  local bytes, count = conn.receivedBytes - link.seenBytes, conn.receivedCount - link.seenCount
+  link.seenBytes, link.seenCount = conn.receivedBytes, conn.receivedCount
+  a.bytes = math.min(self.burst.bytes, a.bytes + dt * self.rate.bytes) - bytes
+  a.messages = math.min(self.burst.messages, a.messages + dt * self.rate.messages) - count
+  return a.bytes >= 0 and a.messages >= 0
+end
+
+-- a link over its allowance: told why, its player leaves, nothing more it
+-- sends is read, and the link closes after the grace
+function Host:_flood(link, now)
+  link.flooded = true
+  link.conn:discard()
+  self.floods = self.floods + 1
+  self:_log("flood", { address = link.conn.address, received = link.conn.receivedBytes,
+                       messages = link.conn.receivedCount }, link.player)
+  self:_refuse(link, -1, "flood")
+  self:_disconnect(link, "flood")
+  link.closeAt = now + Host.GRACE
 end
 
 function Host:_disconnect(link, why)
@@ -193,12 +252,16 @@ function Host:_hello(link, msg)
   p.game = msg.game
   p.device, p.seat, p.via = msg.device, msg.seat, msg.via
   link.player = p
+  link.device = msg.device
+  link.shareLogs = msg.logs ~= nil and msg.logs.share == true
   self.dirty = true
   self:_send(link, {
     type = "welcome", protocol = Protocol.VERSION, player = p.id,
     last_seq = p.lastSeq, campaign = self.campaign.id,
   })
-  self:_log("joined", { name = p.name, seat = p.seat, device = p.device }, p)
+  self:_log("joined", { name = p.name, seat = p.seat, device = p.device,
+                        logs = link.shareLogs }, p)
+  self:_sendLogBacklog(link)
 end
 
 -- per-player sequence numbers (design A1.5): strictly increasing; a number
@@ -239,7 +302,90 @@ function Host:_bye(link, msg)
   link.conn:close()
 end
 
-local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye }
+-- shared session logs (#31) ---------------------------------------------
+
+-- a joined link that shares, of another device than the host's own (whose
+-- lines are already in the host's log); its last batch may arrive with its
+-- bye, after the link closed
+function Host:_streamsTo(link)
+  return link.player ~= nil and link.shareLogs and link.device ~= self.device
+    and not link.flooded
+end
+
+-- a batch of lines, once to every sharing device but the one they came from,
+-- and into the backlog for devices that join later
+function Host:_passLog(lines, fromDevice)
+  if #lines == 0 then return end
+  self.logBatches = self.logBatches + 1
+  local batch = { serial = self.logBatches, lines = lines, bytes = #Json.encode(lines) }
+  self.logBacklog[#self.logBacklog + 1] = batch
+  self.logBacklogBytes = self.logBacklogBytes + batch.bytes
+  while self.logBacklogBytes > Host.LOG_BACKLOG do
+    self.logBacklogBytes = self.logBacklogBytes - table.remove(self.logBacklog, 1).bytes
+  end
+  local sent = {}
+  for _, link in ipairs(self.links) do
+    if self:_streamsTo(link) and not link.conn.closed and link.device ~= fromDevice
+       and not sent[link.device] then
+      sent[link.device] = true
+      self:_send(link, { type = "log", lines = lines })
+      self.logDelivered[link.device] = self.logBatches
+    end
+  end
+end
+
+-- what a device that shares from now on missed of the others' lines, as far
+-- back as the backlog goes
+function Host:_sendLogBacklog(link)
+  if not self:_streamsTo(link) or link.conn.closed then return end
+  local device = link.device
+  for _, batch in ipairs(self.logBacklog) do
+    if batch.serial > (self.logDelivered[device] or 0) then
+      local lines = {}
+      for _, line in ipairs(batch.lines) do
+        if line.device ~= device then lines[#lines + 1] = line end
+      end
+      if #lines > 0 then self:_send(link, { type = "log", lines = lines }) end
+    end
+  end
+  self.logDelivered[device] = self.logBatches
+end
+
+-- a client's own lines: only those of its device, up to a batch (a line
+-- over LINE_BYTES is skipped); kept in the host's log when the host shares
+-- and passed on
+function Host:_logBatch(link, msg)
+  local summary = { type = "log", lines = #msg.lines }
+  if not self:_streamsTo(link) then
+    summary.result = "ignored"
+    return self:_log("message", summary, link.player)
+  end
+  local taken, bytes = {}, 0
+  for _, line in ipairs(msg.lines) do
+    if line.device == link.device then
+      local size = #Json.encode(line)
+      bytes = bytes + size
+      if bytes > SessionLog.BATCH_BYTES + SessionLog.LINE_BYTES then break end
+      if size <= SessionLog.LINE_BYTES then taken[#taken + 1] = line end
+    end
+  end
+  summary.result = #taken .. " taken"
+  self:_log("message", summary, link.player)
+  if self.log and self.log.share then self.log:writeRelayed(taken, link.player.id) end
+  self:_passLog(taken, link.device)
+end
+
+-- the host's own lines, every SHARE_INTERVAL seconds or when `now`
+function Host:_shareOwnLog(now)
+  if not (self.log and self.log.share) then return end
+  local t = self.clock()
+  if not now and t - self.sharedAt < SessionLog.SHARE_INTERVAL then return end
+  self.sharedAt = t
+  self:_passLog(self.log:take(), self.device)
+end
+
+local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
+                   log = Host._logBatch }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -258,7 +404,8 @@ function Host:_receive(link, raw)
     self:_log("dropped", { why = why }, link.player)
     return
   end
-  self:_log("message", msg, link.player)
+  -- a log batch is logged by its handler, as a summary
+  if msg.type ~= "log" then self:_log("message", msg, link.player) end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
   return HANDLERS[msg.type](self, link, msg)
 end
@@ -304,8 +451,14 @@ function Host:update()
   local keep = {}
   for _, link in ipairs(self.links) do
     link.conn:update()
-    for _, raw in ipairs(link.conn:poll()) do
-      self:_receive(link, raw)
+    if link.flooded then
+      link.conn:discard()
+    elseif not self:_meter(link, now) then
+      self:_flood(link, now)
+    else
+      for _, raw in ipairs(link.conn:poll(self.frameBudget)) do
+        self:_receive(link, raw)
+      end
     end
     if link.conn.dropped and link.conn.dropped > (link.seenDropped or 0) then
       self.dropped = self.dropped + link.conn.dropped - (link.seenDropped or 0)
@@ -323,6 +476,7 @@ function Host:update()
     self.dirty = false
     self:_broadcast()
   end
+  if self.status == "running" then self:_shareOwnLog() end
   if self.status == "ending" and (#self.links == 0 or now >= self.endAt) then
     self:_finish()
   end
@@ -333,12 +487,13 @@ end
 -- has passed.
 function Host:shutdown(reason)
   if self.status ~= "running" then return end
+  self:_log("shutdown", { reason = reason or "host_quit" })
+  self:_shareOwnLog(true) -- the host's last lines go out before `ended`
   self.status = "ending"
   self.endAt = self.clock() + Host.GRACE
   for _, link in ipairs(self.links) do
     self:_send(link, { type = "ended", reason = reason or "host_quit" })
   end
-  self:_log("shutdown", { reason = reason or "host_quit" })
 end
 
 function Host:_finish()

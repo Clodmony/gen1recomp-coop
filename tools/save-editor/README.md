@@ -23,9 +23,9 @@ By default it loads the game's active save slot under the LÖVE save
 directory (same identity as the game, deliberately: the editor edits the
 game's saves and reads the game's ROM cache):
 
-- macOS: `~/Library/Application Support/LOVE/pokemon-love2d/`
-- Linux: `~/.local/share/love/pokemon-love2d/`
-- Windows: `%APPDATA%\love\pokemon-love2d\`
+- macOS: `~/Library/Application Support/LOVE/gen1recomp-coop/`
+- Linux: `~/.local/share/love/gen1recomp-coop/`
+- Windows: `%APPDATA%\love\gen1recomp-coop\`
 
 If the file isn't there (or you want another copy), use **Open...**, drop a
 `save.lua` onto the window, or pass `--save`. Each write makes
