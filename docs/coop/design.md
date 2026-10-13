@@ -974,6 +974,7 @@ sibling's D-numbers.
 - **G1. The fork has its own launcher** (licence term 2; owner, 2026-10-13).
   Gen 1 only (Red, Blue, Yellow) at first; Game Boy style; desktop and mobile;
   controls and pad assignment, settings and save management (#3 to #7).
+  The shell is in place: [launcher.md](launcher.md).
 - **G2. Split-screen battles: each half, own menus** (owner, 2026-10-13). When
   both local players are in one battle, each player's half shows it with their
   own cartridge menus, as each window does in the sibling fork.

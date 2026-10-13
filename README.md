@@ -6,7 +6,9 @@
 > with or supported by the upstream project: report problems with the co-op
 > mode here, not upstream. The fork publishes no builds. Its changes are
 > written by an AI coding agent directed by the fork's owner (every commit
-> after upstream `f63f485c`); see [AGENTS.md](AGENTS.md). Upstream's README
+> after upstream `f63f485c`); see [AGENTS.md](AGENTS.md). The game starts
+> from the fork's own launcher, not upstream's
+> ([docs/coop/launcher.md](docs/coop/launcher.md)). Upstream's README
 > follows unchanged.
 
 # G1R Deluxe aka Gen1Recomp

@@ -49,10 +49,12 @@ Read before working:
     `src/import/online/*` as launcher UI too.
   - So: never edit, copy from or build on those files; nothing the fork adds
     may call into them; and the fork's game starts through the fork's own
-    launcher. Upstream currently boots its launcher from `main.lua`
-    (`makeLauncher`), and `src/sync/SyncMods.lua` and `src/core/IssueReport.lua`
-    call `LauncherMods`: until the fork's launcher replaces that path, a build
-    of this branch is for development only and is never handed to anyone.
+    launcher. The fork's launcher is `src/coop/launcher/`
+    ([docs/coop/launcher.md](docs/coop/launcher.md)): `main.lua`'s
+    `makeLauncher` builds it, and `tests/coop/launcher_boot_test.lua` fails
+    when a boot path loads an upstream launcher module. `LauncherWindow.lua`
+    is not on the licence's list and stays; the splash and theme videos play
+    `assets/launcher/` files and stay out.
 - **The fork is public, its builds are not.** Never publish releases, Pages
   sites, packages, store builds or artifacts. Only `coop-ci.yml` runs here;
   upstream's workflows stay disabled in the fork's Actions settings.

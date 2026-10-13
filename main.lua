@@ -564,11 +564,13 @@ function closeSkinStudio()
   end
 end
 
+-- co-op (#3): the fork boots its own launcher, src/coop/launcher; upstream's
+-- (RomImporter's launcher UI, LauncherView, LauncherMods, the splash and theme
+-- videos from assets/launcher) is proprietary and never loaded (LICENSE.MD
+-- term 2, AGENTS.md).  LauncherWindow is GPL window-size memory and stays.
 local function makeLauncher(launcherOpts)
   require("src.import.LauncherWindow").activate()
-  local RomImporter = require("src.import.RomImporter")
-  local forceImport = os.getenv("POKEPORT_FORCE_IMPORT") == "1"
-  return RomImporter.new(function(version, cartId, opts)
+  return require("src.coop.launcher.Launcher").new(function(version, cartId, opts)
     require("src.import.LauncherWindow").observe(0)
     require("src.import.LauncherWindow").flush()
     Importer = nil
@@ -576,16 +578,8 @@ local function makeLauncher(launcherOpts)
     if onBoot and onBoot(version, cartId, opts) then return end
     bootGame(version, cartId, opts)
   end, {
-    launcher = true,
-    forceImport = forceImport,
     initialTab = launcherOpts and launcherOpts.initialTab or nil,
-    invite = launcherOpts and launcherOpts.invite or nil,
-    onEditSave = openEditor,
-    onEditTouchControls = openTouchControlsEditor,
-    -- Skin Studio owns a touch-first layout as well as the desktop workspace.
-    -- Keep the compatibility predicate so external hosts using it still work.
-    onOpenSkinStudio = require("src.ui.SkinStudio").available_desktop()
-      and openSkinStudio or nil,
+    notice = launcherOpts and launcherOpts.notice or nil,
   })
 end
 
@@ -617,8 +611,7 @@ local function rebuildLauncherInProcess(opts)
 
   applySavedOrientation()
 
-  local preload = require("src.mods.LauncherMods").translationStrings()
-  if preload then require("src.core.Strings").load({ strings = preload }) end
+  -- co-op (#3): no LauncherMods translation preload (upstream's launcher)
 
   if love.window and love.window.setTitle then
     local Version = require("src.core.Version")
@@ -667,9 +660,8 @@ function bootGame(version, cartId, opts)
     require("src.core.SaveData").persistenceFs())
   if recoveryNotice then require("src.core.Logger").warn("%s", recoveryNotice) end
   if not recovered then
-    Importer = makeLauncher({ initialTab = "box" })
-    Importer._boxState = nil
-    require("src.import.BoxPanel").refresh(Importer).notice = recoveryError
+    -- co-op (#3): the fork's launcher shows the error (no Box tab)
+    Importer = makeLauncher({ notice = recoveryError })
     return
   end
   pcall(function()
@@ -770,7 +762,12 @@ local function showLauncher(version)
   end
 end
 
+-- co-op (#3): mod updates run in upstream's launcher (LauncherMods), which
+-- the fork never loads, so no launch request asks for them.
+local COOP_NO_MOD_UPDATES = true
+
 local function wantsModUpdate(request)
+  if COOP_NO_MOD_UPDATES then return false end
   if type(request) ~= "table" then return false end
   if type(request.tasks) == "table" and request.tasks.mods ~= nil then
     return request.tasks.mods == true
@@ -810,7 +807,7 @@ local function startLaunchRequest(request)
     return true
   end
 
-  local RomImporter = require("src.import.RomImporter")
+  local RomImporter = require("src.coop.launcher.RomImport") -- co-op (#3)
   Importer = nil
   if Prelaunch then return true end
 
@@ -942,7 +939,7 @@ function love.load(args)
     return
   end
 
-  local RomImporter = require("src.import.RomImporter")
+  local RomImporter = require("src.coop.launcher.RomImport") -- co-op (#3)
   local resolvedLaunch = LaunchOptions.resolveRequest(arg, args)
   local forceImport = os.getenv("POKEPORT_FORCE_IMPORT") == "1"
   local importPath = os.getenv("POKEPORT_IMPORT_ROM")
@@ -980,14 +977,15 @@ function love.load(args)
     if forceImport or not ready then
       -- The importer detects the dropped/loaded ROM's version by SHA-1 and
       -- passes it to onComplete; boot that version.
-      Importer = RomImporter.new(function(version)
+      -- co-op (#3): the fork's launcher imports, then boots that version
+      Importer = require("src.coop.launcher.Launcher").new(function(version)
         if os.getenv("POKEPORT_IMPORT_ONLY") == "1" then
           love.event.quit()
           return
         end
         Importer = nil
         bootGame(version or scriptedVersion, nil, scriptedOpts)
-      end)
+      end, { bootOnImport = true })
       if importPath then Importer:startPath(importPath) end
       return
     end
@@ -1003,10 +1001,7 @@ function love.load(args)
   -- enabled mods' string catalogs -- data only, no entry chunk -- so a
   -- translation reaches the launcher too.  The active game's loader replaces
   -- this with the real merged catalog once a version boots.
-  do
-    local preload = require("src.mods.LauncherMods").translationStrings()
-    if preload then require("src.core.Strings").load({ strings = preload }) end
-  end
+  -- co-op (#3): no LauncherMods translation preload (upstream's launcher)
 
   -- LAUNCH OPTIONS: skip the launcher and boot a game directly.
   --   --game red|blue|yellow|gold  (or POKEPORT_GAME / POKEPORT_LAUNCH)
@@ -1038,7 +1033,7 @@ function love.load(args)
   -- Edit on a save row opens the bundled editor on that slot (openEditor).
   if not relaunched then
     Importer = makeLauncher()
-    launcherSplash = require("src.import.LauncherSplash").new()
+    -- co-op (#3): no LauncherSplash (upstream's launcher intro)
     autoUpdateMods(resolvedLaunch,
       not resolvedLaunch.game and "mods" or nil)
     return
