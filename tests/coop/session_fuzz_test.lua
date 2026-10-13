@@ -22,6 +22,16 @@ print(("fuzz seed %d, %d rounds per type"):format(SEED, ROUNDS))
 local SHA = ("ab"):rep(20)
 local CAMPAIGN = "c00000000000000aa"
 
+-- a log batch as SessionLog writes it (#31)
+local function logBatch()
+  return { type = "log", lines = {
+    { t = 1760000000000, frame = 12, device = "d9", n = 3, src = "client", kind = "joined",
+      name = "FUZZ", seat = 1, player = "p00000009",
+      data = { name = "FUZZ", list = { 1, 2.5, true, "x" }, nested = { a = { b = "c" } } } },
+    { t = 1760000000001, frame = 13, device = "d9", n = 4, src = "host", kind = "message" },
+  } }
+end
+
 -- one valid message of each type, per receiving side
 local VALID = {
   host = {
@@ -29,10 +39,12 @@ local VALID = {
               game = "red", sha1 = SHA, known = { [CAMPAIGN] = "p00000001" } },
     hello = { type = "hello", protocol = Protocol.VERSION, build = "t", name = "FUZZ",
               game = "red", sha1 = SHA, device = "d9", seat = 1,
-              known = { [CAMPAIGN] = "p00000009" }, via = "loopback" },
+              known = { [CAMPAIGN] = "p00000009" }, via = "loopback",
+              logs = { share = true } },
     move = { type = "move", seq = 1, map = "ROUTE_1", x = 3, y = 4,
              facing = "up", warp = true },
     bye = { type = "bye", seq = 1 },
+    log = logBatch(),
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -46,6 +58,7 @@ local VALID = {
                             map = "ROUTE_1", x = 1, y = 2, facing = "down" } } },
     rejected = { type = "rejected", seq = 4, reason = "duplicate" },
     ended = { type = "ended", reason = "host_quit" },
+    log = logBatch(),
   },
 }
 
@@ -145,12 +158,21 @@ end
 
 -- the host side ------------------------------------------------------------
 
-local idN = 0
+-- the host runs on a frame clock: each update is 1/60 s, so the per-link
+-- limits (#32) see the fuzz's traffic at a real frame rate
+local idN, frameTime = 0, 0
 local function newHost()
-  return Host.new({
+  local h = Host.new({
     campaign = { id = CAMPAIGN, title = "FUZZ" }, cartridge = { game = "red", sha1 = SHA },
     hex = function(n) idN = idN + 1; return ("%0" .. n .. "x"):format(idN) end,
+    clock = function() return frameTime end,
   })
+  local update = h.update
+  h.update = function(self)
+    frameTime = frameTime + 1 / 60
+    return update(self)
+  end
+  return h
 end
 
 local host = newHost()
@@ -234,6 +256,7 @@ for _, t in ipairs(Protocol.types("host")) do
   end
 end
 eq(raised, 0, "the host never raises on a malformed message")
+eq(host.floods, 0, "the fuzz's pace is no flood (#32)")
 check(dropped > ROUNDS and accepted > 0, ("fuzz both dropped (%d) and kept (%d) messages")
   :format(dropped, accepted))
 print(("host side: %d dropped, %d still valid"):format(dropped, accepted))

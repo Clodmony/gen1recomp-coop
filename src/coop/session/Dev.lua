@@ -1,11 +1,13 @@
 -- The development entry to a co-op session (#10), until the launcher's
 -- co-op screens exist (#12).  Start the game with
 --
---   love . --coop-host[=PORT] [--coop-name=NAME]
---   love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME]
+--   love . --coop-host[=PORT] [--coop-name=NAME] [--coop-logs=off]
+--   love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME] [--coop-logs=off]
 --
 -- (or POKEPORT_COOP_HOST=PORT, POKEPORT_COOP_JOIN=ADDRESS,
--- POKEPORT_COOP_NAME=NAME for scripted runs).  Once a game runs, the host
+-- POKEPORT_COOP_NAME=NAME, POKEPORT_COOP_LOGS=off for scripted runs).
+-- The session log is shared with the other players unless logs are off
+-- (#31).  Once a game runs, the host
 -- side starts the in-process host on UDP PORT (default 24680) with the LAN
 -- beacon, and its own player dials it over loopback; the join side dials the
 -- address.  Each player's position is reported to the host as it moves; the
@@ -39,6 +41,8 @@ function Dev.parse(args, getenv)
       cfg.mode, cfg.address = "join", value
     elseif key == "name" and value ~= "" then
       cfg.name = value
+    elseif key == "logs" then
+      cfg.logs = value
     end
   end
   if not cfg.mode then
@@ -53,6 +57,10 @@ function Dev.parse(args, getenv)
   cfg.name = cfg.name or getenv("POKEPORT_COOP_NAME")
   if not Protocol.name(cfg.name) then cfg.name = cfg.mode == "host" and "HOST" or "GUEST" end
   cfg.port = cfg.port or Transport.DEFAULT_PORT
+  -- sharing the session log defaults on (#31, design A1.14)
+  local logs = (cfg.logs or getenv("POKEPORT_COOP_LOGS") or ""):lower()
+  cfg.logs = nil
+  cfg.shareLogs = not (logs == "off" or logs == "0" or logs == "no" or logs == "false")
   return cfg
 end
 
@@ -80,13 +88,14 @@ function Dev.start(game)
   s.identity = identity
   s.frames = 0
   s.log = SessionLog.open({ fs = SessionLog.saveFolderFs(), device = identity.device,
-                            name = cfg.name, seat = 1,
+                            name = cfg.name, seat = 1, share = cfg.shareLogs,
                             frame = function() return s.frames end })
   local conn, hostKey
   if cfg.mode == "host" then
     s.host = Host.new({
       campaign = { id = "c" .. Random.hex(16), title = cart.game:upper() .. " CO-OP" },
       cartridge = cart, hostName = cfg.name, port = cfg.port, log = s.log,
+      device = identity.device,
     })
     local hub = s.host:serve(Transport.loopback())
     local listener, err = Transport.listen(cfg.port)
@@ -105,6 +114,8 @@ function Dev.start(game)
   s.client = Client.new(conn, {
     name = cfg.name, game = cart.game, sha1 = cart.sha1, device = identity.device,
     seat = 1, known = identity:known(hostKey, 1), via = cfg.address,
+    -- the host's own player: its lines are already in the host's log
+    log = cfg.mode == "join" and s.log or nil,
     onWelcome = function(c, msg)
       identity:remember(hostKey, 1, msg.campaign, msg.player)
       say("joined campaign %s as %s (%s)", msg.campaign, msg.player, c.name)
