@@ -8,6 +8,9 @@
 --   { kind = "boot", version = v, newGame = bool }
 --   { kind = "import", path = p }          (a typed ROM path)
 --   { kind = "quit" }
+-- and the co-op screens' commands (CoopMenu.lua, #12).
+
+local CoopMenu = require("src.coop.launcher.CoopMenu")
 
 local Menu = {}
 Menu.__index = Menu
@@ -54,6 +57,8 @@ Menu.gameLabel = gameLabel
 --   canQuit           -> show QUIT (desktop; a phone closes the app itself)
 --   canType           -> the import screen takes a typed path
 --   initial           -> preselect this game
+--   coop(version)     -> the co-op screens' env (CoopMenu.lua), or nil for
+--                        no CO-OP row
 function Menu.new(opts)
   opts = opts or {}
   local self = setmetatable({
@@ -61,6 +66,7 @@ function Menu.new(opts)
     saveInfo = opts.saveInfo or function() return nil end,
     canQuit = opts.canQuit ~= false,
     canType = opts.canType ~= false,
+    coopEnv = opts.coop,
     screen = "title", cursor = 1, scroll = 0, path = "",
   }, Menu)
   for i, g in ipairs(Menu.GAMES) do
@@ -86,6 +92,7 @@ function Menu:items()
       rows[#rows + 1] = { id = "continue", label = "CONTINUE" }
     end
     rows[#rows + 1] = { id = "new", label = "NEW GAME" }
+    if self.coopEnv then rows[#rows + 1] = { id = "coop", label = "CO-OP" } end -- #12
     rows[#rows + 1] = { id = "reimport", label = "NEW ROM" }
     rows[#rows + 1] = { id = "back", label = "BACK" }
     return rows
@@ -101,7 +108,35 @@ end
 
 -- A message box over the current screen; any button closes it.
 function Menu:notify(text)
+  if self.coop then return self.coop:notify(text) end
   self.notice = text
+end
+
+-- the co-op screens of `version` (#12), with a message on top
+function Menu:openCoop(version, notice)
+  local env = self.coopEnv and self.coopEnv(version)
+  if not env then return false end
+  self.version = version
+  self.coop = CoopMenu.new(env, { notice = notice })
+  self.screen, self.cursor, self.scroll = "coop", 1, 0
+  return true
+end
+
+local function closeCoop(self)
+  self.coop = nil
+  self:go("game", self.version)
+  for i, row in ipairs(self:items()) do
+    if row.id == "coop" then self.cursor = i end
+  end
+end
+
+-- One frame; the co-op screens may return a command (a joined session
+-- enters the world).
+function Menu:update(dt)
+  if self.screen ~= "coop" or not self.coop then return nil end
+  local command = self.coop:update(dt)
+  if command and command.kind == "coop_exit" then return closeCoop(self) end
+  return command
 end
 
 function Menu:importStarted(version, name)
@@ -157,6 +192,11 @@ function Menu:press(action)
     return nil
   end
   local screen = self.screen
+  if screen == "coop" and self.coop then
+    local command = self.coop:press(action)
+    if command and command.kind == "coop_exit" then return closeCoop(self) end
+    return command
+  end
   if screen == "importing" then return nil end
   if screen == "credits" then
     if action == "up" then self.scroll = math.max(0, self.scroll - 1)
@@ -208,6 +248,8 @@ function Menu:press(action)
     elseif row.id == "new" then
       return { kind = "boot", version = self.version,
         newGame = self.saveInfo(self.version) ~= nil }
+    elseif row.id == "coop" then
+      self:openCoop(self.version)
     elseif row.id == "reimport" then
       self.path = ""
       self:go("import", self.version)
@@ -218,13 +260,15 @@ function Menu:press(action)
   return nil
 end
 
--- Typing on the import screen.
+-- Typing on the import screen or a co-op text field.
 function Menu:text(t)
+  if self.screen == "coop" and self.coop then return self.coop:text(t) end
   if self.screen ~= "import" or self.notice or not self.canType then return end
   self.path = self.path .. t
 end
 
 function Menu:erase()
+  if self.screen == "coop" and self.coop then return self.coop:erase() end
   if self.screen ~= "import" or self.notice then return end
   self.path = self.path:sub(1, -2)
   -- drop a whole UTF-8 sequence, not half of one

@@ -1114,7 +1114,10 @@ function love.update(dt)
     return Importer:update(dt)
   end
   if not Game then return end
-  require("src.coop.session.Dev").update(dt, Game) -- co-op (#10)
+  -- co-op (#10, #12): the session; one that ended goes back to the launcher
+  if require("src.coop.session.Dev").update(dt, Game) == "launcher" then
+    pendingLauncherReturn = {}
+  end
 
   -- Scripted runs (autopilot / POKEPORT_DRIVER) observe and act exactly
   -- once per Game:update, so they must keep a 1:1 relationship with the
@@ -1696,9 +1699,9 @@ function love.textinput(text)
 end
 
 function love.quit()
-  -- co-op (#10): a running session tells the others (no require on quit)
-  local coopDev = package.loaded["src.coop.session.Dev"]
-  if coopDev then coopDev.shutdown() end
+  -- co-op (#10, #12): a running session tells the others (no require on quit)
+  local coopSession = package.loaded["src.coop.session.Session"]
+  if coopSession then coopSession.shutdown() end
   if launcherSplash then launcherSplash:release(); launcherSplash = nil end
   if Importer and Importer._themeVideo then
     pcall(Importer._themeVideo.release, Importer._themeVideo)
