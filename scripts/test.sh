@@ -232,6 +232,14 @@ run_tier "T0 URI launch arguments" "$LUA" tests/engine/launch_uri_args_test.lua
 run_tier "T1/T2 engine invariants + parity gates" "$LUA" tests/run_engine.lua
 # co-op: the fork's own suites (launcher, co-op), ROM-free, in the engine group
 run_tier "T2 co-op fork suites (tests/coop)" "$LUA" tests/run_coop.lua
+# co-op (#10): the session over real ENet sockets needs lua-enet, which ships
+# with LOVE; a windowless LOVE run (coop-ci installs love for it)
+if command -v love >/dev/null 2>&1; then
+  run_tier "T2 co-op session over ENet (LOVE, no window)" love tests/coop/enet
+else
+  echo ""
+  echo "-- T2 co-op session over ENet: skipped (love is not on PATH; coop-ci runs it)"
+fi
 # Gen 2 / Crystal: ROM-free (own fixtures, or a self-skip on a missing cache),
 # so it runs here rather than behind the Red content gate below.
 ACTIVE_GROUP=gen2
