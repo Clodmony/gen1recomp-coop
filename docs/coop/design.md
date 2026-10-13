@@ -200,7 +200,7 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
    pinned at the bottom, sheets rise from the bottom, the address field opens a
    number keypad (D103, tc K11).
 10. **adapt** A split-screen entry (both seats on one device) has no source
-    equivalent; it needs its own start path in this flow (see Q1, Q2).
+    equivalent; it needs its own start path in this flow (G2, G3; #11).
 11. **skip** Launcher themes surviving a theme switch (tc K12), the scripted
     launcher checks (D69's runner): Godot launcher and source tooling.
 
@@ -273,7 +273,7 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
    Town** with a chosen starter at level 5 and 3000 money; **bring a trainer**
    from one of the device's single-player saves (team, PC with its boxes, bag,
    money, place and own world keys) (D34, D50, D61, play). Yellow: the "chosen
-   starter" option and the opening differ (Q3).
+   starter" option and the opening differ (G4; #9).
 2. **carry** A brought save is checked with the game's own validator (the world left
    out, since the campaign places the player) and keeps its trainer id, so the
    player's own Pokémon do not count as traded (D34, D37).
@@ -295,7 +295,7 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
    (D50, D61, D103).
 6. **adapt** The first player to finish the opening sets the rival's starter for the
    campaign, if nobody set it before (D50). Yellow's rival always takes EEVEE
-   and its later form depends on battle outcomes (Q3).
+   and its later form depends on battle outcomes (G4; #9).
 7. **adapt** A new campaign's shared story starts in the state a played opening
    leaves (for Red: the intro flags plus "Oak appeared in Pallet", the lab,
    Pallet Town and house script steps, and the town map, lab rival and two
@@ -478,7 +478,7 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
    or HITMONCHAN, the MAGIKARP for sale and each revived fossil; their flags
    and balls are each player's (owner, D61, D62, D85). A gift with six in the
    party goes to that player's box (tc W68). Yellow's gift list differs
-   (Q3).
+   (G4; #9).
 10. **carry** A partner's own Pokémon is not a traded Pokémon (no boosted EXP); one
     with a foreign original trainer still is: the engine reads each Pokémon's
     owner trainer id, single-player unchanged (D9, design §Battles).
@@ -641,7 +641,7 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
    loser's battle joins as one unique encounter. A dropped driver lets the
    partner go and meets the rival again from the start. The Champion's room has
    no lock (D72, D84). Yellow adds Jessie and James scenes and changes rival
-   maps: re-list (Q3).
+   maps: re-list (G4; #9).
 6. **carry** The Elite Four is one run for the team (owner, D91): each member's and
    the Champion's beaten flag is the campaign's; a window in that room reloads
    so the exit opens; a partner arriving later walks through. The walk-ins,
@@ -753,7 +753,7 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
    hidden in the Cable Club rooms (the game's own friend sprite is the
    partner). No offer within 30 s or no answer within 60 s returns the screen
    to its lists (D31, D55). Upstream's Union Room option moves the Gen 1 Cable
-   Club desk (Q5).
+   Club desk (G6).
 8. **adapt** A world continued inside a Cable Club room (whose only exit on the
    cartridge is a reset) opens at the receptionist: the host keeps the cell the
    room was entered from and the map the center's door leads to (prog §0.1.75
@@ -864,13 +864,13 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
 4. **adapt** Controller pick: one chosen pad plays (kept by GUID, name, serial and
    order among twins, found again after a replug, the others ignored);
    keyboard and mouse always work (prog "Controller pick", tc P08).
-   Split-screen needs per-seat pad assignment instead (Q2).
+   Split-screen needs per-seat pad assignment instead (G3; #4).
 5. **adapt** iOS discovery may need the multicast entitlement; the address path works
    without it (D103).
 6. **adapt** Languages are separate games: German plays only with German, English
    only with English; mixed sessions are refused; each language has its own game
-   ids, so caches and saves stay apart (owner, D95). Whether the target imports
-   German Gen 1 is **uncertain** (Q6).
+   ids, so caches and saves stay apart (owner, D95). Upstream imports only the
+   English dumps today; German import is #25 (G7).
 7. **adapt** In a German world every engine and co-op line uses the cartridge's own
    words where the cartridge has the line; co-op-only lines are project wording
    kept in a list for the owner to check; layouts follow the German cartridge
@@ -963,7 +963,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A12 Friend battles and trades | #23 |
 | A13 Red + Blue mixing, Yellow | #9 |
 | A14 Presence, finding the partner, CO-OP menu, run button | #15 |
-| A15 Mobile, touch, input and language | #7 (and #4 for pads) |
+| A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
 | Local split-screen (the sibling's open #53) | #11 |
 
 ## 6. Decisions
@@ -988,6 +988,7 @@ sibling's D-numbers.
 - **G6. Cable Club trades stay** next to direct friend trades (default
   proposed 2026-10-13, owner may change it). Upstream's Union Room setting
   moves the Gen 1 Cable Club desk; #23 handles both.
-- **G7. German Red/Blue out of scope for now** (default proposed 2026-10-13,
-  owner may change it): unknown whether upstream's importer handles German
-  Gen 1. Languages never mix in one session (D95).
+- **G7. German Red and Blue are in scope** (owner, 2026-10-13), as in the
+  sibling fork (D95, D102): own game ids, German only with German, the
+  cartridge's own words and layouts. Upstream accepts only the English dumps
+  today, so import support comes first (#25).
