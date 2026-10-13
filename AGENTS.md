@@ -34,11 +34,21 @@ Read before working:
   - the README credit line ("Based on the Pokemon Gen 1 Recompilation Project
     by BOIS CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)")
     stays, and any co-op menu or front end that starts the game shows it;
-  - the **launcher is proprietary** and may not be modified or reused:
+  - the **launcher is proprietary** and may not be copied, modified,
+    redistributed or *used* in any fork; a fork must provide **its own
+    launcher**, which shows the credit line. The launcher is
     `src/import/LauncherView.lua`, `LauncherSettings.lua`, `OnlinePanel.lua`,
     `CartLabelArt.lua`, `CartShape.lua`, `src/mods/LauncherMods.lua`, the
-    launcher UI in `src/import/RomImporter.lua`, `assets/launcher/`,
-    `assets/labels/`. Never edit those files; co-op UI lives in files of its own.
+    launcher UI in `src/import/RomImporter.lua` (its ROM import, verification
+    and cache extraction logic stays GPL and may be reused), `assets/launcher/`
+    and `assets/labels/`. Treat the ONLINE tab's screens in
+    `src/import/online/*` as launcher UI too.
+  - So: never edit, copy from or build on those files; nothing the fork adds
+    may call into them; and the fork's game starts through the fork's own
+    launcher. Upstream currently boots its launcher from `main.lua`
+    (`makeLauncher`), and `src/sync/SyncMods.lua` and `src/core/IssueReport.lua`
+    call `LauncherMods`: until the fork's launcher replaces that path, a build
+    of this branch is for development only and is never handed to anyone.
 - **The fork is public, its builds are not.** Never publish releases, Pages
   sites, packages, store builds or artifacts. Only `coop-ci.yml` runs here;
   upstream's workflows stay disabled in the fork's Actions settings.
