@@ -20,9 +20,9 @@ in whole steps:
   refused, since this launcher plays Red, Blue and Yellow. A dropped ROM is
   routed to its game whatever screen is showing.
 - **An imported game**: CONTINUE (when the active save slot holds a save; name,
-  badges and play time shown), NEW GAME, NEW ROM (import again), BACK.
-  NEW GAME over a save starts in a new save slot, so the old save stays on
-  disk; choosing between slots comes with #6.
+  badges and play time shown), NEW GAME, CO-OP (see *Co-op screens*), NEW ROM
+  (import again), BACK. NEW GAME over a save starts in a new save slot, so the
+  old save stays on disk; choosing between slots comes with #6.
 - **Credits**: the credit line, the fork, the AI disclosure, the Plain Pixel
   font licence and the trademark notice.
 
@@ -39,6 +39,65 @@ Controls: arrows or WASD move, Z / Enter / Space confirm, X / Backspace /
 Escape go back; a pad's d-pad or left stick, A, B and Start; a mouse click or
 a tap picks a row, a right click goes back.
 
+## Co-op screens
+
+CO-OP on a game's screen opens the co-op screens of that cartridge (#12,
+design A2). They are drawn like the rest of the launcher, in Game Boy text
+cells with the cartridge's font, boxes and cursor.
+
+- **Co-op**: HOST, JOIN, LAST SESSION (when there is one: hosts the last
+  campaign again, or dials the last host and joins at once when it knows this
+  device), LOGS, BACK.
+- **Host**: one card per campaign of this cartridge, latest hosted first,
+  with its player count; NEW CAMPAIGN asks for the campaign's name and the
+  player's own. A card shows the game it was started on, its players and when
+  it was hosted last, and offers HOST, RENAME and DELETE. DELETE asks again
+  and keeps the last state as `coop/campaigns/<id>.json.bak` in the save
+  folder; renaming it back to `<id>.json` restores the card.
+- **Hosting**: ENTER WORLD (at any time; partners can join later), the
+  addresses partners join at (up to two, a VPN address first, then the home
+  network, each labelled, the one a partner used last marked LAST USED; A
+  copies one), the players in with the cartridge each plays when it differs,
+  and STOP. STOP with a partner in asks first; the partner's game goes back to
+  its launcher with "The host closed the session." The session keeps running
+  while the launcher shows it and on into the game.
+- **Join**: the hosts heard on the LAN beacon (one row per campaign, with the
+  cartridge this device joins with, or NEEDS <GAME> when none fits), BY
+  ADDRESS (an address with an optional `:port`), the recent addresses, BACK. A
+  nearby host on another cartridge this device has imported is joined with
+  that cartridge.
+- **Connecting**: the address, then HOST FOUND, SAME VERSION, CARTRIDGE FITS.
+  While nobody answers, the dial is tried again every 3 s for a minute, with
+  a countdown, TRY NOW and CANCEL; after the minute "could not reach" and a
+  checklist for the kind of address (a VPN address: the VPN on both devices;
+  a home address: the same network and the firewall; a public address: port
+  forwarding). A device the host knows sees one JOIN AS <name>; a new player
+  can type a NEW NAME first. A refusal is named exactly ("The host plays RED.
+  This game is BLUE."), with USE <GAME> when another imported cartridge fits.
+  Once joined, the game starts.
+- **Logs**: SHARE LOGS on or off (sharing of session logs with the session's
+  players, #31) and, on desktop, OPEN FOLDER.
+- **Text entry**: a grid in the style of the cartridge's naming screen, so a
+  pad or a touch screen can type; an address opens on the digits. A keyboard
+  types directly (Enter finishes, Escape cancels, Ctrl+V pastes).
+
+Leaving a session in the game (closing its window, or the host stopping)
+brings the launcher back on the co-op screen with the reason ("You left the
+session.", "The host closed the session.").
+
+The co-op screens remember on this device (`coop/launcher.json`): the
+player's name, the last address and up to four recent ones, the cartridge
+picked (preselected on the title screen), the last session and the
+log-sharing switch.
+
+**Progress until campaign files (#13).** Each device plays a campaign in a
+save slot of its own, created and named after the campaign the first time
+(decision G10 in [design.md](design.md)). ENTER WORLD and a join make that
+slot the game's active one, so the cartridge's title screen offers NEW GAME
+the first time and CONTINUE after. The launcher puts the solo slot back when
+it opens again (a fresh empty slot when the game had none), so a solo
+CONTINUE never opens a campaign's save.
+
 ## Files
 
 - `Launcher.lua`: the object `main.lua` drives (update, draw, input callbacks,
@@ -48,6 +107,13 @@ a tap picks a row, a right click goes back.
 - `RomImport.lua`: verify a ROM and fill its private cache. It uses the GPL
   import modules (`RomArchive`, `GameVersion.forSha1`, `CacheFs`,
   `CacheContract`, `ExtractThread`, `RomExtractor`), never `RomImporter.lua`.
+- `CoopMenu.lua`: the co-op screens as a model, laid out in text cells; the
+  session, campaigns and settings come in through an `env` (Launcher.lua
+  passes the real ones, tests their own).
+- `Keypad.lua`: the text entry grid.
+- `CoopSettings.lua`: what the co-op screens remember on this device, and
+  each campaign's save slot.
+- `../Campaigns.lua`: the hosting device's campaign cards.
 
 ## What it leaves out
 
@@ -62,8 +128,7 @@ fullscreen memory) is not on the licence's list and stays.
 Upstream features that only its launcher reaches are not offered yet: mod
 management and mod updates before a shortcut boot (`main.lua` asks for none),
 the save editor, the skin studio, the touch-controls editor, the Box, carts and
-the other games. Settings, controls, save slots, mobile and the co-op screens
-are #4 to #7 and #12.
+the other games. Settings, controls, save slots and mobile are #4 to #7.
 
 ## Save folder and upstream services
 
@@ -107,6 +172,34 @@ path); no upstream launcher module was loaded. Pads, mouse, file drops and
 the ROM checks are covered headless only; `.zip`/`.7z` ROMs, Ctrl+V,
 Windows, macOS and mobile have not been run.
 
+The co-op screens (#12) were run on the same Linux desktop with US Red, in
+two game processes on one machine, each with its own save folder, driven by
+frame drivers through the launcher's own press calls (no window, the
+offscreen video driver):
+
+- the host made a new campaign and hosted it; the partner's Join screen heard
+  it on the LAN beacon (once, after the fix below), probed it (all three
+  steps OK), typed a new name on the grid and joined; its game started in a
+  new save slot named after the campaign;
+- the hosting screen listed the partner, and the address the partner used as
+  LAST USED; the host entered the world, both players' maps reached the
+  other side, and the card kept both players;
+- the host quit its game, which ended the session: the partner's game went
+  back to its launcher's co-op screen with "The host closed the session.",
+  and its solo save slot came back;
+- a second run: LAST SESSION on the host hosted the campaign again, LAST
+  SESSION on the partner rejoined in one press as the same player, and STOP
+  with the partner in asked first, then sent the partner back to its
+  launcher with the reason.
+
+Screenshots of these screens were looked at locally (they show the
+cartridge's font and stay out of the repository). The run found three
+faults, now fixed and tested: a host on the same machine was listed twice
+(heard on 127.0.0.1 and on its LAN address); a device with no save slot kept
+the campaign's slot active for solo play afterwards; the cartridge font has
+no `_` for the text field's blanks. Two machines on a LAN, pads, touch,
+Windows, macOS and phones have not been run.
+
 ## Tests
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
@@ -115,4 +208,14 @@ coop-ci): `launcher_menu_test.lua` drives the menu model and ROM checks,
 `upstream_services_test.lua` checks that no boot path reaches the updater or
 cloud sync and that `conf.lua` uses the fork's identity, and
 `driver_launcher_boot_test.lua` runs a frame driver that boots a game from the
-launcher (#28).
+launcher (#28). `launcher_coop_test.lua` (#12) runs two devices in one
+process over a loopback hub that stands in for the network: hosting a new
+campaign, finding it nearby (once per campaign), joining under a typed name,
+the players and LAST USED on the hosting screen, STOP with a partner in and
+the partner's return note, LAST SESSION on both sides, renaming and deleting
+a card to its backup, the refusals and USE <GAME>, the retries every 3 s for
+a minute and the checklists, a host that starts after the partner dialled,
+the logs switch, the cartridge pick, each campaign's save slot and the solo
+slot afterwards, the keypad and address kinds, and that every co-op screen
+fits the 20x12 text cells. The ENet suite (`love tests/coop/enet`) has the
+late host over real sockets.

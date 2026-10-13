@@ -161,6 +161,11 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
 ### A2. Launcher co-op flow (hosting, joining, campaign management)
 
 All of this lives in the fork's **own** launcher (upstream's is proprietary).
+The screens are in place (#12, [launcher.md](launcher.md)). Left for other
+issues: the line saying which games play together and the both-versions
+switch (#9); a card's badges, place and last save (campaign files, #13); the
+rival's name and how a new player starts (#22); the split-screen entry
+(#11); a phone layout run on a phone (#7).
 
 1. **adapt** Start screen: cartridge tiles (Ready / needs re-import / not imported),
    the pick remembered, a line saying which games play together; HOST and JOIN;
@@ -952,7 +957,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | Area | Issue |
 |---|---|
 | A1 Session and connection core | #10 (done: [session.md](session.md)); log sharing #31, flood limits #32 |
-| A2 Launcher co-op flow | #12 (after the launcher shell #3) |
+| A2 Launcher co-op flow | #12 ([launcher.md](launcher.md)); rival's name and how to start #22, both versions #9, split-screen entry #11 |
 | A3 Campaign state, saves and persistence | #13 |
 | A4 New players and the opening | #22 |
 | A5 Shared world | #14 |
@@ -1007,3 +1012,11 @@ sibling's D-numbers.
   [launcher.md](launcher.md) describes; an import in the launcher may come
   with #6. The self-updater and cloud sync stay off until the fork wants its
   own (`src/coop/Upstream.lua`).
+- **G10. Until campaign files, a campaign's progress is a save slot per
+  device** (#12, owner, 2026-10-13). Each device plays a campaign in a save
+  slot of its own, created and named after the campaign; entering the
+  campaign makes it the active slot, and the launcher puts the solo slot
+  back afterwards. The host's campaign card holds the title, the game it was
+  started on, the players seen and the address a partner used last. The
+  campaign files of #13 replace the per-device slots with the host's
+  campaign state.
