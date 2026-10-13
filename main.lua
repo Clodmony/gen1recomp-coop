@@ -1690,7 +1690,9 @@ function love.textinput(text)
 end
 
 function love.quit()
-  require("src.coop.session.Dev").shutdown() -- co-op (#10): tell the others
+  -- co-op (#10): a running session tells the others (no require on quit)
+  local coopDev = package.loaded["src.coop.session.Dev"]
+  if coopDev then coopDev.shutdown() end
   if launcherSplash then launcherSplash:release(); launcherSplash = nil end
   if Importer and Importer._themeVideo then
     pcall(Importer._themeVideo.release, Importer._themeVideo)
