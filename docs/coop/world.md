@@ -158,6 +158,26 @@ values takes the first player's. The worlds then lose those entries.
 - A new player's private opening: #22. Today a new player's window takes
   the campaign's story at its first rest point.
 
+## Checked
+
+Run on Linux desktop (LÖVE 11.5), US Red, two game processes on one
+machine, each with its own save folder and a frame driver (host with
+`POKEPORT_COOP_HOST`, guest with `POKEPORT_COOP_JOIN`):
+
+- The host hid PALLETTOWN_FISHER from Route 1 while the guest stood in
+  Pallet Town. The fisher left the guest's live map within 241 frames, and
+  the guest stayed on its cell.
+- The host set a flag with a text box open. After 300 held frames the
+  campaign's story still lacked it; it went out once the box closed and
+  reached the guest.
+- The host opened both Vermilion Gym locks while the guest stood in the
+  gym. Both flags reached the guest, the gym was reloaded once, and the
+  guest stayed on its cell.
+
+Not run live: Victory Road, Cinnabar's gates, the League rooms, Vermilion's
+kept lock with a partner there (ROM-free only), a version 1 file from a
+played campaign.
+
 ## Tests
 
 ROM-free, in `tests/coop/`:
