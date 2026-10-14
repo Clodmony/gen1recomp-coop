@@ -1059,3 +1059,18 @@ sibling's D-numbers.
   Deutsch, else English). The setting is the launcher's alone: a game's text
   follows its cartridge (D95, D102). The German wording is listed in
   [german-wording.md](german-wording.md); the credit line stays English.
+- **G15. A German game's engine lines come from its cartridge** (#25,
+  D102, 2026-10-14). The lines the engine authors itself are keyed on their
+  English source (upstream's `Strings`); a German game fills that catalog at
+  boot from three layers, each only where the one above has nothing: the
+  cartridge's menu words, read at import by pokered label (`field.words`);
+  the cartridge's text labels, composed the way pokered prints them (an EXP
+  gain is `_GainedText` + `_ExpPointsText`); and the fork's own wording for
+  lines no cartridge has (co-op, the engine's extra options, link play),
+  listed for the owner in [german-wording.md](german-wording.md). A
+  translation mod's entries win. The menus the German cartridge draws wider
+  or elsewhere (the two-option boxes, the battle and Safari menus, the SAVE
+  panels, the Cable Club's cancel box, the PC sub-menu) follow it from
+  constants in `src/coop/game/German.lua`; nothing changes for the US games.
+  No German cartridge text is in the repository: it is decoded from the
+  player's cartridge at import. Details in [german.md](german.md).
