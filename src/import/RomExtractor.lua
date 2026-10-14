@@ -1124,10 +1124,25 @@ function RomExtractor:dexEntry(index, species)
   local kind, consumed = self.rom:readString(
     pointerTable.bank, address, self.manifest.charmap, 0x50, 32)
   address = address + consumed
-  local heightFt = self.rom:byte(pointerTable.bank, address)
-  local heightIn = self.rom:byte(pointerTable.bank, address + 1)
-  local weight = self.rom:word(pointerTable.bank, address + 2)
-  address = address + 4
+  local heightFt, heightIn, weight, heightM, weightKg
+  -- co-op (#25): German entries are metric, one height byte in decimetres
+  -- and the weight in 100 g (pokered-de data/pokemon/dex_entries.asm).
+  -- DexEntryMenu draws heightM/weightKg; the imperial fields the schema
+  -- requires hold the same sizes converted.
+  if self.manifest.language == "de" then
+    local dm = self.rom:byte(pointerTable.bank, address)
+    local hg = self.rom:word(pointerTable.bank, address + 1)
+    heightM, weightKg = dm / 10, hg / 10
+    local inches = math.floor(dm * 3.937008 + 0.5)
+    heightFt, heightIn = math.floor(inches / 12), inches % 12
+    weight = math.floor(hg * 2.204623 + 0.5)
+    address = address + 3
+  else
+    heightFt = self.rom:byte(pointerTable.bank, address)
+    heightIn = self.rom:byte(pointerTable.bank, address + 1)
+    weight = self.rom:word(pointerTable.bank, address + 2)
+    address = address + 4
+  end
   assert(self.rom:byte(pointerTable.bank, address) == 0x17,
     "dex entry " .. index .. " has no TX_FAR command")
   local textAddress = self.rom:word(pointerTable.bank, address + 1)
@@ -1136,7 +1151,7 @@ function RomExtractor:dexEntry(index, species)
     or ("_DexEntry_%02X_%04X"):format(textBank, textAddress)
   return {
     kind = kind, heightFt = heightFt, heightIn = heightIn,
-    weight = weight, text = textLabel,
+    weight = weight, heightM = heightM, weightKg = weightKg, text = textLabel,
   }
 end
 
@@ -1913,6 +1928,97 @@ function RomExtractor:extractTradeArt()
   }
 end
 
+-- co-op (#25): the field words a US manifest carries from pret's source,
+-- read from a German cartridge instead (tools/make_german_manifest.py leaves
+-- them empty): the naming-screen presets, the in-game trade nicknames and
+-- the credits roll, which in German names the European staff.
+function RomExtractor:germanField(data)
+  local charmap = self.manifest.charmap
+  local function strings(name, count)
+    local s = self:symbol(name)
+    local out, address = {}, s.address
+    for i = 1, count do
+      local text, consumed = self.rom:readString(s.bank, address, charmap, 0x50, 32)
+      out[i], address = text, address + consumed
+    end
+    return out
+  end
+  -- engine/menus/naming_screen.asm DefaultNames*List: NEW NAME, then three
+  local player = strings("DefaultNamesPlayerList", 4)
+  local rival = strings("DefaultNamesRivalList", 4)
+  data.presetNames = {
+    customOption = player[1],
+    player = { player[2], player[3], player[4] },
+    rival = { rival[2], rival[3], rival[4] },
+  }
+  -- data/events/trades.asm TradeMons: give, get, dialogset, NAME_LENGTH name
+  local trades = self:symbol("TradeMons")
+  for index, trade in ipairs(data.trades) do
+    local row = trades.address + (index - 1) * 14
+    assert(self:species(self.rom:byte(trades.bank, row)) == trade.give,
+      "German TradeMons row " .. index .. " does not match the manifest")
+    trade.nickname = self.rom:decodeText(
+      self.rom:bytes(trades.bank, row + 3, 11), charmap)
+  end
+  data.credits.screens = self:creditScreens()
+  -- engine/movie/credits.asm TheEndTextString: the top row of letter
+  -- columns, $60 + 2 * letter (T, H, E, N, D), " " a gap; German ends on
+  -- E N D E
+  local theEnd = data.credits.theEnd
+  if type(theEnd) == "table" and self.symbols.TheEndTextString then
+    local s = self:symbol("TheEndTextString")
+    local pattern, shown = {}, {}
+    for offset = 0, 31 do
+      local value = self.rom:byte(s.bank, s.address + offset)
+      if value == 0x50 then break end
+      local letter = value >= 0x60 and value <= 0x69 and (value - 0x60) / 2 or -1
+      pattern[#pattern + 1] = math.floor(letter)
+      shown[#shown + 1] = letter >= 0 and theEnd.letters:sub(letter + 1, letter + 1) or " "
+    end
+    theEnd.pattern, theEnd.display = pattern, table.concat(shown)
+  end
+end
+
+-- engine/movie/credits.asm: CreditsOrder is a byte stream of string ids
+-- that fill the current screen, ended by CRED_TEXT ($FC), CRED_TEXT_FADE
+-- ($FD), CRED_TEXT_MON ($FE) or CRED_TEXT_FADE_MON ($FF); CRED_COPYRIGHT
+-- ($FB) adds the logo, CRED_THE_END ($FA) ends the roll.  Each string is a
+-- signed column offset from 9 and a line of text.
+function RomExtractor:creditScreens()
+  local order = self:symbol("CreditsOrder")
+  local pointers = self:symbol("CreditsTextPointers")
+  local mons = self:symbol("CreditsMons")
+  local charmap = self.manifest.charmap
+  local screens, current, monCount = {}, { lines = {} }, 0
+  local address = order.address
+  for _ = 1, 1024 do
+    local value = self.rom:byte(order.bank, address)
+    address = address + 1
+    if value == 0xFA then return screens end
+    if value >= 0xFC then
+      current.fade = value == 0xFD or value == 0xFF
+      if value >= 0xFE then
+        monCount = monCount + 1
+        current.mon = self:species(
+          self.rom:byte(mons.bank, mons.address + monCount - 1))
+      end
+      screens[#screens + 1] = current
+      current = { lines = {} }
+    elseif value == 0xFB then
+      current.copyright = true
+    else
+      local textAddress = self.rom:word(pointers.bank, pointers.address + value * 2)
+      local offset = self.rom:byte(pointers.bank, textAddress)
+      if offset >= 0x80 then offset = offset - 0x100 end
+      current.lines[#current.lines + 1] = {
+        column = 9 + offset,
+        text = self.rom:readString(pointers.bank, textAddress + 1, charmap, 0x50, 32),
+      }
+    end
+  end
+  error("CreditsOrder has no CRED_THE_END")
+end
+
 function RomExtractor:extractField()
   self:beginStage("Interface artwork")
   local done, total = 0, 53
@@ -2235,6 +2341,7 @@ function RomExtractor:extractField()
   end
 
   local data = copy(self.manifest.field)
+  if self.manifest.language == "de" then self:germanField(data) end -- co-op (#25)
   if type(data.townMap) == "table" then
     data.townMap.nest = nestArt
     data.townMap.upArrow = upArrowArt
