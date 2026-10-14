@@ -10059,6 +10059,86 @@
       "CAVERN",
       "FACILITY",
       "PLATEAU"
+    ],
+    "words": [
+      "BattleMenuText",
+      "SafariZoneBattleMenuText",
+      "SwitchStatsCancelText",
+      "BuySellQuitText",
+      "UseTossText",
+      "MoneyText",
+      "TwoOptionMenuStrings.YesNoMenu",
+      "TwoOptionMenuStrings.NoYesMenu",
+      "TwoOptionMenuStrings.TradeCancelMenu",
+      "TwoOptionMenuStrings.HealCancelMenu",
+      "WhichTechniqueString",
+      "DisabledText",
+      "TypeText",
+      "YouWinText",
+      "YouLoseText",
+      "DrawText",
+      [
+        "StatModTextStrings",
+        6
+      ],
+      "StartMenuPokedexText",
+      "StartMenuPokemonText",
+      "StartMenuItemText",
+      "StartMenuSaveText",
+      "StartMenuResetText",
+      "StartMenuExitText",
+      "StartMenuOptionText",
+      "ContinueText",
+      "NewGameText",
+      "CableClubOptionsText",
+      "SaveScreenInfoText",
+      "TextSpeedOptionText",
+      "BattleAnimationOptionText",
+      "BattleStyleOptionText",
+      "OptionMenuCancelText",
+      "NowSavingString",
+      "BoxNoText",
+      "PokemonMenuEntries",
+      "PlayersPCMenuEntries",
+      "BillsPCMenuText",
+      "DepositPCText",
+      "WithdrawPCText",
+      "StatsCancelPCText",
+      "SomeonesPCText",
+      "BillsPCText",
+      "PlayersPCText",
+      "OaksPCText",
+      "PKMNLeaguePCText",
+      "LogOffPCText",
+      "YourTextString",
+      "RivalsTextString",
+      "NameTextString",
+      "NicknameTextString",
+      "PokedexSeenText",
+      "PokedexOwnText",
+      "PokedexContentsText",
+      "PokedexMenuItemsText",
+      "TrainerInfo_NameMoneyTimeText",
+      "TypesIDNoOTText",
+      "StatusText",
+      "PrintStatsBox.StatsText",
+      "StatusScreenExpText",
+      "HallOfFameText",
+      "HoFMonInfoText",
+      "HoFPlayTimeText",
+      "HoFMoneyText",
+      "HallOfFameNoText",
+      "DiplomaCongrats",
+      "PrintPrizePrice.CoinString",
+      "MonsNestText",
+      "AreaUnknownText",
+      "CancelTextString",
+      "TradeCanceled",
+      "WaitingText",
+      "PleaseWaitString",
+      "ListMenuCancelText",
+      "TrainerCharText",
+      "EnemyText"
     ]
   },
   "fontCharmap": [
@@ -19296,6 +19376,10 @@
       9,
       26367
     ],
+    "AreaUnknownText": [
+      28,
+      21064
+    ],
     "ArticunoPicBack": [
       11,
       16952
@@ -19316,6 +19400,10 @@
       14,
       17374
     ],
+    "BattleAnimationOptionText": [
+      1,
+      24582
+    ],
     "BattleHudTiles1": [
       4,
       24704
@@ -19327,6 +19415,14 @@
     "BattleHudTiles3": [
       4,
       24752
+    ],
+    "BattleMenuText": [
+      1,
+      29782
+    ],
+    "BattleStyleOptionText": [
+      1,
+      24611
     ],
     "BattleTransitionTile": [
       28,
@@ -19364,6 +19460,14 @@
       7,
       26462
     ],
+    "BillsPCMenuText": [
+      8,
+      22241
+    ],
+    "BillsPCText": [
+      8,
+      21655
+    ],
     "BirdKeeperPic": [
       19,
       23771
@@ -19387,6 +19491,10 @@
     "BluesHouse_h": [
       6,
       23348
+    ],
+    "BoxNoText": [
+      28,
+      31226
     ],
     "BrockPic": [
       19,
@@ -19431,6 +19539,18 @@
     "ButterfreePicFront": [
       12,
       19511
+    ],
+    "BuySellQuitText": [
+      1,
+      29747
+    ],
+    "CableClubOptionsText": [
+      1,
+      23988
+    ],
+    "CancelTextString": [
+      1,
+      22481
     ],
     "CaterpiePicBack": [
       12,
@@ -19656,6 +19776,10 @@
       19,
       32113
     ],
+    "ContinueText": [
+      1,
+      23960
+    ],
     "CooltrainerFPic": [
       19,
       26558
@@ -19712,6 +19836,10 @@
       1,
       27436
     ],
+    "DepositPCText": [
+      8,
+      22482
+    ],
     "DewgongPicBack": [
       12,
       18914
@@ -19739,6 +19867,14 @@
     "DiglettsCave_h": [
       24,
       24418
+    ],
+    "DiplomaCongrats": [
+      21,
+      26564
+    ],
+    "DisabledText": [
+      15,
+      21860
     ],
     "DisplayBattleMenu.oldManName": [
       15,
@@ -19796,6 +19932,10 @@
       11,
       20817
     ],
+    "DrawText": [
+      4,
+      30827
+    ],
     "DrowzeePicBack": [
       10,
       24325
@@ -19847,6 +19987,10 @@
     "ElectrodePicFront": [
       12,
       26464
+    ],
+    "EnemyText": [
+      0,
+      6773
     ],
     "EngineerPic": [
       19,
@@ -20140,6 +20284,14 @@
       3,
       27287
     ],
+    "HallOfFameNoText": [
+      29,
+      26307
+    ],
+    "HallOfFameText": [
+      28,
+      17003
+    ],
     "HallOfFame_h": [
       22,
       25746
@@ -20175,6 +20327,18 @@
     "HitmonleePicFront": [
       10,
       21183
+    ],
+    "HoFMonInfoText": [
+      28,
+      17192
+    ],
+    "HoFMoneyText": [
+      28,
+      17393
+    ],
+    "HoFPlayTimeText": [
+      28,
+      17383
     ],
     "HorseaPicBack": [
       11,
@@ -20380,6 +20544,14 @@
       30,
       23632
     ],
+    "ListMenuCancelText": [
+      0,
+      12209
+    ],
+    "LogOffPCText": [
+      8,
+      21688
+    ],
     "LoreleiPic": [
       19,
       30585
@@ -20520,6 +20692,14 @@
       28,
       22759
     ],
+    "MoneyText": [
+      1,
+      29777
+    ],
+    "MonsNestText": [
+      28,
+      20357
+    ],
     "MonsterNames": [
       7,
       16926
@@ -20608,6 +20788,18 @@
       7,
       23046
     ],
+    "NameTextString": [
+      1,
+      27008
+    ],
+    "NewGameText": [
+      1,
+      23967
+    ],
+    "NicknameTextString": [
+      1,
+      27014
+    ],
     "NidokingPicBack": [
       9,
       19552
@@ -20672,9 +20864,17 @@
       3,
       20701
     ],
+    "NowSavingString": [
+      28,
+      30516
+    ],
     "OaksLab_h": [
       7,
       19202
+    ],
+    "OaksPCText": [
+      8,
+      21672
     ],
     "OddishPicBack": [
       13,
@@ -20711,6 +20911,14 @@
     "OnixPicFront": [
       10,
       16740
+    ],
+    "OptionMenuCancelText": [
+      1,
+      24639
+    ],
+    "PKMNLeaguePCText": [
+      8,
+      21681
     ],
     "PalletTown_h": [
       6,
@@ -20816,6 +21024,18 @@
       4,
       26296
     ],
+    "PlayersPCMenuEntries": [
+      1,
+      31467
+    ],
+    "PlayersPCText": [
+      8,
+      21664
+    ],
+    "PleaseWaitString": [
+      1,
+      21790
+    ],
     "PokeCenterFlashingMonitorAndHealBall": [
       28,
       17587
@@ -20824,9 +21044,25 @@
       14,
       27014
     ],
+    "PokedexContentsText": [
+      16,
+      17061
+    ],
     "PokedexEntryPointers": [
       16,
       17530
+    ],
+    "PokedexMenuItemsText": [
+      16,
+      17068
+    ],
+    "PokedexOwnText": [
+      16,
+      17057
+    ],
+    "PokedexSeenText": [
+      16,
+      17053
     ],
     "PokedexTileGraphics": [
       4,
@@ -20859,6 +21095,10 @@
     "PokemonMansionB1F_h": [
       20,
       25510
+    ],
+    "PokemonMenuEntries": [
+      1,
+      30647
     ],
     "PokemonTower1F_h": [
       24,
@@ -20939,6 +21179,14 @@
     "PrimeapePicFront": [
       12,
       16967
+    ],
+    "PrintPrizePrice.CoinString": [
+      20,
+      26781
+    ],
+    "PrintStatsBox.StatsText": [
+      4,
+      27464
     ],
     "ProfOakPic": [
       19,
@@ -21063,6 +21311,10 @@
     "Rival3Pic": [
       19,
       30243
+    ],
+    "RivalsTextString": [
+      1,
+      27000
     ],
     "RockTunnel1F_h": [
       17,
@@ -21340,6 +21592,10 @@
       19,
       29266
     ],
+    "SafariZoneBattleMenuText": [
+      1,
+      29802
+    ],
     "SafariZoneCenterRestHouse_h": [
       17,
       23777
@@ -21419,6 +21675,10 @@
     "SandslashPicFront": [
       11,
       23659
+    ],
+    "SaveScreenInfoText": [
+      1,
+      24200
     ],
     "ScientistPic": [
       19,
@@ -21600,6 +21860,10 @@
       12,
       23321
     ],
+    "SomeonesPCText": [
+      8,
+      21643
+    ],
     "SpearowPicBack": [
       9,
       18626
@@ -21632,6 +21896,34 @@
       12,
       31772
     ],
+    "StartMenuExitText": [
+      1,
+      29132
+    ],
+    "StartMenuItemText": [
+      1,
+      29113
+    ],
+    "StartMenuOptionText": [
+      1,
+      29139
+    ],
+    "StartMenuPokedexText": [
+      1,
+      29103
+    ],
+    "StartMenuPokemonText": [
+      1,
+      29108
+    ],
+    "StartMenuResetText": [
+      1,
+      29126
+    ],
+    "StartMenuSaveText": [
+      1,
+      29118
+    ],
     "StaryuPicBack": [
       9,
       30188
@@ -21639,6 +21931,22 @@
     "StaryuPicFront": [
       9,
       29920
+    ],
+    "StatModTextStrings": [
+      15,
+      30381
+    ],
+    "StatsCancelPCText": [
+      8,
+      22500
+    ],
+    "StatusScreenExpText": [
+      4,
+      27828
+    ],
+    "StatusText": [
+      4,
+      27338
     ],
     "SubanimationPointers": [
       30,
@@ -21655,6 +21963,10 @@
     "SwimmerPic": [
       19,
       20787
+    ],
+    "SwitchStatsCancelText": [
+      1,
+      29837
     ],
     "TMNotebookText": [
       34,
@@ -21704,6 +22016,10 @@
       4,
       25240
     ],
+    "TextSpeedOptionText": [
+      1,
+      24552
+    ],
     "TheEndGfx": [
       29,
       18324
@@ -21728,6 +22044,10 @@
       28,
       23091
     ],
+    "TradeCanceled": [
+      1,
+      23119
+    ],
     "TradeCenter_h": [
       19,
       32004
@@ -21748,6 +22068,10 @@
       14,
       25910
     ],
+    "TrainerCharText": [
+      0,
+      6760
+    ],
     "TrainerClassMoveChoiceModifications": [
       14,
       22683
@@ -21760,6 +22084,10 @@
       11,
       31640
     ],
+    "TrainerInfo_NameMoneyTimeText": [
+      4,
+      30087
+    ],
     "TrainerNames": [
       14,
       23039
@@ -21767,6 +22095,22 @@
     "TrainerPicAndMoneyPointers": [
       14,
       22804
+    ],
+    "TwoOptionMenuStrings.HealCancelMenu": [
+      1,
+      30392
+    ],
+    "TwoOptionMenuStrings.NoYesMenu": [
+      1,
+      30362
+    ],
+    "TwoOptionMenuStrings.TradeCancelMenu": [
+      1,
+      30378
+    ],
+    "TwoOptionMenuStrings.YesNoMenu": [
+      1,
+      30370
     ],
     "TypeEffects": [
       15,
@@ -21836,6 +22180,14 @@
       9,
       32257
     ],
+    "TypeText": [
+      15,
+      21870
+    ],
+    "TypesIDNoOTText": [
+      4,
+      27317
+    ],
     "UndergroundPathNorthSouth_h": [
       24,
       24346
@@ -21859,6 +22211,10 @@
     "UndergroundPathWestEast_h": [
       24,
       24382
+    ],
+    "UseTossText": [
+      1,
+      29769
     ],
     "VaporeonPicBack": [
       11,
@@ -22020,6 +22376,10 @@
       11,
       18724
     ],
+    "WaitingText": [
+      1,
+      19492
+    ],
     "WardensHouse_h": [
       29,
       20734
@@ -22060,6 +22420,10 @@
       12,
       27204
     ],
+    "WhichTechniqueString": [
+      15,
+      21430
+    ],
     "WigglytuffPicBack": [
       11,
       25791
@@ -22072,13 +22436,29 @@
       3,
       20203
     ],
+    "WithdrawPCText": [
+      8,
+      22490
+    ],
     "WorldMapTileGraphics": [
       4,
       26040
     ],
+    "YouLoseText": [
+      4,
+      30818
+    ],
+    "YouWinText": [
+      4,
+      30809
+    ],
     "YoungsterPic": [
       19,
       16384
+    ],
+    "YourTextString": [
+      1,
+      26994
     ],
     "ZapdosPicBack": [
       11,
