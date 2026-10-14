@@ -141,8 +141,8 @@ return {
   ["Drop the ROM file on this window, or type its path and press ENTER."] =
     "Zieh die ROM-Datei auf dieses Fenster oder tippe ihren Pfad und drücke ENTER.",
   ["Importing a ROM on this device comes later."] = "ROMs auf diesem Gerät zu importieren kommt später.",
-  ["Clean dumps of Pokemon Red, Blue and Yellow (US) and of the German Rote and Blaue Edition; .zip and .7z where the system opens them."] =
-    "Saubere Dumps von POKéMON Rot, Blau und Gelb (US) und der deutschen Roten und Blauen Edition; .zip und .7z, wo das System sie öffnet.",
+  ["Clean dumps of Pokemon Red, Blue and Yellow (US) and of the German Rote, Blaue and Gelbe Edition; .zip and .7z where the system opens them."] =
+    "Saubere Dumps von POKéMON Rot, Blau und Gelb (US) und der deutschen Roten, Blauen und Gelben Edition; .zip und .7z, wo das System sie öffnet.",
   ["Importing %s"] = "%s wird importiert",
   ["Preparing"] = "Vorbereitung",
   ["Could not open %s"] = "%s ließ sich nicht öffnen",
@@ -152,10 +152,10 @@ return {
   ["That archive is too big to hold one Game Boy ROM."] = "Das Archiv ist zu groß für ein einzelnes Game-Boy-ROM.",
   ["Expected a 1 MiB Game Boy ROM; this file is %.2f MiB."] =
     "Erwartet wird ein Game-Boy-ROM mit 1 MiB; diese Datei hat %.2f MiB.",
-  ["Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote or Blaue Edition (SHA-1 %s)."] =
-    "Unbekanntes ROM. Nötig ist ein sauberer Dump von POKéMON Rot, Blau oder Gelb (US) oder der Roten oder Blauen Edition (SHA-1 %s).",
-  ["%s is not playable here: this launcher plays Red, Blue and Yellow (and German Red and Blue)."] =
-    "%s läuft hier nicht: Dieser Launcher spielt Rot, Blau und Gelb (und die deutschen Rot und Blau).",
+  ["Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote, Blaue or Gelbe Edition (SHA-1 %s)."] =
+    "Unbekanntes ROM. Nötig ist ein sauberer Dump von POKéMON Rot, Blau oder Gelb (US) oder der Roten, Blauen oder Gelben Edition (SHA-1 %s).",
+  ["%s is not playable here: this launcher plays Red, Blue and Yellow, in English or German."] =
+    "%s läuft hier nicht: Dieser Launcher spielt Rot, Blau und Gelb, auf Englisch oder Deutsch.",
 
   -- campaigns
   ["Your campaigns"] = "Deine Kampagnen",
