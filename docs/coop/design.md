@@ -1074,3 +1074,14 @@ sibling's D-numbers.
   constants in `src/coop/game/German.lua`; nothing changes for the US games.
   No German cartridge text is in the repository: it is decoded from the
   player's cartridge at import. Details in [german.md](german.md).
+- **G16. Gelbe Edition is a game of its own, the way Rote and Blaue are**
+  (#40, 2026-10-14). `yellow_de` plays as Yellow (`GameVersion.isYellow()`
+  answers for the base, as `isBlue()` does) with the German cartridge's
+  data, through a manifest derived from the US Yellow one with the
+  addresses of Brianum/pokeyellow-de (constants only, pinned). Where the
+  German Yellow cartridge differs from German Red, the difference lives
+  in data, not branches: a catalog entry's `yellow` variant for the menu
+  words Yellow names otherwise or puts a PRINT row into, `German.layout.yellow`
+  for the one box it draws otherwise, and the manifest's title layout for
+  its ©1995-2000 line and its one-piece surfing title screen. Nothing
+  changes for US Yellow.
