@@ -18,6 +18,7 @@ local RomImport = require("src.coop.launcher.RomImport")
 local CoopSettings = require("src.coop.launcher.CoopSettings")
 local Controls = require("src.coop.launcher.Controls")
 local GameOptions = require("src.coop.launcher.GameOptions")
+local Saves = require("src.coop.launcher.Saves")
 local Seats = require("src.coop.game.Seats")
 local Screens = require("src.coop.launcher.Screens")
 local Text = require("src.coop.launcher.Text")
@@ -93,6 +94,7 @@ function Launcher.new(onBoot, opts)
     controls = self.controls,
     -- the game's options on SETTINGS (#5), in options.lua where the game reads them
     gameOptions = GameOptions.new({ fixedDisplay = require("src.core.VideoMode").fixedDisplay() }),
+    saves = function(v) return Saves.new(self:_savesEnv(v)) end,
   })
   self:_coopReturn()
   if opts.notice then self.menu:notify(opts.notice) end
@@ -204,6 +206,25 @@ function Launcher:_capture(ev)
   return true
 end
 
+-- the SAVES page's env (#6): upstream's slots and codec, a campaign's
+-- slot named after its campaign
+function Launcher:_savesEnv(version)
+  local settings = self:_coopSettings()
+  return {
+    version = version,
+    canType = not mobile(),
+    campaignOf = function(slotId)
+      for id, entry in pairs(settings.slots or {}) do
+        if entry.version == version and entry.slot == slotId then
+          local card = require("src.coop.Campaigns").get(id)
+          return card and card.title or L("a campaign")
+        end
+      end
+      return nil
+    end,
+  }
+end
+
 function Launcher:isReady(version)
   local hit = self.readyCache[version]
   if hit == nil then
@@ -253,6 +274,19 @@ function Launcher:_run(command)
     love.event.quit()
   elseif command.kind == "import" then
     self:startPath(command.path)
+  elseif command.kind == "import_sav" then
+    -- a typed path on the SAVES page (#6)
+    local path = tostring(command.path or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    path = path:gsub('^"(.*)"$', "%1"):gsub("^'(.*)'$", "%1"):gsub("^file://", "")
+    local file = require("src.core.SaveData").openNative(path, "rb")
+    if not file then
+      self.menu:notify(L("Could not open %s", path))
+    else
+      local data = file:read("*a")
+      file:close()
+      if self.menu.saves then self.menu.saves:importData(data, path:match("[^/\\]+$") or path) end
+      self.saveCache = {}
+    end
   elseif command.kind == "boot" then
     if command.newGame then
       -- a new game gets its own slot; the old save stays on disk
@@ -286,6 +320,19 @@ end
 
 function Launcher:importData(data, name)
   if self.job then return end
+  -- a cartridge save goes to the SAVES page of the picked game (#6)
+  if Saves.looksLikeSav(data, name) and self.menu.savesOf then
+    local menu = self.menu
+    if menu.screen ~= "saves" then
+      if not self:isReady(menu.version) then
+        return menu:notify(L("Import the %s ROM before its saves.", Menu.gameLabel(menu.version)))
+      end
+      menu:openSaves(menu.version)
+    end
+    if menu.saves then menu.saves:importData(data, name) end
+    self.saveCache = {}
+    return
+  end
   local version, bytes, label, hash = RomImport.identify(data, name)
   if not version then
     self.menu:notify(bytes)
@@ -522,6 +569,8 @@ function Launcher:press(action)
   -- a new screen starts at its top
   local screenAfter = menu.screen .. "/" .. tostring(menu.coop and menu.coop.screen)
   if screenAfter ~= screenBefore then self.ui.scroll = 0 end
+  -- the SAVES page changes what CONTINUE would open (#6)
+  if menu.screen == "saves" or screenBefore:find("^saves/") then self.saveCache = {} end
 end
 
 -- ------------------------------------------------------------ input

@@ -197,6 +197,29 @@ end
 local GameOptions = require("src.coop.launcher.GameOptions")
 local optionsFs = memoryFs()
 
+-- the SAVES page's model (#6) on a fake slot store
+local Saves = require("src.coop.launcher.Saves")
+local function fakeSlots()
+  local store = {
+    list = {
+      { id = "slot1", exists = true, name = "NOVA", meta = { badges = 3, dexCount = 41, timeText = "12:34" } },
+      { id = "slot2", exists = true, name = "VALE", label = "SUNDAY RUN", meta = { badges = 0, dexCount = 2, timeText = "0:12" } },
+      { id = "slot3", exists = false },
+    }, active = "slot1" }
+  function store.listSlots() return store.list end
+  function store.activeSlot() return store.active end
+  function store.setActiveSlot(_, id) store.active = id return true end
+  function store.createSlot() return "slot4" end
+  function store.deleteSlot() return true end
+  return store
+end
+local function newSaves(version)
+  return Saves.new({ version = version, saves = fakeSlots(),
+    importSav = function() return false, nil, { needsConfirm = true, size = 32786 } end,
+    exportSlot = function() return true, "/somewhere/exports/red/gen1recomp-red-slot1.sav" end,
+    campaignOf = function(id) return id == "slot2" and "SUNDAY RUN" or nil end })
+end
+
 local function newMenu()
   return Menu.new({
     ready = function(v) return ready[v] == true end,
@@ -206,6 +229,7 @@ local function newMenu()
     coop = env, settings = settings, campaigns = Campaigns, canOpenLogs = true,
     controls = newControls(),
     gameOptions = GameOptions.new({ fs = optionsFs }),
+    saves = newSaves,
   })
 end
 
@@ -222,6 +246,27 @@ local SCREENS = {
   { "play, no ROM", function(m) m:select("yellow") end },
   { "solo", function(m) m:go("solo") end },
   { "campaigns", function(m) m:openTab("campaigns") end },
+  { "saves", function(m) m:openSaves("red") end },
+  { "saves, delete", function(m)
+    m:openSaves("red")
+    m.saves.pending = m.saves:details().slots[1]
+    m.saves:go("delete")
+  end },
+  { "saves, import", function(m)
+    m:openSaves("red")
+    m.saves:go("import")
+    m.saves.path = "/home/someone/saves/a long folder name/pokemon red.sav"
+  end },
+  { "saves, oversized", function(m)
+    m:openSaves("red")
+    m.saves:go("import")
+    m.saves:importData(("x"):rep(32786), "big.sav")
+  end },
+  { "saves, exported", function(m)
+    m:openSaves("red")
+    m.saves.cursor = 2
+    m.saves:press("a")
+  end },
   { "controls", function(m) m:openTab("controls") end },
   { "controls, capturing a key", function(m)
     m:openTab("controls")

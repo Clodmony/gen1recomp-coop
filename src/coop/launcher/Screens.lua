@@ -598,6 +598,115 @@ function S.help(p, menu, c)
   return cy + 4
 end
 
+-- the SAVES page (#6): the slots as cards, the questions, the import
+local function savesList(p, saves, c)
+  local rows = saves:items()
+  local d = saves:details()
+  local label = Games.label(saves.version)
+  local y = c.y + heading(p, c, c.y, L("%s saves", label),
+    L("Each slot is one adventure. The game continues the active one."), true)
+  local byslot = {}
+  for i, r in ipairs(rows) do
+    if r.slot then
+      byslot[r.slot] = byslot[r.slot] or {}
+      byslot[r.slot][r.id] = i
+    end
+  end
+  for _, slot in ipairs(d.slots) do
+    local idx = byslot[slot.id] or {}
+    local bws = { fitWidth(L("PLAY →")), fitWidth(L("EXPORT")), fitWidth(L("DELETE")) }
+    local bw = (idx.play and bws[1] + 6 or 0) + bws[2] + bws[3] + 6
+    local inline = c.w - bw - 20 >= 180
+    local ch = inline and 3 * LINE + 14 or 3 * LINE + 44
+    p:rect(c.x, y, c.w, ch, slot.active and "lcd" or "paper")
+    p:frame(c.x, y, c.w, ch, slot.active and "accent" or "line", slot.active and 2 or 1)
+    local tw = inline and c.w - bw - 30 or c.w - 20
+    local title = slot.name or L("Empty slot")
+    if slot.active then title = title .. " · " .. L("ACTIVE") end
+    p:text(c.x + 10, y + 7, Ui.fit(title, tw), "ink")
+    local line2 = slot.exists and L("BADGES %d · POKéDEX %d · TIME %s", slot.badges, slot.dex, slot.time)
+      or L("No save yet: the game starts from its title screen.")
+    p:text(c.x + 10, y + 7 + LINE, Ui.fit(line2, tw), "muted")
+    local line3 = slot.campaign and L("Campaign: %s (entered from CAMPAIGNS)", slot.campaign)
+      or (slot.label and slot.label ~= "" and slot.label ~= slot.name and L("%s · %s", slot.id, slot.label) or slot.id)
+    p:text(c.x + 10, y + 7 + 2 * LINE, Ui.fit(line3, tw), "muted")
+    local bx = inline and c.x + c.w - bw - 10 or c.x + 10
+    local by = inline and y + math.floor((ch - 22) / 2) or y + 3 * LINE + 14
+    if idx.play then
+      rowButton(p, bx, by, bws[1], 22, idx.play, rows[idx.play], { style = "primary" })
+      bx = bx + bws[1] + 6
+    end
+    rowButton(p, bx, by, bws[2], 22, idx.export, rows[idx.export])
+    bx = bx + bws[2] + 6
+    rowButton(p, bx, by, bws[3], 22, idx.delete, rows[idx.delete])
+    y = y + ch + 6
+  end
+  if #d.slots == 0 then
+    y = y + p:para(c.x, y, c.w, L("No saves for %s on this device yet.", label), "muted") + 6
+  end
+  y = y + 6
+  local n = #d.slots
+  p:text(c.x, y + 5, n == 1 and L("1 save slot") or L("%d save slots", n), "muted")
+  local ni, nrow = rowOf(rows, "new")
+  local ii, irow = rowOf(rows, "import")
+  actionsRight(p, c, y, { { index = ii, row = irow }, { index = ni, row = nrow, style = "primary" } })
+  y = y + 30
+  y = y + p:para(c.x, y + 4, c.w,
+    L("A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. Exports go to the exports folder of this device."),
+    "muted") + 4
+  return y
+end
+
+local function savesQuestion(p, saves, c, title)
+  local rows = saves:items()
+  local y = c.y + heading(p, c, c.y, title, nil, false)
+  local close = panel(p, c.x, y, c.w)
+  local py = y + 10 + p:para(c.x + 10, y + 10, c.w - 20, saves:prompt() or "", "ink")
+  close(py + 10)
+  y = py + 18
+  local list = {}
+  for i, row in ipairs(rows) do
+    list[#list + 1] = { index = i, row = row, style = row.id == "confirm" and "primary" or nil }
+  end
+  actionsRight(p, c, y, list)
+  return y + 30
+end
+
+local function savesImport(p, saves, c)
+  local label = Games.label(saves.version)
+  local y = c.y + heading(p, c, c.y, L("Import a save"),
+    L("A .sav for %s becomes a new save slot. Nothing is uploaded.", label), true)
+  local close = panel(p, c.x, y, c.w)
+  local py = y + 10
+  local help = saves.canType
+    and L("Drop the .sav file on this window, or type its path and press ENTER.")
+    or L("Drop the .sav file on this window.")
+  py = py + p:para(c.x + 10, py, c.w - 20, help, "ink") + 8
+  if saves.canType then
+    p:rect(c.x + 10, py, c.w - 20, 22, "field")
+    p:frame(c.x + 10, py, c.w - 20, 22, "line")
+    local shown = saves.path
+    while width(shown) > c.w - 40 do shown = shown:sub(2) end
+    p:text(c.x + 16, py + 5, shown .. "_", "ink")
+    py = py + 30
+  end
+  py = py + p:para(c.x + 10, py, c.w - 20,
+    L("32 KB in the cartridge's format (.sav, .srm). The save's trainer, team, items and progress come along; the slot it lands in is made the active one."),
+    "muted")
+  close(py + 10)
+  return py + 10
+end
+
+function S.saves(p, menu, c)
+  local saves = menu.saves
+  if not saves then return c.y end
+  local s = saves.screen
+  if s == "delete" then return savesQuestion(p, saves, c, L("Delete this save?")) end
+  if s == "confirm" then return savesQuestion(p, saves, c, L("A bigger file than expected")) end
+  if s == "import" then return savesImport(p, saves, c) end
+  return savesList(p, saves, c)
+end
+
 function S.import(p, menu, c)
   local label = Games.label(menu.version)
   local y = c.y + heading(p, c, c.y, L("Bring your cartridge"),
@@ -1027,6 +1136,9 @@ local function screenOf(menu)
     end
     return function(p, c, ui) return C[s](p, coop, c, ui) end, coop
   end
+  if menu.screen == "saves" and menu.saves then
+    return function(p, c) return S.saves(p, menu, c) end, menu.saves
+  end
   local fn = S[menu.screen] or S.play
   return function(p, c) return fn(p, menu, c) end, menu
 end
@@ -1071,6 +1183,7 @@ function Screens.build(menu, ui, opts)
   if spare > 24 then page = make(math.floor(spare / 3)) end
   -- a new screen: the focus starts on the model's cursor, the page at its top
   local sig = menu.screen .. "/" .. tostring(menu.coop and menu.coop.screen)
+    .. "/" .. tostring(menu.saves and menu.saves.screen)
   if ui.sig ~= sig then
     ui.sig, ui.model = sig, nil
     if ui.focus and not ui.focus:find("^tab:") then ui.focus = nil end

@@ -175,6 +175,48 @@ The credit line of upstream's licence is not translated.
 | Video, sound and game options are in each game's own OPTIONS menu. | Bild, Ton und Spieloptionen findest du im Menü OPTIONEN jedes Spiels. | |
 | The game's options are the ones its own OPTIONS menu shows; a change here is a change there. | Die Spieloptionen sind dieselben wie im Menü OPTIONEN des Spiels; eine Änderung hier gilt auch dort. | |
 
+### Saves (#6)
+
+| English | German now | Better German |
+| --- | --- | --- |
+| SAVES | SPIELSTÄNDE | |
+| %s saves | Spielstände %s | |
+| Each slot is one adventure. The game continues the active one. | Jeder Platz ist ein Abenteuer. Das Spiel setzt den aktiven fort. | |
+| PLAY → | SPIELEN → | |
+| EXPORT | EXPORTIEREN | |
+| IMPORT | IMPORTIEREN | |
+| + NEW SAVE | + NEUER SPIELSTAND | |
+| IMPORT .SAV | .SAV IMPORTIEREN | |
+| Empty slot | Leerer Platz | |
+| ACTIVE | AKTIV | |
+| BADGES %d · POKéDEX %d · TIME %s | ORDEN %d · POKéDEX %d · ZEIT %s | |
+| No save yet: the game starts from its title screen. | Noch kein Spielstand: das Spiel beginnt bei seinem Titelbild. | |
+| Campaign: %s (entered from CAMPAIGNS) | Kampagne: %s (Start über KAMPAGNEN) | |
+| No saves for %s on this device yet. | Noch keine Spielstände für %s auf diesem Gerät. | |
+| 1 save slot | 1 Speicherplatz | |
+| %d save slots | %d Speicherplätze | |
+| A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. Exports go to the exports folder of this device. | Eine .sav ist das Format des Moduls, wie ein Emulator oder ein Modul-Lesegerät es schreibt. Exporte landen im Ordner exports dieses Geräts. | |
+| Delete this save? | Diesen Spielstand löschen? | |
+| Delete %s? The save is removed from this device for good. | %s löschen? Der Spielstand wird endgültig von diesem Gerät entfernt. | |
+| this empty slot | diesen leeren Platz | |
+| A bigger file than expected | Eine größere Datei als erwartet | |
+| %s is %d bytes; a cartridge save is %d. Import the first %d bytes? | %s hat %d Bytes; ein Modul-Spielstand hat %d. Die ersten %d Bytes importieren? | |
+| Import a save | Spielstand importieren | |
+| A .sav for %s becomes a new save slot. Nothing is uploaded. | Eine .sav für %s wird ein neuer Speicherplatz. Nichts wird hochgeladen. | |
+| Drop the .sav file on this window, or type its path and press ENTER. | Zieh die .sav-Datei auf dieses Fenster oder tipp ihren Pfad ein und drück ENTER. | |
+| Drop the .sav file on this window. | Zieh die .sav-Datei auf dieses Fenster. | |
+| 32 KB in the cartridge's format (.sav, .srm). The save's trainer, team, items and progress come along; the slot it lands in is made the active one. | 32 KB im Format des Moduls (.sav, .srm). Trainer, Team, Items und Fortschritt kommen mit; der Platz, in dem sie landen, wird der aktive. | |
+| This slot cannot be exported. | Dieser Platz kann nicht exportiert werden. | |
+| This game has no room for another save. | Dieses Spiel hat keinen Platz für einen weiteren Spielstand. | |
+| Exported %s to %s | %s exportiert nach %s | |
+| Could not export: %s | Export fehlgeschlagen: %s | |
+| Deleted %s. | %s gelöscht. | |
+| Could not delete: %s | Löschen fehlgeschlagen: %s | |
+| Imported %s into a new save slot. | %s in einen neuen Speicherplatz importiert. | |
+| Could not import %s: %s | %s konnte nicht importiert werden: %s | |
+| Import the %s ROM before its saves. | Importiere erst das ROM von %s, dann seine Spielstände. | |
+| a campaign | eine Kampagne | |
+
 ### Help
 
 | English | German now | Better German |
