@@ -61,8 +61,10 @@ Rules (design A1):
 - **Versions.** A probe or hello of another protocol version is answered
   with `protocol_mismatch` before anything else in it is read.
 - **Cartridge.** The game id and the ROM's SHA-1 must match the host's, or
-  the hello is refused with `content_mismatch`. Red with Blue is #9. No ROM
-  data is ever sent.
+  the hello is refused with `content_mismatch`. Red with Blue is #9. A
+  cartridge of another language (German `red_de`/`blue_de` against English,
+  [german.md](german.md)) is refused first, whatever #9 lets pair (D95). No
+  ROM data is ever sent.
 - **Refused hellos.** The host sends `rejected` with seq -1 and drops the
   link after `Host.GRACE` (1 s), so the reason arrives first.
 - **Sequence numbers.** Per player and strictly increasing. A number seen

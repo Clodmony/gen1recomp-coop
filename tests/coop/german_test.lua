@@ -44,7 +44,8 @@ do
 end
 local inOrder = {}
 for _, id in ipairs(GameVersion.ORDER) do inOrder[id] = true end
-check(inOrder.red_de and inOrder.blue_de, "both are in GameVersion.ORDER")
+check(not inOrder.red_de and not inOrder.blue_de,
+  "both stay out of upstream's ORDER, so a Gen 1 mod token means the US games")
 
 -- manifests -----------------------------------------------------------------
 local Json = require("src.link.Json")
@@ -116,20 +117,20 @@ local charmap = {}
 for i = 0, 25 do charmap[tostring(0x80 + i)] = string.char(65 + i) end
 
 local rom = romWith({
-  [0x4000] = join(text("NAME"), text("ROT"), text("ASH"), text("JACK")),
-  [0x4020] = join(text("NAME"), text("BLAU"), text("GARY"), text("JOHN")),
+  [0x4000] = join(text("NAME"), text("ONE"), text("TWO"), text("SIX")),
+  [0x4020] = join(text("NAME"), text("TEN"), text("SUN"), text("SKY")),
   -- TradeMons: give 1, get 2, dialogset 1, an 11-byte nickname
   [0x4040] = join({ 1, 2, 1 }, text("BOB"), { 0x50, 0x50, 0x50, 0x50, 0x50, 0x50, 0x50 }),
   -- CreditsOrder: two lines + CRED_TEXT_FADE_MON, copyright + CRED_TEXT, end
   [0x4100] = { 0, 1, 0xFF, 0xFB, 0xFC, 0xFA },
   [0x4200] = { 0x10, 0x42, 0x20, 0x42 },
-  [0x4210] = join({ 0xFD }, text("LEITUNG")),
-  [0x4220] = join({ 0xFA }, text("TAJIRI")),
+  [0x4210] = join({ 0xFD }, text("HEADING")),
+  [0x4220] = join({ 0xFA }, text("STAFF")),
   [0x4300] = { 2 },
   [0x4320] = { 0x64, 0x7F, 0x66, 0x7F, 0x68, 0x7F, 0x64, 0x50 }, -- E N D E
   -- a metric #DEX entry: kind, 19 dm, 1200 hg, TX_FAR
   [0x4400] = { 0x10, 0x44 },
-  [0x4410] = join(text("BOHRER"), { 19, 0xB0, 0x04, 0x17, 0x00, 0x50, 0x2A }),
+  [0x4410] = join(text("KIND"), { 19, 0xB0, 0x04, 0x17, 0x00, 0x50, 0x2A }),
 })
 local deManifest = {
   language = "de",
@@ -150,12 +151,12 @@ local field = {
 }
 x:germanField(field)
 eq(field.presetNames.customOption, "NAME", "the custom-name row is the cartridge's")
-eq(table.concat(field.presetNames.player, ","), "ROT,ASH,JACK", "player presets read")
-eq(table.concat(field.presetNames.rival, ","), "BLAU,GARY,JOHN", "rival presets read")
+eq(table.concat(field.presetNames.player, ","), "ONE,TWO,SIX", "player presets read")
+eq(table.concat(field.presetNames.rival, ","), "TEN,SUN,SKY", "rival presets read")
 eq(field.trades[1].nickname, "BOB", "a trade nickname is read from TradeMons")
 local screens = field.credits.screens
 eq(#screens, 2, "two credits screens")
-eq(screens[1].lines[1].text, "LEITUNG", "a credits line is read")
+eq(screens[1].lines[1].text, "HEADING", "a credits line is read")
 eq(screens[1].lines[1].column, 6, "at column 9 plus its signed offset")
 eq(screens[1].lines[2].column, 3, "the second line's offset")
 check(screens[1].fade and screens[1].mon == "KANGASKHAN",
@@ -168,7 +169,7 @@ eq(table.concat(field.credits.theEnd.pattern, ","), "2,-1,3,-1,4,-1,2",
 eq(field.credits.theEnd.display, "E N D E", "and spelled for the text fallback")
 
 local entry = x:dexEntry(1, "RHYDON")
-eq(entry.kind, "BOHRER", "the #DEX kind")
+eq(entry.kind, "KIND", "the #DEX kind")
 eq(entry.heightM, 1.9, "German height in metres")
 eq(entry.weightKg, 120, "German weight in kilograms")
 eq(entry.heightFt * 12 + entry.heightIn, 75, "converted to 75 inches for the schema")

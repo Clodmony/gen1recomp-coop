@@ -227,8 +227,10 @@ GameVersion.VERSIONS = {
 local NO_FIXES = {}
 
 -- Launcher column order.
-GameVersion.ORDER = { "red", "blue", "yellow", "gold", "silver", "crystal", "firered", "leafgreen", "ruby", "sapphire", "emerald",
-  "red_de", "blue_de" } -- co-op (#25)
+-- co-op (#25): red_de and blue_de stay out: this is upstream's column list
+-- and what a mod's "gen1" token expands to, and a mod for the US games is
+-- not a mod for the German ones.
+GameVersion.ORDER = { "red", "blue", "yellow", "gold", "silver", "crystal", "firered", "leafgreen", "ruby", "sapphire", "emerald" }
 
 GameVersion.current = "red"
 

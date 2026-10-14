@@ -871,8 +871,9 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
    without it (D103).
 6. **adapt** Languages are separate games: German plays only with German, English
    only with English; mixed sessions are refused; each language has its own game
-   ids, so caches and saves stay apart (owner, D95). Upstream imports only the
-   English dumps today; German import is #25 (G7).
+   ids, so caches and saves stay apart (owner, D95). German Red and Blue import
+   and play ([german.md](german.md), #25, G7, G12); the German wording of the
+   engine's own lines is still open in #25.
 7. **adapt** In a German world every engine and co-op line uses the cartridge's own
    words where the cartridge has the line; co-op-only lines are project wording
    kept in a list for the owner to check; layouts follow the German cartridge
@@ -1007,3 +1008,11 @@ sibling's D-numbers.
   [launcher.md](launcher.md) describes; an import in the launcher may come
   with #6. The self-updater and cloud sync stay off until the fork wants its
   own (`src/coop/Upstream.lua`).
+- **G12. German games are the US games with a language** (#25,
+  2026-10-14). `red_de` and `blue_de` carry `base` (the US game they play
+  as) and `language` ("de") in `GameVersion`; their import manifests are
+  derived from the US ones with every address re-sourced from a build of
+  einstein95/pokered-de at its master (its `symbols` branch is from 2022 and
+  uses old label names). Words the US manifests carry from pret's source
+  (name presets, trade nicknames, credits) are read from the cartridge
+  instead, so no German text is committed. Details: [german.md](german.md).
