@@ -397,6 +397,16 @@ P["LEAVE THE CO-OP\nSESSION?"] = "KOOP-SITZUNG\nVERLASSEN?"
 P["END THE SESSION\nFOR EVERYONE?"] = "SITZUNG FÜR ALLE\nBEENDEN?"
 P["%s joined the session."] = "%s ist der Sitzung beigetreten."
 P["%s left the session."] = "%s hat die Sitzung verlassen."
+-- co-op saves (#13)
+P["Campaign saved."] = "Alles gespeichert."
+P["%s saved the campaign."] = "%s hat die Kampagne gespeichert."
+P["The campaign was not saved."] = "Die Kampagne wurde nicht gespeichert."
+P["A battle is in\nprogress!\fIt can't be saved\nright now."] = "Ein Kampf läuft\nnoch!\fSpeichern geht\ngerade nicht."
+P["NOT SAVED YET"] = "NOCH NICHT GESP."
+P["SAVED JUST NOW"] = "GERADE GESPEICHERT"
+P["SAVED %d MIN AGO"] = "VOR %d MIN GESP."
+P["SAVED %d H AGO"] = "VOR %d H GESP."
+P["AUTOSAVE: ON"] = "AUTO-SPEICHERN: AN"
 
 -- battle
 P["FOE"] = "GEGNER"

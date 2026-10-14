@@ -112,6 +112,10 @@ function StartMenu.new(game)
       if menu and game.stack:top() == menu then game.stack:pop() end
     end
     panel.openPrompt = function()
+      -- co-op (#13): a save the host would refuse (a battle running) fails
+      -- in this box and writes nothing, with no YES/NO (CampaignSave.lua)
+      local refused = require("src.coop.game.CampaignSave").refusal(game)
+      if refused then return game.stack:push(TextBox.new(game, refused, closePanel)) end
       game.stack:push(TextBox.new(game,
         Strings("Would you like to\nSAVE the game?"), nil, {
         -- SaveTheGame_YesOrNo pins its TWO_OPTION_MENU at hlcoord 0, 7 rather
@@ -127,7 +131,7 @@ function StartMenu.new(game)
           -- DelayFrames 30.  The write itself is invisible either side of the
           -- "Now saving..." hold, so it stays on that box's onDone.
           game.stack:push(TextBox.new(game, Strings("Now saving..."), function()
-            game:writeSave()
+            game:writeSave("menu") -- co-op (#13): the kind of save
             game.stack:push(TextBox.new(game,
               Strings("%s saved\nthe game!", game.save.player.name or "RED"),
               closePanel, { auto = {
