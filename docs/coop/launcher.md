@@ -225,8 +225,13 @@ dark colours in English at 960 x 864; the pages were looked at locally. The cart
 flags were set by the driver, so no ROM was imported and no game booted in
 that run; the session in the hosting page was a real in-process host with
 networking off, and the join and connection pages showed sessions the driver
-made up. Pads, touch, the system-language default on a German desktop,
-Windows, macOS and phones have not been run with the new pages.
+made up. A second run used two game processes on one machine, each with
+its own save folder and an imported US Red, driven through the pages'
+targets as a click would: the host made a new campaign and hosted it, the
+partner found it on Join a friend, its check showed all three steps ticked,
+it joined, and both entered the game with both players in the session. Two
+machines on a LAN, pads, touch, the system-language default on a German
+desktop, Windows, macOS and phones have not been run with the new pages.
 
 ## Tests
 
