@@ -40,9 +40,10 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 4 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 5 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
-[campaign.md](campaign.md)). Every message is a JSON object with a `type`. Every field from the
+[campaign.md](campaign.md); 5 added the shared world, #14:
+[world.md](world.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -56,6 +57,7 @@ checks what the host sends.
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
 | `world` | `seq`, `save` (the game's save text, at most 1.5 MiB), `checkpoint` (a real SAVE asking the host to save the campaign), `kind` (`menu`, `box`, `hall`, `link`, `quick`; optional) |
+| `patch` | `seq`, `set` (story path to value: a boolean or a whole number 0 to 255), `unset` (paths): this window's change to the shared story since its last patch, at most 8192 entries each |
 
 | Host to client | Fields |
 |---|---|
@@ -64,6 +66,7 @@ checks what the host sends.
 | `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map), `saved_ago` (seconds since the campaign was saved, -1 never), `busy` (why a save would be refused now, or empty) |
 | `world` | once after `welcome`: `fresh` (the campaign has no world for this player), `save` (their world) |
 | `saved` | `ok`, `by` (who saved), `you` (this player asked), `reason` (a refusal: `battle_in_progress`, `bad_world`, `save_failed`), `kind` |
+| `story` | `rev`, `base` (the whole story, replacing the window's), `set`, `unset` (what changed since the last `story` to this player), `applied` (the last of this player's patches the host applied) |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
@@ -95,6 +98,10 @@ Rules (design A1):
   is refused as `bad_world` and changes nothing. A `checkpoint` while a
   battle runs or a join is pending is refused as `battle_in_progress` and
   takes nothing.
+- **Story** (#14). A `patch` entry is applied only when the campaign owns
+  its path and the value fits (`Ownership.lua`); others are skipped, and
+  the patch still counts as applied. The world a player gets has the story
+  laid over it. See [world.md](world.md).
 - **Trusted windows** (D72). The host checks only the step length, up to
   two cells on one map (a ledge hop). A map change or a jump has to come
   with `warp`, which is taken as it is. A refused step is `bad_step`.
