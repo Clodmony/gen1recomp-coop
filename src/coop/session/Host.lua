@@ -9,6 +9,10 @@
 --   every frame: host:update()
 --   host:shutdown("host_quit")  -- clients get `ended`, links close
 --
+-- opts.players lists the campaign's known players ({ id, name, game }, the
+-- launcher's campaign card, #12): they start disconnected, so a device that
+-- remembers one, or types the same name, gets that player back.
+--
 -- Clients send intentions; the host checks each one (Protocol.sanitize, then
 -- its own rules) and answers every player with the state it may see.  This
 -- issue covers joining, moving, leaving and rejoining; the campaign, world,
@@ -81,6 +85,15 @@ function Host.new(opts)
     dropped = 0,
     floods = 0,
   }, Host)
+  for _, known in ipairs(type(opts.players) == "table" and opts.players or {}) do
+    if type(known) == "table" and Protocol.playerId(known.id) and Protocol.name(known.name)
+        and not self.byId[known.id] and #self.players < self.maxPlayers then
+      local p = { id = known.id, name = known.name, lastSeq = 0, connected = false,
+                  game = Protocol.gameId(known.game) and known.game or nil }
+      self.players[#self.players + 1] = p
+      self.byId[p.id] = p
+    end
+  end
   self.sharedAt = self.clock()
   self:_log("start", { campaign = self.campaign, cartridge = self.cartridge,
                        build = self.build, protocol = Protocol.VERSION })
@@ -292,7 +305,7 @@ function Host:_move(link, msg)
       return self:_refuse(link, msg.seq, "bad_step")
     end
   end
-  p.map, p.x, p.y, p.facing = msg.map, msg.x, msg.y, msg.facing
+  p.map, p.x, p.y, p.facing, p.travel = msg.map, msg.x, msg.y, msg.facing, msg.travel
   self.dirty = true
 end
 
@@ -414,7 +427,8 @@ end
 
 local function publicView(p)
   return { id = p.id, name = p.name, game = p.game, connected = p.connected,
-           map = p.map, x = p.x, y = p.y, facing = p.facing }
+           map = p.map, x = p.x, y = p.y, facing = p.facing,
+           travel = p.map and p.travel or nil }
 end
 
 function Host:_broadcast()
@@ -511,5 +525,16 @@ function Host:_finish()
 end
 
 function Host:player(id) return self.byId[id] end
+
+-- every player the session has seen, for the campaign card (#12): id, name,
+-- game, connected, and the address they dialled (`via`)
+function Host:roster()
+  local out = {}
+  for i, p in ipairs(self.players) do
+    out[i] = { id = p.id, name = p.name, game = p.game, connected = p.connected == true,
+               via = p.via }
+  end
+  return out
+end
 
 return Host

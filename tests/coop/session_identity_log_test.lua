@@ -10,6 +10,7 @@ local T = require("tests.harness")
 local check, eq = T.check, T.eq
 local Json = require("src.link.Json")
 local Identity = require("src.coop.session.Identity")
+local Protocol = require("src.coop.session.Protocol")
 local SessionLog = require("src.coop.session.SessionLog")
 local Transport = require("src.coop.session.Transport")
 local Host = require("src.coop.session.Host")
@@ -41,6 +42,40 @@ eq(broken.device, ("b"):rep(16), "a malformed device id is replaced")
 eq(next(broken:known("h", 1)), nil, "malformed remembered entries are skipped")
 stored = "not json"
 eq(#Identity.load(store).device, 16, "an unreadable file starts over")
+
+-- live check #15: the development entry hosts a new campaign on every
+-- boot, and after 64 of them the hello's `known` map was over
+-- Protocol.MAX_KNOWN, so the host dropped the hello whole and the player
+-- stayed "joining" for good.  A device keeps the newest MAX_KNOWN per seat.
+do
+  stored = nil
+  local many = Identity.load(store)
+  local function cid(i) return ("c%016x"):format(i) end
+  for i = 1, Protocol.MAX_KNOWN + 6 do many:remember("loopback", 1, cid(i), "p00000001") end
+  local known = many:known("loopback", 1)
+  local n = 0
+  for _ in pairs(known) do n = n + 1 end
+  eq(n, Protocol.MAX_KNOWN, "a seat keeps at most MAX_KNOWN campaigns")
+  eq(known[cid(1)], nil, "the oldest gives way")
+  eq(known[cid(Protocol.MAX_KNOWN + 6)], "p00000001", "the newest stays")
+  many:remember("loopback", 1, cid(7), "p00000009")
+  many:remember("loopback", 1, cid(Protocol.MAX_KNOWN + 7), "p00000001")
+  eq(many:known("loopback", 1)[cid(7)], "p00000009", "a campaign played again is newest again")
+  local reloaded = Identity.load(store)
+  eq(reloaded:known("loopback", 1)[cid(7)], "p00000009", "the order survives a restart")
+  eq(reloaded:known("loopback", 1)[cid(8)], nil, "and so does the trimming")
+  local hello = { type = "hello", protocol = Protocol.VERSION, build = "t", name = "RED",
+                  game = "red", sha1 = SHA, device = ("a"):rep(16), seat = 1,
+                  known = reloaded:known("loopback", 1) }
+  check(Protocol.sanitize(hello, "host") ~= nil, "the hello with every kept campaign passes")
+  -- a file from before the cap, with more than MAX_KNOWN, loads trimmed
+  local big = {}
+  for i = 1, Protocol.MAX_KNOWN + 10 do big[cid(i)] = "p00000001" end
+  stored = Json.encode({ device = ("a"):rep(16), hosts = { loopback = { ["1"] = big } } })
+  n = 0
+  for _ in pairs(Identity.load(store):known("loopback", 1)) do n = n + 1 end
+  eq(n, Protocol.MAX_KNOWN, "an older, longer file loads trimmed")
+end
 
 -- live check #10: two games started together drew the same device id from
 -- the unseeded math.random; ids now come from the system's random source
@@ -93,7 +128,7 @@ c:join()
 for _ = 1, 3 do host:update(); c:update() end
 c:move("PALLET_TOWN", 1, 1, "up", true)
 c.conn:send({ type = "move", seq = 1, map = "PALLET_TOWN", x = 1, y = 2,
-              facing = "up", warp = false })
+              facing = "up", warp = false, travel = "walk" })
 c.conn:send({ type = "move", seq = "x" })
 for _ = 1, 3 do host:update(); c:update() end
 host:shutdown("host_quit")

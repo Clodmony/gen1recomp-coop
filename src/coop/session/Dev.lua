@@ -1,29 +1,23 @@
--- The development entry to a co-op session (#10), until the launcher's
--- co-op screens exist (#12).  Start the game with
+-- The development entry to a co-op session (#10): start the game with
 --
 --   love . --coop-host[=PORT] [--coop-name=NAME] [--coop-logs=off]
 --   love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME] [--coop-logs=off]
 --
 -- (or POKEPORT_COOP_HOST=PORT, POKEPORT_COOP_JOIN=ADDRESS,
 -- POKEPORT_COOP_NAME=NAME, POKEPORT_COOP_LOGS=off for scripted runs).
--- The session log is shared with the other players unless logs are off
--- (#31).  Once a game runs, the host
--- side starts the in-process host on UDP PORT (default 24680) with the LAN
--- beacon, and its own player dials it over loopback; the join side dials the
--- address.  Each player's position is reported to the host as it moves; the
--- console prints who joined, left and changed maps.  Nothing of the other
--- players is drawn yet (#15).
+-- The launcher's co-op screens (#12) are the way in for players; this entry
+-- skips them for scripted runs.  Once a game runs, the host side hosts a
+-- new campaign on UDP PORT (default 24680) with the LAN beacon, and the
+-- join side dials the address and joins as soon as the host answers.  The
+-- session itself is Session.lua; the session log is shared with the other
+-- players unless logs are off (#31).
 
 local Transport = require("src.coop.session.Transport")
 local Protocol = require("src.coop.session.Protocol")
-local Host = require("src.coop.session.Host")
-local Client = require("src.coop.session.Client")
-local Beacon = require("src.coop.session.Beacon")
-local Identity = require("src.coop.session.Identity")
-local SessionLog = require("src.coop.session.SessionLog")
+local Session = require("src.coop.session.Session")
 local Random = require("src.coop.session.Random")
 
-local Dev = { config = nil }
+local Dev = { config = nil, session = nil }
 
 local function say(fmt, ...)
   print("co-op: " .. fmt:format(...))
@@ -72,147 +66,43 @@ function Dev.configure(args)
   end
 end
 
-local function cartridge()
-  local GameVersion = require("src.core.GameVersion")
-  local version = GameVersion.get()
-  local info = GameVersion.info(version)
-  return { game = version, sha1 = info and info.sha1 or "" }
-end
+Dev.nextMove = Session.nextMove
 
-function Dev.start(game)
+function Dev.start()
   local cfg = Dev.config
-  local s = { game = game, last = nil, names = {}, maps = {} }
-  Dev.session = s
-  local cart = cartridge()
-  local identity = Identity.load(Identity.saveFolderStore())
-  s.identity = identity
-  s.frames = 0
-  s.log = SessionLog.open({ fs = SessionLog.saveFolderFs(), device = identity.device,
-                            name = cfg.name, seat = 1, share = cfg.shareLogs,
-                            frame = function() return s.frames end })
-  local conn, hostKey
+  local cart = Session.cartridge()
   if cfg.mode == "host" then
-    s.host = Host.new({
+    Dev.session = Session.startHost({
       campaign = { id = "c" .. Random.hex(16), title = cart.game:upper() .. " CO-OP" },
-      cartridge = cart, hostName = cfg.name, port = cfg.port, log = s.log,
-      device = identity.device,
+      cartridge = cart, name = cfg.name, port = cfg.port, shareLogs = cfg.shareLogs,
     })
-    local hub = s.host:serve(Transport.loopback())
-    local listener, err = Transport.listen(cfg.port)
-    if listener then
-      s.host:serve(listener)
-      say("hosting on UDP port %d (campaign %s)", cfg.port, s.host.campaign.id)
-      s.beacon = Beacon.sender({ lobby = function() return s.host:lobby() end })
-    else
-      say("only local players: %s", tostring(err))
-    end
-    conn, hostKey = hub:dial(), "loopback"
   else
-    conn, hostKey = Transport.dial(cfg.address), cfg.address
-    say("dialling %s", conn.address or cfg.address)
-  end
-  s.client = Client.new(conn, {
-    name = cfg.name, game = cart.game, sha1 = cart.sha1, device = identity.device,
-    seat = 1, known = identity:known(hostKey, 1), via = cfg.address,
-    -- the host's own player: its lines are already in the host's log
-    log = cfg.mode == "join" and s.log or nil,
-    onWelcome = function(c, msg)
-      identity:remember(hostKey, 1, msg.campaign, msg.player)
-      say("joined campaign %s as %s (%s)", msg.campaign, msg.player, c.name)
-    end,
-  })
-  s.client:join()
-end
-
--- The move to report for this player's cell `cur` ({ mapId, x, y,
--- facing }) after `last`, or nil when nothing is to be sent.  warp when the
--- map changed or the player jumped (a warp tile, fly, a whiteout) or after
--- a refused step.  A step through a map connection shows a cell off the map
--- for a frame (y = -1 on the next map); that one is skipped, so the settled
--- cell on the new map goes out as the map change.
-function Dev.nextMove(last, cur, resync)
-  if not cur or type(cur.x) ~= "number" or type(cur.y) ~= "number" then return nil end
-  if cur.x < 0 or cur.y < 0 or cur.x > Protocol.MAX_CELL or cur.y > Protocol.MAX_CELL then
-    return nil
-  end
-  local map = tostring(cur.mapId)
-  local facing = cur.facing or "down"
-  if last and last.map == map and last.x == cur.x and last.y == cur.y
-     and last.facing == facing and not resync then
-    return nil
-  end
-  local warp = not last or last.map ~= map
-    or math.abs(last.x - cur.x) + math.abs(last.y - cur.y) > 2 or resync and true or false
-  return { map = map, x = cur.x, y = cur.y, facing = facing, warp = warp }
-end
-
-local function report(s)
-  local WorldAPI = require("src.world.WorldAPI")
-  local m = Dev.nextMove(s.last, WorldAPI.new(s.game):current(), s.resync)
-  if m and s.client:move(m.map, m.x, m.y, m.facing, m.warp) then
-    s.last = m
-    s.resync = false
+    Dev.session = Session.startDial({ address = cfg.address, cartridge = cart,
+                                 name = cfg.name, shareLogs = cfg.shareLogs })
+    say("dialling %s", Dev.session.address)
   end
 end
 
--- console lines for what changed among the other players
-local function narrate(s)
-  local state = s.client.state
-  if not state or state == s.seenState then return end
-  s.seenState = state
-  for _, p in ipairs(state.players) do
-    if p.id ~= s.client.player then
-      local was = s.names[p.id]
-      if p.connected and was ~= "on" then say("%s joined", p.name) end
-      if not p.connected and was == "on" then say("%s left", p.name) end
-      s.names[p.id] = p.connected and "on" or "off"
-      if p.map and p.map ~= s.maps[p.id] then
-        say("%s is on %s (%d,%d)", p.name, p.map, p.x or 0, p.y or 0)
-        s.maps[p.id] = p.map
-      end
-    end
-  end
-end
-
+-- One frame of a game: the session the launcher started, or the one this
+-- entry starts once the game runs.  Returns "launcher" when the session
+-- ended under the game (main.lua then goes back to the launcher).
 function Dev.update(dt, game)
-  if not Dev.config or not game then return end
-  if not Dev.session then Dev.start(game) end
+  if not game then return nil end
+  if not Dev.config then return Session.tick(dt, game) end
+  if Session.takeLauncher() then return "launcher" end
+  if not Dev.session then Dev.start() end
   local s = Dev.session
-  s.frames = s.frames + 1
-  if s.host then s.host:update() end
-  if s.beacon then s.beacon:update(dt) end
-  local c = s.client
-  local before = c.status
-  c:update()
-  if c.status ~= before then
-    if s.log then s.log:write("client", c.status, { reason = c.reason }, c.player) end
-    if c.status == "refused" or c.status == "ended" or c.status == "closed" then
-      say("%s (%s)", c.status, tostring(c.reason))
-    end
+  if s.kind == "join" and s.status == "probed" then s:join() end
+  if s.status == "refused" and not s.said then
+    s.said = true
+    say("refused (%s)", tostring(s.reason))
   end
-  for i = (s.seenRejections or 0) + 1, #c.rejections do
-    if c.rejections[i].reason == "bad_step" then s.resync = true end
-  end
-  s.seenRejections = #c.rejections
-  if c.status == "joined" then
-    report(s)
-    narrate(s)
-  end
+  if s ~= Session.current then return nil end
+  return Session.tick(dt, game)
 end
 
 function Dev.shutdown()
-  local s = Dev.session
-  if not s then return end
-  Dev.session = nil
-  if s.client then s.client:leave() end
-  if s.host then
-    s.host:shutdown("host_quit")
-    s.host:update()
-    s.host:_finish()
-  elseif s.log then
-    s.log:close()
-  end
-  if s.beacon then s.beacon:close() end
+  Session.shutdown()
 end
 
 return Dev

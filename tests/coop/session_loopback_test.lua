@@ -104,7 +104,7 @@ eq(#green.state.nearby, 0, "players on two maps are not nearby")
 -- sequence numbers ----------------------------------------------------------
 local before = #red.rejections
 red.conn:send({ type = "move", seq = red.seq, map = "ROUTE_1", x = 5, y = 34,
-                facing = "up", warp = false })
+                facing = "up", warp = false, travel = "walk" })
 pump(host, { red, green })
 eq(#red.rejections, before + 1, "a repeated number is answered")
 eq(lastRejection(red), "duplicate", "a repeated number is refused as duplicate")
@@ -113,7 +113,7 @@ eq(green:playerView(red.player).y, 35, "a duplicate changes nothing")
 -- an intention before hello ------------------------------------------------
 local early = hub:dial()
 early:send({ type = "move", seq = 1, map = "ROUTE_1", x = 1, y = 1,
-             facing = "up", warp = true })
+             facing = "up", warp = true, travel = "walk" })
 pump(host, { red, green })
 local got = early:poll()
 eq(got[1] and got[1].reason, "hello_first", "a move before hello is refused")

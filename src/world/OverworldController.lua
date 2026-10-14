@@ -1817,6 +1817,7 @@ function OverworldState:handleInput()
     if not held then held = {}; self.joyLatch = held end
     if input:wasPressed("a") then held.a = true end
     if input:wasPressed("start") then held.start = true end
+    if input:wasPressed("select") then held.select = true end -- co-op (#15)
     return
   end
   local latch = self.joyLatch
@@ -1830,6 +1831,11 @@ function OverworldState:handleInput()
      or (latch and latch.start and input:isDown("start")) then
     require("src.core.Sound").play(Game.data, "Start_Menu")
     Screens.push(Game, "StartMenu")
+    return
+  end
+  -- co-op (#15): SELECT opens the CO-OP menu in a co-op session
+  if (input:wasPressed("select") or (latch and latch.select and input:isDown("select")))
+     and require("src.coop.game.CoopMenu").select(Game) then
     return
   end
 
@@ -5977,6 +5983,8 @@ end
 function OverworldState:draw()
   Game.renderer:beginWorldPass()
   if not self:drawWorldFaded() then self:drawWorld() end
+  -- co-op (#15): the partner arrows, on the world's edges, under the UI
+  require("src.coop.game.Presence").drawWorld(Game, self)
   Game.renderer:endWorldPass()
   self:drawUI()
 end
@@ -6842,6 +6850,8 @@ end
 
 -- screen-space overlays: drawn to the UI canvas at normal scale
 function OverworldState:drawUI()
+  -- co-op (#15): the notices, under every box and menu
+  require("src.coop.game.Presence").drawUI(Game, self)
   -- engine/events/prize_menu.asm:24-28
   if self.prizeWindow then
     require("src.ui.PrizeCounter").drawWindow(
