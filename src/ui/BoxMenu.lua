@@ -56,6 +56,9 @@ end
 -- action + STATS + CANCEL.  STATS shows the status screen and returns
 -- here; CANCEL/B goes back to the list.
 local function monSubmenu(game, action, mon, onAction)
+  -- co-op (#25): bills_pc.asm draws the German box from column 8, a
+  -- column wider (src/coop/game/German.lua layout.pcSubmenu)
+  local de = require("src.coop.game.German").layoutFor("pcSubmenu")
   game.stack:push(Menu.new(game, {
     { label = action, onSelect = onAction },
     {
@@ -66,7 +69,7 @@ local function monSubmenu(game, action, mon, onAction)
       end,
     },
     { label = Strings("CANCEL") },
-  }, { tx = 9, ty = 10, tw = 11, th = 8, noSound = true }))
+  }, { tx = de and de.boxX or 9, ty = 10, tw = de and de.boxW or 11, th = 8, noSound = true }))
 end
 
 -- After a successful transfer: close the mon list (BoxMenu stays beneath
