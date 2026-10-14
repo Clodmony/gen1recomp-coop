@@ -1,8 +1,9 @@
--- What the launcher's co-op screens remember on this device (#12, design
--- A2.1, A2.8): the player's name, the last address and the recent ones, the
--- cartridge picked, the last session (for the Last session row), the log-sharing switch, and the
--- save slot each campaign plays in on this device.  `coop/launcher.json` in
--- the save folder.
+-- What the launcher remembers on this device (#12, design A2.1, A2.8): the
+-- player's name, the last address and the recent ones, the cartridge
+-- picked, the last session (for the LAST SESSION row), the log-sharing
+-- switch, the save slot each campaign plays in on this device, and the
+-- launcher's language and colours (#41, #38; nil: the system's language,
+-- light colours).  `coop/launcher.json` in the save folder.
 --
 -- Until the campaign files of #13, a player's progress in a campaign is a
 -- save slot of their own device, named after the campaign.  Entering a
@@ -45,6 +46,8 @@ function CoopSettings.load(fs)
     end
   end
   if data.shareLogs == false then self.shareLogs = false end
+  if data.language == "en" or data.language == "de" then self.language = data.language end
+  if data.theme == "light" or data.theme == "dark" then self.theme = data.theme end
   if Protocol.gameId(data.pick) then self.pick = data.pick end
   local last = data.last
   if type(last) == "table" and Protocol.gameId(last.version) then
@@ -76,7 +79,7 @@ function CoopSettings:save()
   return f.write(CoopSettings.FILE, Json.encode({
     name = self.name, address = self.address, recent = self.recent,
     shareLogs = self.shareLogs, pick = self.pick, last = self.last, slots = self.slots,
-    restore = self.restore,
+    restore = self.restore, language = self.language, theme = self.theme,
   }))
 end
 

@@ -1,5 +1,6 @@
--- The fork's launcher menu model (#3): screens, cursor, commands, the credit
--- line and ROM identification, ROM-free.
+-- The fork's launcher menu model (#3, laid out anew in #38): tabs, the
+-- cartridge pick, solo, the import screen, settings, the credit line and ROM
+-- identification, ROM-free.
 --   luajit tests/coop/launcher_menu_test.lua
 
 package.path = "./?.lua;./?/init.lua;" .. package.path
@@ -8,11 +9,35 @@ love = love or require("tests.love_stub")
 local T = require("tests.harness")
 local check, eq = T.check, T.eq
 local Menu = require("src.coop.launcher.Menu")
+local Text = require("src.coop.launcher.Text")
+Text.set("en")
 
 local function ids(menu)
   local out = {}
   for _, row in ipairs(menu:items()) do out[#out + 1] = row.id end
   return table.concat(out, ",")
+end
+
+local function pick(menu, id, game)
+  for i, row in ipairs(menu:items()) do
+    if row.id == id and (game == nil or row.game == game) then
+      menu.cursor = i
+      return menu:press("a")
+    end
+  end
+  error("no row " .. id)
+end
+
+local function row(menu, id)
+  for _, r in ipairs(menu:items()) do if r.id == id then return r end end
+  return nil
+end
+
+local function fakeSettings()
+  local s = { saved = 0 }
+  function s:save() self.saved = self.saved + 1 end
+  function s:picked(v) self.pick = v end
+  return s
 end
 
 local function newMenu(opts)
@@ -21,56 +46,52 @@ local function newMenu(opts)
     ready = function(v) return (opts.ready or {})[v] == true end,
     saveInfo = function(v) return (opts.saves or {})[v] end,
     canQuit = opts.canQuit, canType = opts.canType, initial = opts.initial,
+    coop = opts.coop, settings = opts.settings or fakeSettings(),
+    canOpenLogs = opts.canOpenLogs,
   })
 end
 
--- the credit line is the licence's text, word for word
+-- the credit line is the licence's text, word for word, in every language
 eq(Menu.CREDIT, "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB "
   .. "GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)",
   "credit line matches LICENSE.MD term 1")
-do
-  local found = false
-  for _, para in ipairs(Menu.CREDITS) do
-    if para == Menu.CREDIT then found = true end
-  end
-  check(found, "the credits screen carries the credit line")
-  local lines = Menu.wrap(Menu.CREDIT, 20)
-  eq(#lines, 6, "credit line fits the 6-row footer at 20 columns")
-  for _, line in ipairs(lines) do check(#line <= 20, "footer line fits: " .. line) end
-  eq(table.concat(lines):gsub(" ", ""), Menu.CREDIT:gsub(" ", ""),
-    "wrapping keeps every character of the credit line")
+for _, lang in ipairs({ "en", "de" }) do
+  Text.set(lang)
+  eq(Menu.credits()[1], Menu.CREDIT, "the HELP tab's credits start with the credit line (" .. lang .. ")")
 end
+Text.set("en")
 
--- title screen
+-- PLAY: the five cartridges, solo, the three ways to play together
 do
   local m = newMenu({ ready = { red = true } })
-  eq(ids(m), "red,blue,yellow,red_de,blue_de,credits,quit",
-    "title lists the five games (German Red and Blue too, #25), credits, quit")
-  eq(m:items()[1].detail, nil, "an imported game shows no NO ROM")
-  eq(m:items()[2].detail, "NO ROM", "a game without a ROM says so")
-  eq(ids(newMenu({ canQuit = false })), "red,blue,yellow,red_de,blue_de,credits",
-    "no QUIT on mobile")
-  eq(newMenu({ initial = "yellow" }).cursor, 3, "initial game is preselected")
+  eq(m.screen, "play", "the launcher opens on PLAY")
+  eq(ids(m), "cart,cart,cart,cart,cart,solo,host,join,couch",
+    "five cartridges (German Red and Blue too, #25), solo, host, join, couch co-op")
+  eq(m.version, "red", "Red is picked by default")
+  eq(m:items()[1].detail, "Ready", "an imported cartridge says so")
+  eq(m:items()[2].detail, "Import ROM", "a cartridge without a ROM says so")
+  eq(row(m, "couch").enabled, false, "couch co-op is planned, not offered (#4, #11)")
+  eq(row(m, "host").enabled, false, "no hosting without the co-op screens")
+  eq(newMenu({ initial = "yellow" }).version, "yellow", "the initial game is picked")
+  pick(m, "cart", "blue")
+  eq(m.version, "blue", "A on a cartridge picks it")
+  eq(m.settings.pick, "blue", "and the pick is remembered")
+  eq(ids(m), "cart,cart,cart,cart,cart,solo,host,join,couch,import",
+    "a cartridge without a ROM adds IMPORT ROM")
+  eq(row(m, "solo").enabled, false, "and cannot be played solo")
+  m.cursor = 1
   m:press("up")
-  eq(m.cursor, 7, "cursor wraps from the top to QUIT")
+  eq(m:items()[m.cursor].id, "import", "the cursor wraps from the top to the last row")
   m:press("down")
   eq(m.cursor, 1, "and back")
-  m.cursor = 7
-  eq(m:press("a").kind, "quit", "QUIT asks the host to quit")
-  m.cursor = 6
-  m:press("a")
-  eq(m.screen, "credits", "CREDITS opens the credits")
-  m:press("b")
-  eq(m.screen, "title", "B leaves the credits")
-  eq(m.cursor, 6, "back on CREDITS")
 end
 
--- a game with no ROM: the import screen takes a path
+-- a cartridge with no ROM: the import screen takes a path
 do
   local m = newMenu()
-  m.cursor = 2
-  m:press("a")
-  eq(m.screen, "import", "a game without a ROM opens the import screen")
+  pick(m, "cart", "blue")
+  pick(m, "import")
+  eq(m.screen, "import", "IMPORT ROM opens the import screen")
   eq(m.version, "blue", "for that game")
   eq(m:press("a"), nil, "an empty path does nothing")
   m:text("/roms/Blue é")
@@ -81,42 +102,73 @@ do
   eq(cmd and cmd.kind, "import", "A on a path asks the host to import")
   eq(cmd and cmd.path, "/roms/Blue x.gb", "with the typed path")
   m:press("b")
-  eq(m.screen, "title", "B goes back to the title")
-  eq(m.cursor, 2, "with the game still selected")
+  eq(m.screen, "play", "B goes back to PLAY")
+  eq(m:items()[m.cursor].game, "blue", "with the cartridge under the cursor")
   m:text("ignored")
   eq(m.path, "/roms/Blue x.gb", "typing outside the import screen is ignored")
 end
 
--- an imported game: continue or start
+-- solo: continue or start
 do
   local m = newMenu({ ready = { red = true } })
-  m:press("a")
-  eq(m.screen, "game", "an imported game opens its game screen")
+  pick(m, "solo")
+  eq(m.screen, "solo", "PLAY SOLO opens the solo sheet")
   eq(ids(m), "new,reimport,back", "no CONTINUE without a save")
-  local cmd = m:press("a")
+  local cmd = pick(m, "new")
   eq(cmd and cmd.kind, "boot", "NEW GAME boots")
   eq(cmd and cmd.newGame, false, "without a save, NEW GAME needs no new slot")
-  m.cursor = 2
-  m:press("a")
-  eq(m.screen, "import", "NEW ROM opens the import screen for that game")
+  pick(m, "reimport")
+  eq(m.screen, "import", "IMPORT AGAIN opens the import screen for that game")
   eq(m.version, "red", "for Red")
 end
 do
   local m = newMenu({ ready = { red = true }, saves = { red = { name = "ASH", badges = 2, time = "3:04" } } })
-  m:press("a")
+  pick(m, "solo")
   eq(ids(m), "continue,new,reimport,back", "a save adds CONTINUE first")
-  local cmd = m:press("a")
+  local cmd = pick(m, "continue")
   eq(cmd and cmd.kind .. ":" .. cmd.version, "boot:red", "CONTINUE boots Red")
   eq(cmd and cmd.newGame, false, "CONTINUE keeps the save")
-  m:press("down")
-  cmd = m:press("a")
+  cmd = pick(m, "new")
   eq(cmd and cmd.newGame, true, "NEW GAME over a save asks for a new slot")
   m:press("b")
-  eq(m.screen, "title", "B leaves the game screen")
-  m:press("a")
-  m.cursor = 4
-  m:press("a")
-  eq(m.screen, "title", "BACK leaves the game screen")
+  eq(m.screen, "play", "B leaves the solo sheet")
+  eq(m:items()[m.cursor].id, "solo", "back on PLAY SOLO")
+  pick(m, "solo")
+  pick(m, "back")
+  eq(m.screen, "play", "BACK leaves it too")
+end
+
+-- tabs
+do
+  local m = newMenu({ ready = { red = true }, canOpenLogs = true })
+  check(m:isTop(), "PLAY is a tab's page")
+  m:openTab("settings")
+  eq(m.screen, "settings", "the SETTINGS tab")
+  eq(ids(m), "language,theme", "language and colours")
+  eq(m:items()[1].detail, "ENGLISH", "the language shows")
+  local cmd = pick(m, "language")
+  eq(cmd and cmd.kind, "settings", "a changed setting tells the launcher")
+  eq(Text.language, "de", "LANGUAGE switches to German")
+  eq(m.settings.language, "de", "and is kept")
+  eq(m:items()[1].label, "SPRACHE", "the menu is German at once")
+  pick(m, "language")
+  eq(Text.language, "en", "and back to English")
+  pick(m, "theme")
+  eq(m.settings.theme, "dark", "THEME switches to dark")
+  m:openTab("help")
+  eq(ids(m), "share,open", "HELP: the log-sharing switch and the logs folder")
+  eq(m:items()[1].detail, "ON", "sharing is on by default")
+  pick(m, "share")
+  eq(m.settings.shareLogs, false, "and switches off")
+  eq(pick(m, "open").kind, "open_logs", "OPEN LOGS FOLDER asks the launcher")
+  m:openTab("controls")
+  eq(ids(m), "", "CONTROLS has nothing to choose")
+  m:press("b")
+  eq(m.screen, "play", "B on a tab goes back to PLAY")
+  eq(m.tab, "play", "and the PLAY tab")
+  local nolog = newMenu({})
+  nolog:openTab("help")
+  eq(ids(nolog), "share", "no OPEN LOGS FOLDER where it cannot open (a phone)")
 end
 
 -- import progress and messages
@@ -139,16 +191,10 @@ do
   m:importStarted("yellow", "y.gb")
   ready.yellow = true
   m:importDone("yellow")
-  eq(m.screen, "game", "a finished import opens the game screen")
-  eq(m.version, "yellow", "for Yellow")
+  eq(m.screen, "play", "a finished import goes to PLAY")
+  eq(m.version, "yellow", "with Yellow picked")
+  eq(m:items()[m.cursor].id, "solo", "on PLAY SOLO")
   check(m.notice ~= nil, "and says it is ready")
-end
-
--- wrap
-do
-  local lines = Menu.wrap("aaaaaaaaaaaaaaaaaaaaaaaaa bb", 10)
-  eq(table.concat(lines, "|"), "aaaaaaaaaa|aaaaaaaaaa|aaaaa bb", "a long word is split")
-  eq(#Menu.wrap("", 10), 1, "empty text is one empty line")
 end
 
 -- ROM identification (no ROM: the hash and the version lookup are stubbed)
@@ -171,6 +217,11 @@ do
   v, msg = RomImport.identify(("x"):rep(1024 * 1024), "x.gb")
   check(v == nil and tostring(msg):find("Red, Blue and Yellow", 1, true) ~= nil,
     "a non-Gen 1 game is refused")
+  Text.set("de")
+  v, msg = RomImport.identify(("x"):rep(1024 * 1024), "x.gb")
+  check(v == nil and tostring(msg):find("Rot, Blau und Gelb", 1, true) ~= nil,
+    "and the reason is German in a German launcher (#41)")
+  Text.set("en")
   GameVersion.forSha1 = function() return "blue" end
   local version, bytes, label, hash = RomImport.identify(("x"):rep(1024 * 1024), "x.gb")
   eq(version, "blue", "a known Gen 1 ROM is named by its SHA-1")
