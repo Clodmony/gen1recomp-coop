@@ -17,6 +17,7 @@ local Menu = require("src.coop.launcher.Menu")
 local RomImport = require("src.coop.launcher.RomImport")
 local CoopSettings = require("src.coop.launcher.CoopSettings")
 local Controls = require("src.coop.launcher.Controls")
+local GameOptions = require("src.coop.launcher.GameOptions")
 local Seats = require("src.coop.game.Seats")
 local Screens = require("src.coop.launcher.Screens")
 local Text = require("src.coop.launcher.Text")
@@ -90,6 +91,8 @@ function Launcher.new(onBoot, opts)
     campaigns = require("src.coop.Campaigns"),
     coop = function(v) return self:_coopEnv(v) end,
     controls = self.controls,
+    -- the game's options on SETTINGS (#5), in options.lua where the game reads them
+    gameOptions = GameOptions.new({ fixedDisplay = require("src.core.VideoMode").fixedDisplay() }),
   })
   self:_coopReturn()
   if opts.notice then self.menu:notify(opts.notice) end
@@ -492,7 +495,14 @@ function Launcher:press(action)
   else
     local page = self:_page()
     local focused = self.ui.focus and page:find(self.ui.focus)
-    if DIRECTIONS[action] then
+    local act = focused and focused.act
+    local stepping = act and act.kind == "row" and (action == "left" or action == "right")
+      and (Screens.model(menu):items()[act.index] or {}).option
+    if stepping then
+      -- left and right step a game option's value, never leave the row (#5)
+      self:_focus(focused)
+      self:_run(menu:press(action))
+    elseif DIRECTIONS[action] then
       local target = focused and Ui.neighbour(page, focused, action)
       if target then
         self:_focus(target)

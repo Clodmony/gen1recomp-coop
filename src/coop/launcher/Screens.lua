@@ -501,24 +501,52 @@ end
 function S.settings(p, menu, c)
   local rows = menu:items()
   local y = c.y + heading(p, c, c.y, L("Settings"),
-    L("The launcher's own settings. A game's text follows its cartridge."), false)
-  local close = panel(p, c.x, y, c.w)
-  local ry = y + 10
+    L("The launcher's own settings, then the game's. A pressed value moves on; left and right step it."), false)
   local notes = {
-    language = L("The language of the launcher."),
+    language = L("The language of the launcher. A game's text follows its cartridge."),
     theme = L("Light or dark colours for the launcher."),
+    window = L("A window, or the whole screen."),
+    scale = L("Draw the game at an exact multiple of its pixels; OFF fits the window."),
+    music = L("0 to 7."),
+    sound = L("0 to 7."),
+    textSpeed = L("How fast text appears."),
+    animations = L("Attack animations in battle."),
+    battleStyle = L("SHIFT asks before the next Pokemon; SET does not."),
   }
-  for i, row in ipairs(rows) do
-    p:text(c.x + 10, ry + 5, row.label, "ink")
-    p:para(c.x + 10, ry + 5 + LINE, c.w - 150, notes[row.id] or "", "muted", 1, 2)
-    local bw = math.max(100, fitWidth(row.detail))
-    rowButton(p, c.x + c.w - bw - 10, ry + 4, bw, 22, i, row, { label = row.detail })
-    ry = ry + 2 * LINE + 14
+  local groups = {
+    { "launcher", L("LAUNCHER") }, { "video", L("VIDEO") }, { "audio", L("AUDIO") }, { "game", L("GAME") },
+  }
+  for _, g in ipairs(groups) do
+    local mine = {}
+    for i, row in ipairs(rows) do
+      if (row.group or "launcher") == g[1] then mine[#mine + 1] = { index = i, row = row } end
+    end
+    if #mine > 0 then
+      local close = panel(p, c.x, y, c.w)
+      local ry = y + 10
+      sectionLabel(p, c.x + 10, ry, g[2])
+      ry = ry + LINE + 4
+      for _, e in ipairs(mine) do
+        local row = e.row
+        p:text(c.x + 10, ry + 5, row.label, "ink")
+        p:para(c.x + 10, ry + 5 + LINE, c.w - 150, notes[row.id] or "", "muted", 1, 2)
+        local bw = math.max(100, fitWidth(row.detail, 24))
+        rowButton(p, c.x + c.w - bw - 10, ry + 4, bw, 22, e.index, row,
+          { label = row.option and ("< " .. row.detail .. " >") or row.detail })
+        ry = ry + 2 * LINE + 14
+      end
+      close(ry + 4)
+      y = ry + 14
+    end
   end
-  ry = ry + p:para(c.x + 10, ry, c.w - 20,
-    L("Video, sound and game options are in each game's own OPTIONS menu."), "muted")
-  close(ry + 10)
-  return ry + 10
+  if not menu.gameOptions then
+    y = y + p:para(c.x + 10, y, c.w - 20,
+      L("Video, sound and game options are in each game's own OPTIONS menu."), "muted") + 4
+  else
+    y = y + p:para(c.x + 10, y, c.w - 20,
+      L("The game's options are the ones its own OPTIONS menu shows; a change here is a change there."), "muted") + 4
+  end
+  return y
 end
 
 function S.help(p, menu, c)

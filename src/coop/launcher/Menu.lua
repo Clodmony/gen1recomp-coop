@@ -67,6 +67,7 @@ end
 --                        session
 --   canOpenLogs       -> the logs folder can be opened (desktop)
 --   controls          -> the CONTROLS page's model (Controls.lua), or nil
+--   gameOptions       -> the game's options on SETTINGS (GameOptions.lua), or nil
 function Menu.new(opts)
   opts = opts or {}
   local self = setmetatable({
@@ -79,6 +80,7 @@ function Menu.new(opts)
     settings = opts.settings,
     campaigns = opts.campaigns,
     controls = opts.controls,
+    gameOptions = opts.gameOptions,
     screen = "play", tab = "play", cursor = 1, path = "",
     version = Menu.GAMES[1].id,
   }, Menu)
@@ -133,6 +135,10 @@ function Menu:items()
     add({ id = "language", label = L("LANGUAGE"), detail = Text.NAMES[Text.language] })
     add({ id = "theme", label = L("THEME"),
           detail = settings.theme == "dark" and L("DARK") or L("LIGHT") })
+    -- the game's options (#5), stored where the game reads them
+    if self.gameOptions then
+      for _, row in ipairs(self.gameOptions:rows()) do add(row) end
+    end
   elseif s == "help" then
     local settings = self.settings or {}
     add({ id = "share", label = L("SHARE LOGS"), detail = settings.shareLogs == false
@@ -334,6 +340,14 @@ function Menu:press(action)
     if self.path ~= "" then return { kind = "import", path = self.path } end
     return nil
   end
+  -- left and right step a game option (#5); elsewhere they move
+  if (action == "left" or action == "right") and screen == "settings" then
+    local row = self:items()[self.cursor]
+    if row and row.option and self.gameOptions then
+      self.gameOptions:step(row, action == "right" and 1 or -1)
+      return nil
+    end
+  end
   if action == "up" or action == "left" then move(self, -1) return nil end
   if action == "down" or action == "right" then move(self, 1) return nil end
   if action == "b" then
@@ -388,6 +402,10 @@ function Menu:press(action)
     if self.controls then self.controls:press(row) end
   elseif screen == "settings" then
     local settings = self.settings
+    if row.option and self.gameOptions then
+      self.gameOptions:step(row, 1)
+      return nil
+    end
     if id == "language" then
       local nextLanguage = Text.language == "de" and "en" or "de"
       Text.set(nextLanguage)

@@ -194,6 +194,9 @@ local function newControls()
   })
 end
 
+local GameOptions = require("src.coop.launcher.GameOptions")
+local optionsFs = memoryFs()
+
 local function newMenu()
   return Menu.new({
     ready = function(v) return ready[v] == true end,
@@ -202,6 +205,7 @@ local function newMenu()
     end,
     coop = env, settings = settings, campaigns = Campaigns, canOpenLogs = true,
     controls = newControls(),
+    gameOptions = GameOptions.new({ fs = optionsFs }),
   })
 end
 
