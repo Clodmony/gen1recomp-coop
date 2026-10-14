@@ -268,7 +268,7 @@ for _, c in ipairs({
   end }
 end
 SCREENS[#SCREENS + 1] = { "a message", function(m)
-  m:notify(Text.get("Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote or Blaue Edition (SHA-1 %s).",
+  m:notify(Text.get("Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote, Blaue or Gelbe Edition (SHA-1 %s).",
     ("0123456789abcdef"):rep(2) .. "01234567"))
 end }
 

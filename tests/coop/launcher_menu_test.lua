@@ -61,12 +61,12 @@ for _, lang in ipairs({ "en", "de" }) do
 end
 Text.set("en")
 
--- PLAY: the five cartridges, solo, the three ways to play together
+-- PLAY: the six cartridges, solo, the three ways to play together
 do
   local m = newMenu({ ready = { red = true } })
   eq(m.screen, "play", "the launcher opens on PLAY")
-  eq(ids(m), "cart,cart,cart,cart,cart,solo,host,join,couch",
-    "five cartridges (German Red and Blue too, #25), solo, host, join, couch co-op")
+  eq(ids(m), "cart,cart,cart,cart,cart,cart,solo,host,join,couch",
+    "six cartridges (German Red, Blue and Yellow too, #25, #40), solo, host, join, couch co-op")
   eq(m.version, "red", "Red is picked by default")
   eq(m:items()[1].detail, "Ready", "an imported cartridge says so")
   eq(m:items()[2].detail, "Import ROM", "a cartridge without a ROM says so")
@@ -76,7 +76,7 @@ do
   pick(m, "cart", "blue")
   eq(m.version, "blue", "A on a cartridge picks it")
   eq(m.settings.pick, "blue", "and the pick is remembered")
-  eq(ids(m), "cart,cart,cart,cart,cart,solo,host,join,couch,import",
+  eq(ids(m), "cart,cart,cart,cart,cart,cart,solo,host,join,couch,import",
     "a cartridge without a ROM adds IMPORT ROM")
   eq(row(m, "solo").enabled, false, "and cannot be played solo")
   m.cursor = 1

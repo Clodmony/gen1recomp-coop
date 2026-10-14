@@ -83,6 +83,19 @@ GameVersion.VERSIONS = {
     base = "blue",
     language = "de",
   },
+  yellow_de = { -- co-op (#40): Gelbe Edition, the same way
+    id = "yellow_de",
+    label = "Gelb",
+    displayName = "Pokemon Gelbe Edition",
+    launcherName = "Gelb",
+    sha1 = "42f3714eec6eca25200d42461ff08d57c98f6d1d",
+    manifest = "tools/rom_manifest_yellow_de.json",
+    cachePrefix = "yellow_de/",
+    saveSuffix = "_yellow_de",
+    engine = "gen1",
+    base = "yellow",
+    language = "de",
+  },
   -- Gen 2, Phase 1 (docs/gold-phase1.md): a 2 MiB cart, twice the size of
   -- the Gen 1 ROMs above, imported through RomExtractorGen2 instead of
   -- RomExtractor.
@@ -255,7 +268,7 @@ function GameVersion.language(id)
   return info and info.language or "en"
 end
 
--- co-op (#25): a German cartridge (Rote or Blaue Edition).
+-- co-op (#25, #40): a German cartridge (Rote, Blaue or Gelbe Edition).
 function GameVersion.isGerman(id)
   return GameVersion.language(id) == "de"
 end
@@ -265,7 +278,7 @@ function GameVersion.isBlue()
 end
 
 function GameVersion.isYellow()
-  return GameVersion.current == "yellow"
+  return GameVersion.base() == "yellow" -- co-op (#40): Gelbe Edition too
 end
 
 function GameVersion.isGold()

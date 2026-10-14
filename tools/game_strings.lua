@@ -175,6 +175,15 @@ local function textWhere(entry)
   return where
 end
 
+-- the entry's place, and Yellow's where it reads another (#40)
+local function where(entry, describe)
+  if type(entry) == "function" then return describe(entry) end
+  local own = (entry[1] ~= nil or entry.join ~= nil) and describe(entry) or nil
+  if entry.yellow == nil then return own end
+  local yellow = "Yellow: " .. (entry.yellow and describe(entry.yellow) or "no such row")
+  return own and (own .. "; " .. yellow) or yellow
+end
+
 -- The PROJECT groups as the source spells them: "-- name" comment lines
 -- head each group of P[...] = "..." entries.
 local function projectGroups(root)
@@ -221,10 +230,10 @@ function M.markdown(root)
   line("| English | Read from |")
   line("|---|---|")
   for _, k in ipairs(sortedKeys(German.WORDS)) do
-    line("| " .. cell(k) .. " | " .. cell(wordWhere(German.WORDS[k])) .. " |")
+    line("| " .. cell(k) .. " | " .. cell(where(German.WORDS[k], wordWhere)) .. " |")
   end
   for _, k in ipairs(sortedKeys(German.TEXTS)) do
-    line("| " .. cell(k) .. " | " .. cell(textWhere(German.TEXTS[k])) .. " |")
+    line("| " .. cell(k) .. " | " .. cell(where(German.TEXTS[k], textWhere)) .. " |")
   end
   line("")
   line("### The fork's own wording")
