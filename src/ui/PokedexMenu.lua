@@ -184,7 +184,7 @@ function PokedexMenu:sideItems()
   if require("src.core.GameVersion").isYellow() then
     labels[#labels + 1] = Strings("PRNT")
   end
-  labels[#labels + 1] = Strings("QUIT")
+  labels[#labels + 1] = Strings("QUIT", "pokedex") -- co-op (#25)
   return labels
 end
 
@@ -242,7 +242,7 @@ local function chooseEntry(item, dexList)
         or Strings("Printer error!\n%s", tostring(err))))
     end }
   end
-  entries[#entries + 1] = { label = Strings("QUIT"), onSelect = function()
+  entries[#entries + 1] = { label = Strings("QUIT", "pokedex"), onSelect = function() -- co-op (#25)
     -- engine/menus/pokedex.asm .exitPokedex
     dexList:close()
     if dexList.onCancel then dexList.onCancel() end

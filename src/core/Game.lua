@@ -62,6 +62,11 @@ function Game:load(opts)
     self.mods:load(Data)
   end
   self.modStatus = self.mods:status()
+  -- co-op (#25): a German game's engine lines in the cartridge's words, its
+  -- type names and its wider boxes, into Data.strings / type_chart /
+  -- field.theme where no mod put anything (src/coop/game/German.lua); before
+  -- TypeChart and Theme read them; a no-op for the US games
+  require("src.coop.game.German").install(Data)
   -- render pipelines dispatch off the merged dataset; point them at the
   -- one the mods just merged into before anything can draw a frame
   require("src.render.Pipelines").install(Data)
