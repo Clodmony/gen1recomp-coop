@@ -12,8 +12,9 @@ Keep that disclosure in `README.md` and here.
 
 Read before working:
 
-- **Start here:** the open issues on GitHub (the only task list) and the
-  session handoff note; work follows the issue loop under *Workflow*.
+- **Start here:** [HANDOFF.md](HANDOFF.md), the session handoff note (state,
+  open pull requests, next group), and the open issues on GitHub (the only
+  task list); work follows the issue loop under *Workflow*.
 - Upstream's docs, which still apply: [docs/architecture.md](docs/architecture.md),
   [CONTRIBUTING-mods.md](CONTRIBUTING-mods.md) (mod API compatibility rules),
   and the existing network features the co-op work builds on:
@@ -87,14 +88,25 @@ Read before working:
   from `gen1recomp-coop`, and for each issue in it reproduce the problem (a
   failing test first) and fix it, one commit or more per issue. Then run
   `tools/verify.sh`, update the docs, push and open one draft pull request
-  that says `Closes #N` for every issue it finishes. Then write the handoff
-  note (open pull requests, branch state, next group) and stop: the owner
-  starts a fresh session for the next group. If a group grows too long, stop
+  that says `Closes #N` for every issue it finishes. Then rewrite
+  `HANDOFF.md` (open pull requests, branch state, next group, cleanup) and
+  stop: the owner starts a fresh session for the next group. If a group grows too long, stop
   at an issue boundary, open the pull request for the finished issues, and
   leave the rest of the group for the next session. An issue found on the
   way goes into the milestone where it fits.
 - **GitHub issues are the task list.** New work, bugs found on the way and
   follow-ups become issues; there is no task file in the repository.
+- **The handoff lives in the repository.** `HANDOFF.md` is rewritten at the end
+  of every session and committed on the group's branch. When a session ends
+  without a pull request, or the note must be visible before the owner merges,
+  commit it alone (`handoff: <date>`) and push it to `gen1recomp-coop`
+  directly: it is the one file that may land there without a pull request.
+  Per-checkout agent memory is not read from another worktree, so state goes
+  into this file, not into memory.
+- **Worktrees.** One worktree per group: a Superset workspace, or
+  `git worktree add` under scratch. Superset runs `.superset/setup.sh` when it
+  creates a workspace; run it by hand in any other worktree (identity, upstream
+  remote, tool check). Remove a worktree when its pull request is merged.
 - **The owner merges.** A pull request is merged only when the owner says so,
   locally under the Claude identity.
 - **Scratch lives on disk, outside the repository**, under
