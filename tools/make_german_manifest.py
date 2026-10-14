@@ -95,15 +95,32 @@ GERMAN = {
 # pokeyellow, which the US Yellow manifest follows (make_yellow_manifest.py):
 #   * Mew's base stats are the 151st BaseStats entry (pret pokeyellow has no
 #     MewBaseStats label either; the US manifest synthesises it the same way);
-#   * the surfing minigame's intro screen is one 360-byte tilemap,
-#     Tilemap_3e_5063 (gfx/surfing_pikachu/unknown_3e_5063.tilemap), which
-#     pret later split into SurfingMinigame_BeachIntroTilemap and three
-#     labels inside it.  The German tilemap has the US layout (checked on the
-#     owner's dump: the Pikachu's Beach title the extractor composes), so the
-#     US offsets inside the intro tilemap apply.
+#   * the surfing minigame's intro screen.  The US cartridge keeps its beach,
+#     its two lines and its title apart (SurfingMinigame_BeachIntroTilemap
+#     and three labels), which the engine composes; the German cartridge
+#     keeps the whole 20x18 screen as one tilemap, Tilemap_3e_5063
+#     (gfx/surfing_pikachu/unknown_3e_5063.tilemap, copied to wTileMap in
+#     one go), with the German lines in it.  The manifest names it
+#     SurfingMinigameIntroScreenTilemap, which RomExtractor reads whole, and
+#     leaves the four US labels out.
+# Its copyright line reads ©1995-2000 (engine/movie/title.asm
+# .tileScreenCopyrightTiles, CopyrightTextString): the first five tiles of
+# NintendoCopyrightLogoGraphics, then the two tiles under its own NineTile
+# label (US Yellow: six tiles and the one nine tile RomExtractor finds
+# between GameFreakLogoGraphics and TextBoxGraphics by their distance), a
+# blank, and GAME FREAK inc. at column 10.  The manifest names NineTile, the
+# extractor reads it by name and as wide as title.nine says, and the title
+# and the intro card draw title.copyPrefix with GAME FREAK inc. at
+# title.gameFreakX.
 BASE_STATS_ENTRY_SIZE = 28
+YELLOW_TITLE = {
+    "copyPrefix": [0, 1, 2, 3, 4],
+    "nine": {"path": "assets/generated/title/nine.png", "width": 16, "height": 8},
+    "gameFreakX": 80,
+}
 MEW_DEX_NUMBER = 151
 YELLOW_INTRO_TILEMAP = "Tilemap_3e_5063"
+YELLOW_INTRO_SCREEN = "SurfingMinigameIntroScreenTilemap"
 SURFING_TILEMAPS = (
     "SurfingMinigame_BeachIntroTilemap", "SurfingMinigame_TitleTilemap",
     "SurfingMinigame_ToSurfRadTilemap", "SurfingMinigame_UseControlPadTilemap",
@@ -191,7 +208,8 @@ def _variable(token):
 
 
 def yellow_renamed(base, symbols):
-    """The US Yellow symbols pokeyellow-de has under other names."""
+    """The US Yellow symbols pokeyellow-de has under other names: name ->
+    [bank, address], or None for a US label this cartridge has not."""
     stats = symbols.by_name.get("BaseStats")
     intro = symbols.by_name.get(YELLOW_INTRO_TILEMAP)
     if stats is None or intro is None:
@@ -200,12 +218,13 @@ def yellow_renamed(base, symbols):
     out = {"MewBaseStats": [
         stats.bank,
         stats.address + (MEW_DEX_NUMBER - 1) * BASE_STATS_ENTRY_SIZE]}
-    us_intro = base["symbols"][SURFING_TILEMAPS[0]]
     for name in SURFING_TILEMAPS:
-        us = base["symbols"][name]
-        if us[0] != us_intro[0] or not 0 <= us[1] - us_intro[1] < 360:
-            raise SystemExit(f"{name} is not inside the US intro tilemap")
-        out[name] = [intro.bank, intro.address + us[1] - us_intro[1]]
+        out[name] = None
+    out[YELLOW_INTRO_SCREEN] = [intro.bank, intro.address]
+    nine = symbols.by_name.get("NineTile")
+    if nine is None:
+        raise SystemExit("pokeyellow.sym has no NineTile")
+    out["NineTile"] = [nine.bank, nine.address]
     return out
 
 
@@ -227,12 +246,15 @@ def derive(base, tree, symbols_path, sha1, the_end, words, renamed=None):
     for name in base["symbols"]:
         symbol = symbols.by_name.get(name)
         if symbol is None:
-            if name in other:
-                resolved[name] = other[name]
-            else:
+            if name not in other:
                 missing.append(name)
+            elif other[name] is not None:
+                resolved[name] = other[name]
             continue
         resolved[name] = [symbol.bank, symbol.address]
+    for name, address in other.items():
+        if name not in base["symbols"] and address is not None:
+            resolved[name] = address
     if missing:
         raise SystemExit(
             f"{os.path.basename(symbols_path)} is missing symbols the "
@@ -345,6 +367,8 @@ def main():
             None if yellow else red["field"]["credits"]["theEnd"],
             GERMAN_WORD_SYMBOLS + (YELLOW_WORD_SYMBOLS if yellow else RED_BLUE_WORD_SYMBOLS),
             yellow_renamed if yellow else None)
+        if yellow:
+            data["field"]["title"].update(copy.deepcopy(YELLOW_TITLE))
         with open(spec["out"], "w", encoding="utf-8", newline="\n") as f:
             json.dump(data, f, ensure_ascii=True, indent=2, sort_keys=True)
             f.write("\n")

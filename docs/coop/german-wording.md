@@ -1,6 +1,6 @@
 # German wording for the owner to check
 
-The German cartridges (Rote and Blaue Edition, #25) bring almost all of their
+The German cartridges (Rote, Blaue and Gelbe Edition, #25, #40) bring almost all of their
 text with them: dialogue, names, items, moves and menus come from the
 cartridge ([german.md](german.md)). This list holds the German the project
 writes itself, for the owner to check. Write the better German in the last

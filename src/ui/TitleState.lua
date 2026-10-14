@@ -284,8 +284,10 @@ function TitleState.new(game, opts)
   -- ..(pokeyellow engine/movie/title.asm .tileScreenCopyrightTiles / NineTile)
   self.nineImg = yellowCopy and tryImage(imagePath(title.nine)
     or "assets/generated/title/nine.png") or nil
-  self.copyPrefix = yellowCopy
-    and { 0, 1, 2, 3, 1, 2 } or { 0, 1, 2, 1, 3, 1, 4 }
+  -- ..(co-op #40: a cartridge may spell its own prefix, title.copyPrefix,
+  -- with a wider nine tile and GAME FREAK inc. at title.gameFreakX)
+  self.copyPrefix = title.copyPrefix or (yellowCopy
+    and { 0, 1, 2, 3, 1, 2 } or { 0, 1, 2, 1, 3, 1, 4 })
   -- Yellow title is a fixed Pikachu composition (title_yellow.asm), not
   -- TitleMons cycling.  Prefer composed pikachu.png from the Yellow import.
   self.yellowPikachu = self.yellow and tryImage(imagePath(title.pikachu)
@@ -839,9 +841,9 @@ function TitleState:drawCopyright(y)
     end
     if self.nineImg then
       love.graphics.draw(self.nineImg, x, y)
-      x = x + 8
+      x = x + self.nineImg:getWidth() -- co-op (#40): two tiles in Gelbe Edition
     end
-    love.graphics.draw(self.gfInc, x, y)
+    love.graphics.draw(self.gfInc, self.title.gameFreakX or x, y)
     return
   end
   love.graphics.setColor(0, 0, 0, 1)

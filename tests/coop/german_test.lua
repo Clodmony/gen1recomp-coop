@@ -74,9 +74,12 @@ for _, pair in ipairs({ { "red_de", "red" }, { "blue_de", "blue" }, { "yellow_de
   local us = manifest(GameVersion.info(base).manifest)
   eq(de.romSha1, GameVersion.info(id).sha1, id .. " manifest names its dump")
   eq(de.language, "de", id .. " manifest is marked German")
+  -- the US Yellow surfing title's four pieces are one screen in German (below)
+  local whole = { SurfingMinigame_BeachIntroTilemap = true, SurfingMinigame_TitleTilemap = true,
+                  SurfingMinigame_ToSurfRadTilemap = true, SurfingMinigame_UseControlPadTilemap = true }
   local missing = {}
   for name in pairs(us.symbols) do
-    if not de.symbols[name] then missing[#missing + 1] = name end
+    if not de.symbols[name] and not (base == "yellow" and whole[name]) then missing[#missing + 1] = name end
   end
   eq(#missing, 0, id .. " manifest resolves every symbol of " .. base .. "'s")
   for _, name in ipairs(CARTRIDGE_WORDS) do
@@ -101,17 +104,21 @@ for _, pair in ipairs({ { "red_de", "red" }, { "blue_de", "blue" }, { "yellow_de
       id .. " lists Yellow's own option and link menu labels")
     check(not listed.TextSpeedOptionText and not listed.NowSavingString,
       id .. " lists none of Red's labels Yellow has not")
-    -- pokeyellow-de names Mew's stats and the surfing minigame's title
-    -- tilemaps differently: the generator places them as the US manifest does
+    -- pokeyellow-de has no MewBaseStats label: the generator places Mew as
+    -- the US manifest does
     local stats = de.symbols.BaseStats
     eq(de.symbols.MewBaseStats[1], stats[1], id .. " puts Mew's stats in BaseStats' bank")
     eq(de.symbols.MewBaseStats[2], stats[2] + 150 * 28, id .. " ..at the 151st entry")
-    for _, name in ipairs({ "SurfingMinigame_TitleTilemap", "SurfingMinigame_ToSurfRadTilemap",
-                            "SurfingMinigame_UseControlPadTilemap" }) do
-      eq(de.symbols[name][2] - de.symbols.SurfingMinigame_BeachIntroTilemap[2],
-         us.symbols[name][2] - us.symbols.SurfingMinigame_BeachIntroTilemap[2],
-         id .. " places " .. name .. " at the US offset inside the intro tilemap")
-    end
+    -- the German cartridge keeps the surfing title screen whole, and its
+    -- nine tile under a label of its own
+    check(de.symbols.SurfingMinigameIntroScreenTilemap ~= nil, id .. " names the whole surfing title screen")
+    local pieces = 0
+    for name in pairs(whole) do if de.symbols[name] then pieces = pieces + 1 end end
+    eq(pieces, 0, id .. " lists none of the US title's four pieces")
+    check(de.symbols.NineTile ~= nil, id .. " names the title's nine tile")
+    eq(table.concat(de.field.title.copyPrefix, ","), "0,1,2,3,4", id .. " spells ©1995-2000 from five tiles")
+    eq(de.field.title.nine.width, 16, id .. " ..and a two-tile year ending")
+    eq(de.field.title.gameFreakX, 80, id .. " ..with GAME FREAK inc. at column 10")
     check(de.field.credits.theEnd == nil, id .. " draws the credits' end as US Yellow does (none)")
     eq(de.field.title.layout, "yellow_pikachu", id .. " keeps Yellow's title layout")
   else

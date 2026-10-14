@@ -8518,12 +8518,20 @@
       ]
     },
     "title": {
+      "copyPrefix": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
       "copyright": {
         "height": 8,
         "path": "assets/generated/title/copyright.png",
         "width": 152
       },
       "cycleSpecies": [],
+      "gameFreakX": 80,
       "gamefreakInc": {
         "height": 8,
         "path": "assets/generated/title/gamefreak_inc.png",
@@ -8536,6 +8544,11 @@
         "width": 128
       },
       "music": "Music_TitleScreen",
+      "nine": {
+        "height": 8,
+        "path": "assets/generated/title/nine.png",
+        "width": 16
+      },
       "pikaBubble": {
         "height": 32,
         "path": "assets/generated/title/pika_bubble.png",
@@ -22665,6 +22678,10 @@
       13,
       21375
     ],
+    "NineTile": [
+      4,
+      19976
+    ],
     "NinetalesPicBack": [
       11,
       19667
@@ -26265,21 +26282,9 @@
       28,
       27032
     ],
-    "SurfingMinigame_BeachIntroTilemap": [
+    "SurfingMinigameIntroScreenTilemap": [
       62,
       20579
-    ],
-    "SurfingMinigame_TitleTilemap": [
-      62,
-      20847
-    ],
-    "SurfingMinigame_ToSurfRadTilemap": [
-      62,
-      20834
-    ],
-    "SurfingMinigame_UseControlPadTilemap": [
-      62,
-      20819
     ],
     "SurfingPikachu1Graphics1": [
       32,
