@@ -179,6 +179,21 @@ local function env(version)
   }
 end
 
+-- the CONTROLS page's model (#4): a rebind, two pads, one claimed
+local Controls = require("src.coop.launcher.Controls")
+settings.seats = { false, { kind = "pad", guid = "guid-b", twin = 1, name = "Wireless Controller" } }
+local function newControls()
+  return Controls.new({
+    bindings = function() return { a = { key = "k" } } end,
+    saveBindings = function() end,
+    settings = settings,
+    pads = function()
+      return { { kind = "pad", guid = "guid-a", twin = 1, name = "Pad A" },
+               { kind = "pad", guid = "guid-b", twin = 1, name = "Wireless Controller" } }
+    end,
+  })
+end
+
 local function newMenu()
   return Menu.new({
     ready = function(v) return ready[v] == true end,
@@ -186,6 +201,7 @@ local function newMenu()
       return v == "red" and { name = "NOVA", badges = 3, time = "12:34" } or nil
     end,
     coop = env, settings = settings, campaigns = Campaigns, canOpenLogs = true,
+    controls = newControls(),
   })
 end
 
@@ -203,6 +219,14 @@ local SCREENS = {
   { "solo", function(m) m:go("solo") end },
   { "campaigns", function(m) m:openTab("campaigns") end },
   { "controls", function(m) m:openTab("controls") end },
+  { "controls, capturing a key", function(m)
+    m:openTab("controls")
+    m.controls:press(m:items()[5])
+  end },
+  { "controls, capturing a seat", function(m)
+    m:openTab("controls")
+    m.controls:press(m:items()[11])
+  end },
   { "settings", function(m) m:openTab("settings") end },
   { "help", function(m) m:openTab("help") end },
   { "import", function(m)

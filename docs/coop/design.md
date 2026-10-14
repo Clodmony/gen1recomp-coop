@@ -879,7 +879,8 @@ the battle notice, and SELECT in a co-op battle.
 4. **adapt** Controller pick: one chosen pad plays (kept by GUID, name, serial and
    order among twins, found again after a replug, the others ignored);
    keyboard and mouse always work (prog "Controller pick", tc P08).
-   Split-screen needs per-seat pad assignment instead (G3; #4).
+   Split-screen needs per-seat pad assignment instead (G3; #4, G17: a seat
+   per local player with the device claimed on CONTROLS).
 5. **adapt** iOS discovery may need the multicast entitlement; the address path works
    without it (D103).
 6. **adapt** Languages are separate games: German plays only with German, English
@@ -1085,3 +1086,14 @@ sibling's D-numbers.
   for the one box it draws otherwise, and the manifest's title layout for
   its ©1995-2000 line and its one-piece surfing title screen. Nothing
   changes for US Yellow.
+- **G17. One Input per seat, the device claimed on CONTROLS** (#4,
+  2026-10-14). Upstream's `Input` merges every pad and the keyboard into one
+  player; the fork keeps that for solo and online play (player 1 is that
+  very table) and adds a seat per local player (`src/coop/game/Seats.lua`):
+  an instance of `Input` that, in couch mode, takes only the device claimed
+  for it on the launcher's CONTROLS page, the keyboard or one pad by GUID
+  and order among twins, remembered in `coop/launcher.json`. The hook in
+  `Input.lua` is one filter at each device entry, marked. Rebinds are not
+  per seat: the launcher writes `options.bindings` where the game reads it,
+  so every seat and the game's own CONTROLS menu agree. Couch co-op (#11)
+  starts couch mode; until then the seats are only remembered.

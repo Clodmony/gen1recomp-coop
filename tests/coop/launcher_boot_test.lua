@@ -248,4 +248,62 @@ do
   noLauncherModules("on a scripted import")
 end
 
+-- 8. CONTROLS (#4): a rebind lands in options.lua, a pad claim in the
+-- launcher's settings, both through the real event callbacks
+do
+  Launcher.current = nil
+  love.filesystem.remove("options.lua")
+  love.filesystem.remove("coop/launcher.json")
+  local Seats = require("src.coop.game.Seats")
+  local SaveData = require("src.core.SaveData")
+  SaveData.invalidateOptionsCache()
+  Seats.reset()
+  local padB = { getGUID = function() return "guid-b" end, getName = function() return "Pad B" end,
+                 isGamepad = function() return true end }
+  love.joystick = { getJoysticks = function() return { padB } end,
+                    getJoystickCount = function() return 1 end }
+  love.load({})
+  frames(2)
+  local l = Launcher.current
+  l.menu:openTab("controls")
+  frames(1)
+  check(table.concat(drawnText(), " "):find("CONNECTED PADS PAD B", 1, true), "CONTROLS lists the connected pad")
+  click(l, "bind")  -- the first bind row: UP
+  check(l.menu:capturing() ~= nil, "a click on UP waits for a press")
+  love.keypressed("i")
+  eq(l.menu:capturing(), nil, "the key ends the capture")
+  eq((SaveData.loadOptions().bindings or {}).up and SaveData.loadOptions().bindings.up.key, "i",
+    "options.lua binds UP to I, where the game reads it")
+  love.keypressed("down")  -- the arrows walk again
+  eq(l.menu:capturing(), nil, "a key after the capture is a launcher key again")
+  -- player 2 claims the pad with A on it
+  local seatRow
+  for i, r in ipairs(l.menu:items()) do if r.id == "seat" and r.player == 2 then seatRow = i end end
+  l.menu.cursor = seatRow
+  l:_run(l.menu:press("a"))
+  check(l.menu:capturing() ~= nil, "player 2's row waits for a press")
+  love.gamepadpressed(padB, "b")
+  eq(l.menu:capturing(), nil, "B on the pad cancels")
+  l:_run(l.menu:press("a"))
+  love.gamepadpressed(padB, "a")
+  eq(l.menu:capturing(), nil, "A on the pad claims it")
+  local CoopSettings = require("src.coop.launcher.CoopSettings")
+  local saved = CoopSettings.load(love.filesystem)
+  eq(saved.seats[2] and saved.seats[2].guid, "guid-b", "the claim is in coop/launcher.json")
+  eq(saved.seats[1], false, "player 1 has none")
+  eq(Seats.devices[2] and Seats.devices[2].guid, "guid-b", "and Seats knows it")
+  check(table.concat(drawnText(), " "):find("PAD B", 1, true), "the page shows the pad as player 2's")
+  love.gamepadpressed(padB, "dpdown")
+  eq(l.menu:capturing(), nil, "the pad drives the launcher again")
+  -- a click beside the rows cancels a capture
+  click(l, "bind")
+  love.mousepressed(1, 1, 1, false)
+  eq(l.menu:capturing(), nil, "a click elsewhere cancels")
+  love.joystick = nil
+  Seats.reset()
+  love.filesystem.remove("options.lua")
+  love.filesystem.remove("coop/launcher.json")
+  SaveData.invalidateOptionsCache()
+end
+
 T.finish()

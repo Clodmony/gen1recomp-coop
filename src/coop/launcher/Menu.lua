@@ -15,7 +15,9 @@
 --   { kind = "quit" }
 --   { kind = "open_logs" }
 --   { kind = "settings" }                  (language or theme changed)
--- and the co-op screens' commands (CoopMenu.lua).
+-- and the co-op screens' commands (CoopMenu.lua).  The CONTROLS rows come
+-- from Controls.lua (#4); while it captures a key or pad press the host
+-- hands raw presses to Menu:captured instead of actions.
 
 local CoopMenu = require("src.coop.launcher.CoopMenu")
 local Games = require("src.coop.launcher.Games")
@@ -64,6 +66,7 @@ end
 --   campaigns         -> the campaign cards (Campaigns.lua), for the last
 --                        session
 --   canOpenLogs       -> the logs folder can be opened (desktop)
+--   controls          -> the CONTROLS page's model (Controls.lua), or nil
 function Menu.new(opts)
   opts = opts or {}
   local self = setmetatable({
@@ -75,6 +78,7 @@ function Menu.new(opts)
     coopEnv = opts.coop,
     settings = opts.settings,
     campaigns = opts.campaigns,
+    controls = opts.controls,
     screen = "play", tab = "play", cursor = 1, path = "",
     version = Menu.GAMES[1].id,
   }, Menu)
@@ -120,6 +124,10 @@ function Menu:items()
     add({ id = "new", label = L("NEW GAME") })
     add({ id = "reimport", label = L("IMPORT AGAIN") })
     add({ id = "back", label = L("BACK") })
+  elseif s == "controls" then
+    if self.controls then
+      for _, row in ipairs(self.controls:rows()) do add(row) end
+    end
   elseif s == "settings" then
     local settings = self.settings or {}
     add({ id = "language", label = L("LANGUAGE"), detail = Text.NAMES[Text.language] })
@@ -178,6 +186,7 @@ end
 -- open a tab (the nav bar)
 function Menu:openTab(tab)
   if self.coop then self:_leaveCoop() end
+  if self.controls then self.controls:cancel() end
   if tab == "campaigns" then
     self.tab = "campaigns"
     if self:openCoop(self.version, nil, "campaigns") then return end
@@ -197,6 +206,20 @@ end
 function Menu:currentNotice()
   if self.screen == "coop" and self.coop then return self.coop.notice end
   return self.notice
+end
+
+-- The CONTROLS page is waiting for a key or pad press (#4): the prompt, or
+-- nil.  While it is, the host sends raw presses to captured().
+function Menu:capturing()
+  if self.screen ~= "controls" or not self.controls then return nil end
+  return self.controls:prompt()
+end
+
+-- a raw press while capturing: { kind = "key", key } | { kind = "pad",
+-- button, device } | { kind = "cancel" }; true when it was used
+function Menu:captured(ev)
+  if not self:capturing() then return false end
+  return self.controls:captured(ev)
 end
 
 -- the co-op screens of `version` (#12) from `start` ("host", "join",
@@ -361,6 +384,8 @@ function Menu:press(action)
     elseif id == "back" then
       return self:press("b")
     end
+  elseif screen == "controls" then
+    if self.controls then self.controls:press(row) end
   elseif screen == "settings" then
     local settings = self.settings
     if id == "language" then
