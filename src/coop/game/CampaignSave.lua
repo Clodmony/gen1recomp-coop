@@ -25,10 +25,12 @@ local function session()
   return nil
 end
 
--- the game wrote its save: the world goes to the host with a save request
+-- the game wrote its save: the scene so far goes out as a patch (#14,
+-- design A5.5), then the world goes to the host with a save request
 function CampaignSave.written(game, kind)
   local s = session()
   if not s or not game or type(game.save) ~= "table" then return nil end
+  if s.window then s.window:flush(game.save) end
   return s:sendWorld(game.save, true, kind)
 end
 

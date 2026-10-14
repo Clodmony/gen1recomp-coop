@@ -27,18 +27,41 @@
 local Json = require("src.link.Json")
 local Campaign = require("src.coop.campaign.Campaign")
 local Protocol = require("src.coop.session.Protocol")
+local Ownership = require("src.coop.campaign.Ownership")
+local SaveSerializer = require("src.core.SaveSerializer")
 
 local CampaignFile = {}
 
 CampaignFile.FORMAT = "gen1recomp-coop campaign"
-CampaignFile.VERSION = 1
+CampaignFile.VERSION = 2
 CampaignFile.DIR = "coop/campaigns"
 -- twelve full PCs and more; a campaign file is never this long
 CampaignFile.MAX_FILE = 64 * 1024 * 1024
 
--- MIGRATIONS[n](data) brings a version-n file to n + 1 (none yet: version 1
--- is the first)
+-- MIGRATIONS[n](data) brings a version-n file to n + 1
 CampaignFile.MIGRATIONS = {}
+
+-- 1 to 2 (#14): the shared story moves out of the players' worlds into the
+-- campaign's section.  A flag any player set stands (the team rule); an
+-- entry two worlds hold with two values takes the first player's.
+CampaignFile.MIGRATIONS[1] = function(data)
+  local worlds, rests = {}, {}
+  for i, entry in ipairs(type(data.players) == "table" and data.players or {}) do
+    if type(entry) == "table" and type(entry.world) == "string" then
+      local ok, rest = pcall(SaveSerializer.decode, entry.world)
+      if ok and type(rest) == "table" then
+        worlds[#worlds + 1] = rest
+        rests[i] = rest
+      end
+    end
+  end
+  if type(data.campaign) ~= "table" then return data end
+  data.campaign.story = Ownership.merge(worlds)
+  for i, rest in pairs(rests) do
+    data.players[i].world = SaveSerializer.encode(Ownership.strip(rest))
+  end
+  return data
+end
 
 function CampaignFile.path(game, id)
   return CampaignFile.DIR .. "/" .. game .. "/" .. id .. ".campaign"
