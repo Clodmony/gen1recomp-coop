@@ -52,6 +52,21 @@ do
   Text.set("en")
 end
 
+-- the wording list for the owner is made from the catalog, and complete
+do
+  local f = assert(io.open("docs/coop/german-wording.md", "r"))
+  local doc = f:read("*a")
+  f:close()
+  local made = doc:match("<!%-%- made by: luajit tools/launcher_strings%.lua %-%-markdown %-%->\n(.-)<!%-%- end of the made part %-%->")
+  eq(made, strings.markdown(), "docs/coop/german-wording.md lists the catalog as it is "
+    .. "(luajit tools/launcher_strings.lua --markdown)")
+  local missing = {}
+  for _, k in ipairs(strings.keys()) do
+    if not (made or ""):find("| " .. k:gsub("|", "\\|") .. " |", 1, true) then missing[#missing + 1] = k end
+  end
+  eq(table.concat(missing, " | "), "", "every launcher string is on the list")
+end
+
 -- the system's language ---------------------------------------------------
 
 do

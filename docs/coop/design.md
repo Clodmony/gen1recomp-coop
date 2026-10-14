@@ -161,7 +161,9 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
 ### A2. Launcher co-op flow (hosting, joining, campaign management)
 
 All of this lives in the fork's **own** launcher (upstream's is proprietary).
-The screens are in place (#12, [launcher.md](launcher.md)). Left for other
+The screens are in place (#12, [launcher.md](launcher.md)), laid out after
+#38's design (G13): the start screen is the PLAY tab and the troubleshooting
+entry (log sharing, the logs folder) is on the HELP tab. Left for other
 issues: the line saying which games play together and the both-versions
 switch (#9); a card's badges, place and last save (campaign files, #13); the
 rival's name and how a new player starts (#22); the split-screen entry
@@ -1027,13 +1029,12 @@ sibling's D-numbers.
   started on, the players seen and the address a partner used last. The
   campaign files of #13 replace the per-device slots with the host's
   campaign state.
-- **G11. Colours by place** (#15, default proposed 2026-10-14, the owner
-  may change it). Each player wears the colour of their place in the
+- **G11. Colours by place** (#15, owner, 2026-10-14). Each player wears the colour of their place in the
   session, the host's player first: red, blue, green, purple, orange, teal,
   pink, brown, then again. A colour is an OBJ palette (white, skin, the
   colour, a dark outline) that reads on every Gen 1 COLORS mode. This
   player wears theirs too, so a player has one colour in every window.
-- **G12. German games are the US games with a language** (#25,
+- **G12. German games are the US games with a language** (#25, owner,
   2026-10-14). `red_de` and `blue_de` carry `base` (the US game they play
   as) and `language` ("de") in `GameVersion`; their import manifests are
   derived from the US ones with every address re-sourced from a build of
@@ -1041,3 +1042,20 @@ sibling's D-numbers.
   uses old label names). Words the US manifests carry from pret's source
   (name presets, trade nicknames, credits) are read from the cartridge
   instead, so no German text is committed. Details: [german.md](german.md).
+- **G13. The launcher's own look** (#38, 2026-10-14). The launcher leaves
+  the 160 x 144 text grid for #38's design: tabs (PLAY, CAMPAIGNS, CONTROLS,
+  SETTINGS, HELP), green LCD panels in a light and a dark set, the bundled
+  Plain Pixel face and no cartridge graphics or fonts, the credit line under
+  every page. It is drawn at whole multiples of the window's pixels with at
+  least 480 x 400 launcher pixels and laid out for the size it gets (two
+  columns from 460 wide, a scrolled page when it is taller); the game's
+  renderer keeps 160 x 144. Couch co-op and per-player controls show as
+  PLANNED and are not offered until #4 and #11 work. Details:
+  [launcher.md](launcher.md).
+- **G14. The launcher speaks English or German** (#41, default proposed
+  2026-10-14, the owner may change it). Every launcher string goes through
+  one catalog keyed by its English source; LANGUAGE in SETTINGS picks
+  ENGLISH or DEUTSCH, and before a choice the system's locale does (German:
+  Deutsch, else English). The setting is the launcher's alone: a game's text
+  follows its cartridge (D95, D102). The German wording is listed in
+  [german-wording.md](german-wording.md); the credit line stays English.
