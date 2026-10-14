@@ -35,11 +35,14 @@ over ENet. One host serves both kinds at once (G3).
 - `Addresses.lua`: this device's addresses by kind (VPN, home, public) and
   the checklist for an address nobody answered on.
 - `Dev.lua`: the development entry for scripted runs.
+- The campaign the host keeps and saves is `src/coop/campaign/`
+  ([campaign.md](campaign.md)).
 
 ## Protocol
 
-Version 3 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
-#32; 3 added how a player travels, #15). Every message is a JSON object with a `type`. Every field from the
+Version 4 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+#32; 3 added how a player travels, #15; 4 added campaign files, #13:
+[campaign.md](campaign.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -52,12 +55,15 @@ checks what the host sends.
 | `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped), `travel` (`walk`, `run`, `bike`, `surf`) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
+| `world` | `seq`, `save` (the game's save text, at most 1.5 MiB), `checkpoint` (a real SAVE asking the host to save the campaign), `kind` (`menu`, `box`, `hall`, `link`, `quick`; optional) |
 
 | Host to client | Fields |
 |---|---|
 | `probe` | the lobby view (`kind`, `protocol`, `build`, `campaign`, `title`, `game`, `sha1`, `host`, `players` with `name`, `game`, `connected`), `refused` (empty, `protocol_mismatch` or `content_mismatch`), `you` (the player this device or name would get back) and `port` |
 | `welcome` | `protocol`, `player`, `campaign`, `last_seq` |
-| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map) |
+| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map), `saved_ago` (seconds since the campaign was saved, -1 never), `busy` (why a save would be refused now, or empty) |
+| `world` | once after `welcome`: `fresh` (the campaign has no world for this player), `save` (their world) |
+| `saved` | `ok`, `by` (who saved), `you` (this player asked), `reason` (a refusal: `battle_in_progress`, `bad_world`, `save_failed`), `kind` |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
@@ -83,6 +89,12 @@ Rules (design A1):
   joins as someone new. A device that lost its id is recognised by the same
   name. Split-screen has two seats, so a device remembers two players per
   campaign.
+- **Worlds** (#13). A `world` is kept only when it parses with the game's
+  own save parser and has a save's shape (a team of at most six, twelve
+  boxes of twenty, a current box among them, money a number); otherwise it
+  is refused as `bad_world` and changes nothing. A `checkpoint` while a
+  battle runs or a join is pending is refused as `battle_in_progress` and
+  takes nothing.
 - **Trusted windows** (D72). The host checks only the step length, up to
   two cells on one map (a ledge hop). A map change or a jump has to come
   with `warp`, which is taken as it is. A refused step is `bad_step`.
@@ -207,10 +219,12 @@ past the launcher's screens:
 ```bash
 love . --coop-host[=PORT] [--coop-name=NAME] [--coop-logs=off]  # host on UDP PORT (24680)
 love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME] [--coop-logs=off]
+love . --coop-host --coop-campaign=ID  # host that campaign again from its file (#13)
 ```
 
 Scripted runs can use `POKEPORT_COOP_HOST=PORT`, `POKEPORT_COOP_JOIN=ADDRESS`,
-`POKEPORT_COOP_NAME=NAME` and `POKEPORT_COOP_LOGS=off` instead. Once a game
+`POKEPORT_COOP_NAME=NAME`, `POKEPORT_COOP_LOGS=off` and
+`POKEPORT_COOP_CAMPAIGN=ID` instead. Once a game
 is running, the host side hosts a new campaign (a new id each time) and the
 join side dials the address and joins as soon as the host answers. A step
 through a map connection shows a cell off the map for one frame, which is
@@ -279,6 +293,9 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   [launcher.md](launcher.md).
 - `tests/coop/presence_test.lua` (#15): the partners in a running game;
   see [presence.md](presence.md).
+- `tests/coop/campaign_file_test.lua`, `campaign_session_test.lua` and
+  `campaign_game_test.lua` (#13): the campaign, its file and its saves;
+  see [campaign.md](campaign.md).
 - `tests/coop/enet/` runs under LÖVE without a window (`love tests/coop/enet`),
   since plain luajit has no lua-enet:
   - a loopback seat and two ENet players on one host;
