@@ -1097,3 +1097,14 @@ sibling's D-numbers.
   per seat: the launcher writes `options.bindings` where the game reads it,
   so every seat and the game's own CONTROLS menu agree. Couch co-op (#11)
   starts couch mode; until then the seats are only remembered.
+- **G18. The game's options live in the game's file** (#5, 2026-10-14).
+  The launcher's SETTINGS page edits video, audio and game options in
+  `options.lua` through GPL `SaveData`, the keys the game's own OPTIONS menu
+  writes, one key per change; the launcher's own settings (language,
+  colours, devices, sessions) stay in `coop/launcher.json`. A second copy of
+  the game's options in the launcher's file would drift from the game's
+  menu, and `options.lua` is the engine's file, not the proprietary
+  launcher's: upstream's launcher only called the same GPL reader and
+  writer, which the fork keeps calling and never routes through
+  `LauncherSettings.lua`. Per-cart overlays (`CART_OPTION_KEYS`) keep
+  working, since the writes go through the same path as the game's.

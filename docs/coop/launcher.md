@@ -58,8 +58,20 @@ language, under every page and every message.
   LAUNCHER names the launcher's own keys, pad buttons, mouse and touch.
   Key and pad button names are shown as SDL names them (ENTER, ESC, D-PAD
   UP, BACK) in every language.
-- **SETTINGS**: LANGUAGE (ENGLISH or DEUTSCH) and THEME (LIGHT or DARK).
-  Video, sound and game options stay in each game's own OPTIONS menu until #5.
+- **SETTINGS**: LAUNCHER holds LANGUAGE (ENGLISH or DEUTSCH) and THEME
+  (LIGHT or DARK), the launcher's own, in `coop/launcher.json`. VIDEO, AUDIO
+  and GAME (#5) hold the game's: WINDOW (WINDOWED or BORDERLESS, the whole
+  screen), INTEGER SCALE (OFF, 1X to 4X: the game drawn at an exact multiple
+  of its pixels, upstream's faithful-resolution lock), MUSIC and SOUND (0 to
+  7), TEXT SPEED (FAST, MEDIUM, SLOW), BATTLE ANIMATION (ON, OFF) and BATTLE
+  STYLE (SHIFT, SET). A press moves a value on, left and right step it (the
+  volumes stop at 0 and 7, as in the game's menu). These are the keys the
+  game's own OPTIONS menu writes (`videoMode`, `faithfulRes`, `musicVol`,
+  `sfxVol`, `textSpeed`, `animations`, `battleStyle`) in `options.lua`,
+  written through GPL `SaveData.saveOptions` one key at a time, so the
+  launcher and the game always show the same value and the game applies
+  them at boot as it applies its own (decision G18 in
+  [design.md](design.md)). A phone or console has no WINDOW row.
 - **HELP**: how partners connect, SHARE LOGS (on by default; session logs go
   to the session's players and hold trainer names and addresses) and OPEN LOGS
   FOLDER on desktop, and the credits: the credit line, the fork, the AI
@@ -174,6 +186,9 @@ CONTINUE never opens a campaign's save.
   import modules (`RomArchive`, `GameVersion.forSha1`, `CacheFs`,
   `CacheContract`, `ExtractThread`, `RomExtractor`), never `RomImporter.lua`.
 - `Keypad.lua`: the text entry grid.
+- `GameOptions.lua` (#5): the game's options on SETTINGS: each row's key
+  in `options.lua`, its value's label and how it steps, read and written
+  through `SaveData`.
 - `Controls.lua` (#4): the CONTROLS page's model: the buttons' rows, the
   capture of a key or pad press, the swap rule, the players' devices. The
   seats themselves are `src/coop/game/Seats.lua`: one `Input` per player
@@ -198,8 +213,9 @@ fullscreen memory) is not on the licence's list and stays.
 Upstream features that only its launcher reaches are not offered yet: mod
 management and mod updates before a shortcut boot (`main.lua` asks for none),
 the save editor, the skin studio, the touch-controls editor, the Box, carts and
-the other games. Settings, save slots and mobile are #5 to #7; the game's
-CONTROLS menu stays in the game and agrees with the launcher's page (#4).
+the other games. Save slots and mobile are #6 and #7; the game's CONTROLS
+and OPTIONS menus stay in the game and agree with the launcher's pages
+(#4, #5).
 
 ## Save folder and upstream services
 
@@ -267,6 +283,15 @@ claims, twins and per-seat input were checked by the ROM-free tests only
 seats have not been run: the game uses the seats only once couch co-op
 (#11) starts it in couch mode.
 
+The SETTINGS page (#5) was run the same way: the page rendered in English
+and German at 1024 x 768 and 480 x 400, then TEXT SPEED, BATTLE ANIMATION,
+BATTLE STYLE, MUSIC, SOUND and INTEGER SCALE set through the page's rows
+and US Red (a private import of the owner's dump) booted from the launcher:
+the game's save options held the six values, its window was 320 x 288 for
+2X, and its OPTIONS menu opened on them. WINDOW (borderless) was not run
+on a screen: the offscreen driver has none, so it is covered by the reader
+(`VideoMode.applyOptions`) and the ROM-free tests only.
+
 ## Tests
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
@@ -280,7 +305,12 @@ headless on the fixture dataset and drives the launcher with keys, a pad, the
 mouse, the wheel and a file drop; `upstream_services_test.lua` checks that no
 boot path reaches the updater or cloud sync and that `conf.lua` uses the
 fork's identity; and `driver_launcher_boot_test.lua` runs a frame driver that
-boots a game from the launcher (#28). `seats_test.lua` (#4) drives two fake pads and the keyboard through the
+boots a game from the launcher (#28). `game_options_test.lua` (#5) reads the defaults from no file, steps every
+row and reads each change back from `options.lua`, falls back from a broken
+file, and walks the rows in the menu (A, left, right); the boot test sets
+the options on the page through the real callbacks, boots Red on the
+fixture dataset and checks that the game's save options hold them.
+`seats_test.lua` (#4) drives two fake pads and the keyboard through the
 seats: solo merges them into player 1, couch co-op keeps each seat to its
 device (events and polled pads), twins are told apart, the claims round
 trip through the settings file, and the controls model writes

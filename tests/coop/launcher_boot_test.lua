@@ -306,4 +306,71 @@ do
   SaveData.invalidateOptionsCache()
 end
 
+-- 9. SETTINGS (#5): the game's options set on the page are the ones the
+-- booted game applies
+do
+  Launcher.current = nil
+  love.filesystem.remove("options.lua")
+  local SaveData = require("src.core.SaveData")
+  SaveData.invalidateOptionsCache()
+  ready = { red = true }
+  love.load({})
+  frames(2)
+  local l = Launcher.current
+  l.menu:openTab("settings")
+  frames(1)
+  local function rowIndex(id)
+    for i, r in ipairs(l.menu:items()) do if r.id == id then return i end end
+    error("no row " .. id)
+  end
+  -- the lower rows sit under the fold at this size: the focus walks there
+  -- (the page scrolls to it) and the keys act through the real callbacks
+  local function focusRow(id)
+    l.menu.cursor = rowIndex(id)
+    l.ui.focus = "row:" .. rowIndex(id)
+    l.ui.cursor = l.menu.cursor
+    frames(1)
+  end
+  click(l, "scale")
+  eq(l.menu:items()[rowIndex("scale")].detail, "1X", "a click on INTEGER SCALE moves it on")
+  focusRow("textSpeed")
+  love.keypressed("return")
+  eq(l.menu:items()[rowIndex("textSpeed")].detail, "SLOW", "Enter on TEXT SPEED moves it on")
+  focusRow("music")
+  love.keypressed("left")
+  love.keypressed("left")
+  eq(l.menu:items()[rowIndex("music")].detail, "5", "left steps MUSIC down twice")
+  focusRow("animations")
+  love.keypressed("right")
+  focusRow("battleStyle")
+  love.keypressed("z")
+  focusRow("scale")
+  local pad = { isGamepad = function() return true end }
+  love.gamepadpressed(pad, "a")
+  local shown = {}
+  for _, r in ipairs(l.menu:items()) do if r.option then shown[#shown + 1] = r.id .. "=" .. r.detail end end
+  eq(table.concat(shown, " "), "window=WINDOWED scale=2X music=5 sound=7 textSpeed=SLOW animations=OFF battleStyle=SET",
+    "the page shows what was set")
+  local o = SaveData.loadOptions()
+  eq(o.textSpeed .. "/" .. tostring(o.animations) .. "/" .. o.battleStyle .. "/" .. o.musicVol .. "/" .. o.faithfulRes,
+    "5/false/set/5/2", "options.lua holds the game's keys")
+  -- boot Red from the launcher: the game applies these very options
+  l.menu:openTab("play")
+  l.menu:select("red")
+  l:_run({ kind = "boot", version = "red", newGame = false })
+  frames(3)
+  local Game = package.loaded["src.core.Game"]
+  check(Game and Game.save and Game.save.options, "the game booted with options")
+  local go = Game and Game.save and Game.save.options or {}
+  eq(go.textSpeed, 5, "the game's text speed is SLOW")
+  eq(go.animations, false, "battle animations are off")
+  eq(go.battleStyle, "set", "the battle style is SET")
+  eq(go.musicVol, 5, "the music volume is 5")
+  eq(go.faithfulRes, 2, "the integer scale is 2X")
+  love.quit()
+  frames(2)
+  love.filesystem.remove("options.lua")
+  SaveData.invalidateOptionsCache()
+end
+
 T.finish()

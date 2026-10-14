@@ -116,16 +116,45 @@ return {
 
   -- settings
   ["Settings"] = "Optionen",
-  ["The launcher's own settings. A game's text follows its cartridge."] =
-    "Die Optionen des Launchers. Der Text eines Spiels folgt seinem Modul.",
+  ["The launcher's own settings, then the game's. A pressed value moves on; left and right step it."] =
+    "Erst die Optionen des Launchers, dann die des Spiels. Drücken schaltet einen Wert weiter; links und rechts gehen Schritt für Schritt.",
+  ["LAUNCHER"] = "LAUNCHER",
+  ["VIDEO"] = "BILD",
+  ["AUDIO"] = "TON",
+  ["GAME"] = "SPIEL",
   ["LANGUAGE"] = "SPRACHE",
-  ["The language of the launcher."] = "Die Sprache des Launchers.",
+  ["The language of the launcher. A game's text follows its cartridge."] =
+    "Die Sprache des Launchers. Der Text eines Spiels folgt seinem Modul.",
   ["THEME"] = "FARBEN",
   ["Light or dark colours for the launcher."] = "Helle oder dunkle Farben für den Launcher.",
   ["LIGHT"] = "HELL",
   ["DARK"] = "DUNKEL",
+  ["WINDOW"] = "FENSTER",
+  ["A window, or the whole screen."] = "Ein Fenster oder der ganze Bildschirm.",
+  ["WINDOWED"] = "FENSTER",
+  ["BORDERLESS"] = "VOLLBILD",
+  ["INTEGER SCALE"] = "GANZZAHLIGE SKALIERUNG",
+  ["Draw the game at an exact multiple of its pixels; OFF fits the window."] =
+    "Zeichnet das Spiel in einem genauen Vielfachen seiner Pixel; AUS passt es ins Fenster.",
+  ["MUSIC"] = "MUSIK",
+  ["SOUND"] = "GERÄUSCHE",
+  ["0 to 7."] = "0 bis 7.",
+  ["TEXT SPEED"] = "TEXT-TEMPO",
+  ["How fast text appears."] = "Wie schnell Text erscheint.",
+  ["FAST"] = "SCHNELL",
+  ["MEDIUM"] = "MITTEL",
+  ["SLOW"] = "LANGSAM",
+  ["BATTLE ANIMATION"] = "KAMPFANIMATION",
+  ["Attack animations in battle."] = "Angriffsanimationen im Kampf.",
+  ["BATTLE STYLE"] = "KAMPFSTIL",
+  ["SHIFT asks before the next Pokemon; SET does not."] =
+    "WECHSEL fragt vor dem nächsten POKéMON; FOLGEND nicht.",
+  ["SHIFT"] = "WECHSEL",
+  ["SET"] = "FOLGEND",
   ["Video, sound and game options are in each game's own OPTIONS menu."] =
     "Bild, Ton und Spieloptionen findest du im Menü OPTIONEN jedes Spiels.",
+  ["The game's options are the ones its own OPTIONS menu shows; a change here is a change there."] =
+    "Die Spieloptionen sind dieselben wie im Menü OPTIONEN des Spiels; eine Änderung hier gilt auch dort.",
 
   -- help
   ["A little help before you go"] = "Ein wenig Hilfe vor dem Start",
