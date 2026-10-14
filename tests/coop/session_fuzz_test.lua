@@ -47,6 +47,9 @@ local VALID = {
     log = logBatch(),
     world = { type = "world", seq = 1, checkpoint = true, kind = "menu",
               save = 'return { player = { name = "FUZZ" }, money = 5, party = {} }\n' },
+    patch = { type = "patch", seq = 2, set = { ["flags/EVENT_GOT_POKEDEX"] = true,
+              ["objectToggles/ROUTE_1/BALL"] = false, ["inventory/BOULDERBADGE"] = 1 },
+              unset = { "flags/EVENT_X" } },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -65,6 +68,9 @@ local VALID = {
     rejected = { type = "rejected", seq = 4, reason = "duplicate" },
     ended = { type = "ended", reason = "host_quit" },
     log = logBatch(),
+    story = { type = "story", rev = 7, base = true, applied = 2,
+              set = { ["flags/EVENT_GOT_POKEDEX"] = true, ["trashPuzzle/first"] = 4 },
+              unset = { "itemsTaken/ROUTE_1_obj_2" } },
   },
 }
 
