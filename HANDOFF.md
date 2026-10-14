@@ -71,7 +71,10 @@ In a driver, wait for `src.ui.ChoiceBox` on top before pressing YES.
 
 ## Worktrees and background processes
 
-- Main checkout on local `dev` (leave it). One Superset worktree on
+- Main checkout on `gen1recomp-coop` (switched 2026-10-15: Superset bases new
+  workspaces on the main checkout's branch, and the old local `dev` had no
+  `.superset/` or `HANDOFF.md`; keep it on the integration branch). One Superset
+  worktree on
   `coop/group4-campaign-state`, pushed, clean. No scratch worktrees, no
   background processes.
 
