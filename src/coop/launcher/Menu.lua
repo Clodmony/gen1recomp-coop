@@ -38,6 +38,8 @@ Menu.GAMES = {
   { id = "red", label = "RED" },
   { id = "blue", label = "BLUE" },
   { id = "yellow", label = "YELLOW" },
+  { id = "red_de", label = "ROT (DE)" },   -- Rote Edition (#25)
+  { id = "blue_de", label = "BLAU (DE)" }, -- Blaue Edition (#25)
 }
 
 local function gameLabel(version)

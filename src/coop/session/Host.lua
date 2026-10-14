@@ -24,6 +24,7 @@
 -- it shares too) and passes each batch on once to every other sharing
 -- device, keeping LOG_BACKLOG bytes of batches for a device that joins later.
 
+local GameVersion = require("src.core.GameVersion")
 local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
 local Random = require("src.coop.session.Random")
@@ -97,8 +98,12 @@ function Host:_log(kind, data, player)
 end
 
 -- the cartridge rule: the same game and the same dump.  Red with Blue
--- (design A1.7, A13) is decided in #9.
+-- (design A1.7, A13) is decided in #9.  Languages never mix (D95, #25):
+-- German plays with German only, whatever #9 lets pair.
 function Host:cartridgeFits(game, sha1)
+  if GameVersion.language(game) ~= GameVersion.language(self.cartridge.game) then
+    return false
+  end
   return game == self.cartridge.game and sha1 == self.cartridge.sha1
 end
 
