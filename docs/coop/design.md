@@ -161,6 +161,11 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
 ### A2. Launcher co-op flow (hosting, joining, campaign management)
 
 All of this lives in the fork's **own** launcher (upstream's is proprietary).
+The screens are in place (#12, [launcher.md](launcher.md)). Left for other
+issues: the line saying which games play together and the both-versions
+switch (#9); a card's badges, place and last save (campaign files, #13); the
+rival's name and how a new player starts (#22); the split-screen entry
+(#11); a phone layout run on a phone (#7).
 
 1. **adapt** Start screen: cartridge tiles (Ready / needs re-import / not imported),
    the pick remembered, a line saying which games play together; HOST and JOIN;
@@ -800,6 +805,12 @@ All of this lives in the fork's **own** launcher (upstream's is proprietary).
 
 ### A14. Presence, finding the partner, the CO-OP menu and the run button
 
+In place (#15, [presence.md](presence.md)), with what a session without
+battles supports. Left for #34: the "!" where a battle started, who is not
+drawn in a battle, the opening or the Cable Club, the menu's fight, join,
+battle and trade rows, "in a battle", "in the opening" and the last save,
+the battle notice, and SELECT in a co-op battle.
+
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
    through (D19, D53). The target's Collision has passable entities (Yellow's
@@ -952,7 +963,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | Area | Issue |
 |---|---|
 | A1 Session and connection core | #10 (done: [session.md](session.md)); log sharing #31, flood limits #32 |
-| A2 Launcher co-op flow | #12 (after the launcher shell #3) |
+| A2 Launcher co-op flow | #12 ([launcher.md](launcher.md)); rival's name and how to start #22, both versions #9, split-screen entry #11 |
 | A3 Campaign state, saves and persistence | #13 |
 | A4 New players and the opening | #22 |
 | A5 Shared world | #14 |
@@ -964,7 +975,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
 | A12 Friend battles and trades | #23 |
 | A13 Red + Blue mixing, Yellow | #9 |
-| A14 Presence, finding the partner, CO-OP menu, run button | #15 |
+| A14 Presence, finding the partner, CO-OP menu, run button | #15 ([presence.md](presence.md)); the battle, opening, friend battle and campaign file parts #34 |
 | A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
 | Local split-screen (the sibling's open #53) | #11 |
 
@@ -1007,3 +1018,17 @@ sibling's D-numbers.
   [launcher.md](launcher.md) describes; an import in the launcher may come
   with #6. The self-updater and cloud sync stay off until the fork wants its
   own (`src/coop/Upstream.lua`).
+- **G10. Until campaign files, a campaign's progress is a save slot per
+  device** (#12, owner, 2026-10-13). Each device plays a campaign in a save
+  slot of its own, created and named after the campaign; entering the
+  campaign makes it the active slot, and the launcher puts the solo slot
+  back afterwards. The host's campaign card holds the title, the game it was
+  started on, the players seen and the address a partner used last. The
+  campaign files of #13 replace the per-device slots with the host's
+  campaign state.
+- **G11. Colours by place** (#15, default proposed 2026-10-14, the owner
+  may change it). Each player wears the colour of their place in the
+  session, the host's player first: red, blue, green, purple, orange, teal,
+  pink, brown, then again. A colour is an OBJ palette (white, skin, the
+  colour, a dark outline) that reads on every Gen 1 COLORS mode. This
+  player wears theirs too, so a player has one colour in every window.

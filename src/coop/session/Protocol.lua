@@ -15,8 +15,9 @@ local Protocol = {}
 
 -- raised whenever a message's shape or meaning changes; a peer of another
 -- version is refused with protocol_mismatch (design A1.6).  2: shared session
--- logs (#31) and the flood refusal (#32).
-Protocol.VERSION = 2
+-- logs (#31) and the flood refusal (#32).  3: how a player travels
+-- (`travel` on moves and players, #15).
+Protocol.VERSION = 3
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -48,6 +49,10 @@ Protocol.REASONS = {
 }
 
 local FACINGS = { up = true, down = true, left = true, right = true }
+-- how a player moves: the sprite they wear and how fast their steps are
+-- eased on the other screens (#15, design A14.5)
+local TRAVELS = { walk = true, run = true, bike = true, surf = true }
+Protocol.TRAVELS = TRAVELS
 
 -- field checks: each returns the clean value, or nil and a reason ---------
 
@@ -228,6 +233,7 @@ local publicPlayer = record({
   connected = bool,
 }, {
   map = Protocol.mapId, x = cell, y = cell, facing = enum(FACINGS),
+  travel = enum(TRAVELS),
 })
 
 -- the lobby view of a player (probe answers and the LAN beacon)
@@ -284,10 +290,10 @@ Protocol.TO_HOST = {
     device = Protocol.deviceId, seat = int(1, 2),
   })), { known = known, via = text(64), logs = record({ share = bool }) }),
   -- the client's own position; warp is true when its world changed map or
-  -- jumped (a warp, a map connection, a fly)
+  -- jumped (a warp, a map connection, a fly); travel is how it moves (#15)
   move = record(withType("move", {
     seq = seq, map = Protocol.mapId, x = cell, y = cell,
-    facing = enum(FACINGS), warp = bool,
+    facing = enum(FACINGS), warp = bool, travel = enum(TRAVELS),
   })),
   -- leaving on purpose; a dropped link leaves the same way
   bye = record(withType("bye", { seq = seq })),

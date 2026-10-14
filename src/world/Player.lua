@@ -131,6 +131,8 @@ function Player:stepLength(dir)
   if self.spinning and not self.spinFrames then
     frames = math.floor(tonumber(frames) or STEP_FRAMES) / LOOP_FRAMES * SPIN_ITER_FRAMES
   end
+  -- co-op (#15): hold B to run in a co-op session (src/coop/game/Run.lua)
+  frames = require("src.coop.game.Run").stepFrames(self, frames, onBike, Game.input)
   if Runtime.wantsHook("movement.speed") then
     frames = Runtime.call("movement.speed", function(f) return f end, frames, {
       onBike = onBike,
