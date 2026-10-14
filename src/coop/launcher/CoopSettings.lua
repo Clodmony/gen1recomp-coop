@@ -1,9 +1,11 @@
 -- What the launcher remembers on this device (#12, design A2.1, A2.8): the
 -- player's name, the last address and the recent ones, the cartridge
 -- picked, the last session (for the LAST SESSION row), the log-sharing
--- switch, the save slot each campaign plays in on this device, and the
+-- switch, the save slot each campaign plays in on this device, the
 -- launcher's language and colours (#41, #38; nil: the system's language,
--- light colours).  `coop/launcher.json` in the save folder.
+-- light colours) and each player's device for couch co-op (#4: the
+-- keyboard, or a pad by GUID and order among twins; `false` marks a player
+-- without one).  `coop/launcher.json` in the save folder.
 --
 -- Until the campaign files of #13, a player's progress in a campaign is a
 -- save slot of their own device, named after the campaign.  Entering a
@@ -13,6 +15,7 @@
 
 local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
+local Seats = require("src.coop.game.Seats")
 
 local CoopSettings = {}
 CoopSettings.__index = CoopSettings
@@ -33,8 +36,8 @@ CoopSettings.validAddress = address
 
 function CoopSettings.load(fs)
   local f = fs or defaultFs()
-  local self = setmetatable({ fs = f, recent = {}, slots = {}, restore = {}, shareLogs = true },
-    CoopSettings)
+  local self = setmetatable({ fs = f, recent = {}, slots = {}, restore = {}, shareLogs = true,
+                              seats = {} }, CoopSettings)
   local text = f.getInfo(CoopSettings.FILE) and f.read(CoopSettings.FILE)
   local ok, data = pcall(Json.decode, type(text) == "string" and text or "null")
   if not ok or type(data) ~= "table" then return self end
@@ -64,6 +67,15 @@ function CoopSettings.load(fs)
       self.slots[id] = { version = s.version, slot = s.slot }
     end
   end
+  for n, d in ipairs(type(data.seats) == "table" and data.seats or {}) do
+    if n > Seats.MAX then break end
+    local device = Seats.device(d)
+    if device or d == false or type(d) == "table" and (d.kind == "pad" or d.kind == "keyboard") then
+      self.seats[n] = device or false
+    else
+      break
+    end
+  end
   for version, slot in pairs(type(data.restore) == "table" and data.restore or {}) do
     if Protocol.gameId(version) and (slot == false
         or (type(slot) == "string" and slot:match("^slot%d+$"))) then
@@ -80,6 +92,7 @@ function CoopSettings:save()
     name = self.name, address = self.address, recent = self.recent,
     shareLogs = self.shareLogs, pick = self.pick, last = self.last, slots = self.slots,
     restore = self.restore, language = self.language, theme = self.theme,
+    seats = self.seats,
   }))
 end
 

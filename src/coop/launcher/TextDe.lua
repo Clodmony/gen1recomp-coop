@@ -73,8 +73,36 @@ return {
 
   -- controls
   ["Controls"] = "Steuerung",
-  ["The launcher answers keyboard, pad, mouse and touch the same way."] =
-    "Der Launcher reagiert gleich auf Tastatur, Controller, Maus und Touch.",
+  ["The game's buttons, and each player's device for couch co-op."] =
+    "Die Knöpfe des Spiels und das Gerät jedes Spielers für den Sofa-Koop.",
+  ["IN THE GAME"] = "IM SPIEL",
+  ["UP"] = "OBEN",
+  ["DOWN"] = "UNTEN",
+  ["LEFT"] = "LINKS",
+  ["RIGHT"] = "RECHTS",
+  ["A"] = "A",
+  ["B"] = "B",
+  ["START"] = "START",
+  ["SELECT"] = "SELECT",
+  ["RESET BINDINGS"] = "BELEGUNG ZURÜCKSETZEN",
+  ["A key and a pad button for each. The game's own CONTROLS menu shows the same."] =
+    "Je eine Taste und ein Controller-Knopf. Das STEUERUNG-Menü des Spiels zeigt dasselbe.",
+  ["Press a key or a pad button for %s. Esc cancels."] =
+    "Drücke eine Taste oder einen Controller-Knopf für %s. Esc bricht ab.",
+  ["PLAYER DEVICES"] = "GERÄTE DER SPIELER",
+  ["PLAYER %d"] = "SPIELER %d",
+  ["KEYBOARD"] = "TASTATUR",
+  ["PAD"] = "CONTROLLER",
+  ["ANY DEVICE"] = "JEDES GERÄT",
+  ["NO DEVICE"] = "KEIN GERÄT",
+  ["CLEAR DEVICES"] = "GERÄTE VERGESSEN",
+  ["Player %d: press A on your pad, or Enter for the keyboard. Esc cancels."] =
+    "Spieler %d: drücke A auf deinem Controller oder Enter für die Tastatur. Esc bricht ab.",
+  ["CONNECTED PADS"] = "VERBUNDENE CONTROLLER",
+  ["No pad connected."] = "Kein Controller verbunden.",
+  ["P%d"] = "S%d",
+  ["Couch co-op seats each player at the device claimed here, remembered by pad. Without a claim, player 1 uses any device, as in solo play."] =
+    "Beim Sofa-Koop spielt jeder an dem hier gewählten Gerät; der Launcher merkt sich den Controller. Ohne Wahl nutzt Spieler 1 jedes Gerät, wie beim Alleinspielen.",
   ["IN THE LAUNCHER"] = "IM LAUNCHER",
   ["MOVE"] = "WÄHLEN",
   ["Arrows or WASD · D-pad or stick"] = "Pfeile oder WASD · Steuerkreuz oder Stick",
@@ -85,11 +113,6 @@ return {
   ["A click chooses, a right click goes back."] = "Ein Klick wählt, ein Rechtsklick geht zurück.",
   ["TOUCH"] = "TOUCH",
   ["A tap chooses."] = "Tippen wählt.",
-  ["PLAYER DEVICES"] = "GERÄTE DER SPIELER",
-  ["Couch co-op gives each player a controller of their own. It comes with a later version."] =
-    "Beim Sofa-Koop hat jeder Spieler einen eigenen Controller. Das kommt mit einer späteren Version.",
-  ["In a game, the game's own controls apply, as in solo play."] =
-    "Im Spiel gilt die Steuerung des Spiels, wie beim Alleinspielen.",
 
   -- settings
   ["Settings"] = "Optionen",

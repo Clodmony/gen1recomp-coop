@@ -16,6 +16,8 @@ local GamepadMap = require("src.core.GamepadMap")
 local Menu = require("src.coop.launcher.Menu")
 local RomImport = require("src.coop.launcher.RomImport")
 local CoopSettings = require("src.coop.launcher.CoopSettings")
+local Controls = require("src.coop.launcher.Controls")
+local Seats = require("src.coop.game.Seats")
 local Screens = require("src.coop.launcher.Screens")
 local Text = require("src.coop.launcher.Text")
 local Theme = require("src.coop.launcher.Theme")
@@ -62,6 +64,21 @@ function Launcher.new(onBoot, opts)
   if not RomImport.isGen1(initial) then initial = nil end
   if not initial and RomImport.isGen1(settings.pick) then initial = settings.pick end
   local canOpenLogs = not mobile() and love.system ~= nil and love.system.openURL ~= nil
+  -- the CONTROLS page (#4): rebinds go where the game reads them
+  -- (options.bindings, GPL SaveData), the players' devices into the
+  -- launcher's own settings
+  Seats.load(settings)
+  self.controls = Controls.new({
+    bindings = function()
+      local ok, options = pcall(require("src.core.SaveData").loadOptions)
+      return ok and type(options) == "table" and options.bindings or {}
+    end,
+    saveBindings = function(overlay)
+      pcall(require("src.core.SaveData").saveOptions, { bindings = overlay })
+    end,
+    settings = settings,
+    pads = function() return self:pads() end,
+  })
   self.menu = Menu.new({
     ready = function(v) return self:isReady(v) end,
     saveInfo = function(v) return self:saveInfo(v) end,
@@ -72,6 +89,7 @@ function Launcher.new(onBoot, opts)
     settings = settings,
     campaigns = require("src.coop.Campaigns"),
     coop = function(v) return self:_coopEnv(v) end,
+    controls = self.controls,
   })
   self:_coopReturn()
   if opts.notice then self.menu:notify(opts.notice) end
@@ -153,6 +171,34 @@ function Launcher:_openLogs()
   if not love.system.openURL("file://" .. dir) then
     self.menu:notify(L("The logs are in %s", dir))
   end
+end
+
+-- the pads connected now, as Seats.describe entries (#4)
+local function joysticks()
+  local js = love.joystick
+  if not (js and js.getJoysticks) then return {} end
+  local ok, list = pcall(js.getJoysticks)
+  return ok and type(list) == "table" and list or {}
+end
+
+function Launcher:pads()
+  local out = {}
+  local list = joysticks()
+  for _, j in ipairs(list) do
+    if not GamepadMap.isAccelerometer(j) then
+      local d = Seats.describe(j, list)
+      if d then out[#out + 1] = d end
+    end
+  end
+  return out
+end
+
+-- a raw press while the CONTROLS page captures one (#4); true when it took it
+function Launcher:_capture(ev)
+  local menu = self.menu
+  if not menu:capturing() then return false end
+  menu:captured(ev)
+  return true
 end
 
 function Launcher:isReady(version)
@@ -473,6 +519,10 @@ end
 function Launcher:keypressed(key)
   self.device = "keys"
   local menu = self.menu
+  if self:_capture({ kind = "key", key = key }) then
+    self.swallowText = #key == 1 or key == "space"
+    return
+  end
   -- co-op (#12): a text field types; arrows still move on its grid
   if self:_typing() then
     local coop = menu.coop
@@ -519,8 +569,11 @@ end
 local PAD_ACTIONS = { up = true, down = true, left = true, right = true,
   a = true, b = true, start = true }
 
-function Launcher:gamepadpressed(_, button)
+function Launcher:gamepadpressed(joystick, button)
   self.device = "pad"
+  if self:_capture({ kind = "pad", button = button, device = Seats.describe(joystick, joysticks()) }) then
+    return
+  end
   local action = GamepadMap.mapGamepadButton(button)
   if PAD_ACTIONS[action] then self:press(action) end
 end
@@ -536,7 +589,7 @@ function Launcher:gamepadaxis(joystick, axis, value)
   local held = math.abs(value) >= STICK_ON
   if held and not self.axis[key] then
     self.device = "pad"
-    self:press(dir)
+    if not self.menu:capturing() then self:press(dir) end
   end
   self.axis[key] = held
 end
@@ -550,6 +603,10 @@ end
 function Launcher:joystickpressed(joystick, button)
   if not rawOnly(joystick) then return end
   self.device = "pad"
+  if self:_capture({ kind = "pad", button = GamepadMap.mapRawToGamepadButton(button) or ("joy" .. button),
+      device = Seats.describe(joystick, joysticks()) }) then
+    return
+  end
   local action = GamepadMap.mapRawButton(button)
   if PAD_ACTIONS[action] then self:press(action) end
 end
@@ -558,7 +615,7 @@ function Launcher:joystickreleased() end
 function Launcher:joystickaxis() end
 
 function Launcher:joystickhat(joystick, _, direction)
-  if not rawOnly(joystick) then return end
+  if not rawOnly(joystick) or self.menu:capturing() then return end
   self.device = "pad"
   local dir = ({ u = "up", d = "down", l = "left", r = "right" })[direction]
   if dir then self:press(dir) end
@@ -574,6 +631,8 @@ function Launcher:_targetAt(x, y)
 end
 
 function Launcher:_tap(x, y)
+  -- a click or tap while CONTROLS waits for a press cancels it (#4)
+  if self:_capture({ kind = "cancel" }) then return end
   local n = self:_targetAt(x, y)
   if n then return self:_activate(n) end
   -- a tap beside a message closes it
@@ -583,7 +642,10 @@ end
 function Launcher:mousepressed(x, y, button, istouch)
   if istouch then return end
   self.device = "mouse"
-  if button == 2 then return self:press("b") end
+  if button == 2 then
+    if self:_capture({ kind = "cancel" }) then return end
+    return self:press("b")
+  end
   if button == 1 then self:_tap(x, y) end
 end
 

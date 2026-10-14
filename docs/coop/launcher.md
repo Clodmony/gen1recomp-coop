@@ -41,8 +41,23 @@ language, under every page and every message.
   ROM is routed to its game whatever page is showing. A scripted import
   (`POKEPORT_IMPORT_ONLY`) that fails prints the error and exits with 1.
 - **CAMPAIGNS**: every campaign on this device (see *Co-op screens*).
-- **CONTROLS**: the launcher's keys, pad buttons, mouse and touch; per-player
-  devices are marked PLANNED (#4).
+- **CONTROLS** (#4): IN THE GAME lists the Game Boy buttons with the key and
+  the pad button each answers to (the defaults of `src/core/Input.lua`,
+  primary key first); a row waits for the next key or pad button, which
+  then answers to that button. A key another button answered to is swapped,
+  never stolen (that button gets the key this one had), as in the game's
+  own CONTROLS menu; RESET BINDINGS puts the defaults back. The rebinds are
+  written where the game reads them, `options.bindings` in `options.lua`
+  (GPL `SaveData`), so the game and its CONTROLS menu show the same. PLAYER
+  DEVICES is the seat of each player for couch co-op: a row asks that
+  player to press A on their pad or Enter for the keyboard, the connected
+  pads are listed with the player each is claimed for, CLEAR DEVICES
+  forgets them. A claim is remembered in `coop/launcher.json` by the pad's
+  GUID (and, between twins of one model, its order among the connected
+  pads). Without a claim player 1 uses any device, as in solo play. IN THE
+  LAUNCHER names the launcher's own keys, pad buttons, mouse and touch.
+  Key and pad button names are shown as SDL names them (ENTER, ESC, D-PAD
+  UP, BACK) in every language.
 - **SETTINGS**: LANGUAGE (ENGLISH or DEUTSCH) and THEME (LIGHT or DARK).
   Video, sound and game options stay in each game's own OPTIONS menu until #5.
 - **HELP**: how partners connect, SHARE LOGS (on by default; session logs go
@@ -159,6 +174,13 @@ CONTINUE never opens a campaign's save.
   import modules (`RomArchive`, `GameVersion.forSha1`, `CacheFs`,
   `CacheContract`, `ExtractThread`, `RomExtractor`), never `RomImporter.lua`.
 - `Keypad.lua`: the text entry grid.
+- `Controls.lua` (#4): the CONTROLS page's model: the buttons' rows, the
+  capture of a key or pad press, the swap rule, the players' devices. The
+  seats themselves are `src/coop/game/Seats.lua`: one `Input` per player
+  (player 1 is upstream's singleton, so solo play is unchanged), the device
+  each one listens to, and `Seats.dispatch` for an event every seat sees
+  and filters (the hook is `Input.seatFilter`, marked `co-op (#4)` in
+  `src/core/Input.lua`).
 - `CoopSettings.lua`: what the launcher remembers on this device, and each
   campaign's save slot.
 - `../Campaigns.lua`: the hosting device's campaign cards.
@@ -176,7 +198,8 @@ fullscreen memory) is not on the licence's list and stays.
 Upstream features that only its launcher reaches are not offered yet: mod
 management and mod updates before a shortcut boot (`main.lua` asks for none),
 the save editor, the skin studio, the touch-controls editor, the Box, carts and
-the other games. Settings, controls, save slots and mobile are #4 to #7.
+the other games. Settings, save slots and mobile are #5 to #7; the game's
+CONTROLS menu stays in the game and agrees with the launcher's page (#4).
 
 ## Save folder and upstream services
 
@@ -235,6 +258,15 @@ it joined, and both entered the game with both players in the session. Two
 machines on a LAN, pads, touch, the system-language default on a German
 desktop, Windows, macOS and phones have not been run with the new pages.
 
+The CONTROLS page (#4) was run on Linux desktop (LÖVE 11.5, offscreen) by a
+frame driver that opened it in English and German at 1024 x 768, 480 x 400
+and 960 x 540, with a bind capture and a seat capture showing; no pad was
+connected in that run, so the pad list showed "No pad connected." and the
+claims, twins and per-seat input were checked by the ROM-free tests only
+(fake pads). Two real pads, a claim on a real pad and a game taking the
+seats have not been run: the game uses the seats only once couch co-op
+(#11) starts it in couch mode.
+
 ## Tests
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
@@ -248,7 +280,14 @@ headless on the fixture dataset and drives the launcher with keys, a pad, the
 mouse, the wheel and a file drop; `upstream_services_test.lua` checks that no
 boot path reaches the updater or cloud sync and that `conf.lua` uses the
 fork's identity; and `driver_launcher_boot_test.lua` runs a frame driver that
-boots a game from the launcher (#28). `launcher_coop_test.lua` (#12) runs two
+boots a game from the launcher (#28). `seats_test.lua` (#4) drives two fake pads and the keyboard through the
+seats: solo merges them into player 1, couch co-op keeps each seat to its
+device (events and polled pads), twins are told apart, the claims round
+trip through the settings file, and the controls model writes
+`options.bindings` the way `Input` reads them (the swap, reset, claims);
+the menu, UI and boot tests open the page, lay it out capturing in both
+languages and drive a rebind and a pad claim through the real callbacks.
+`launcher_coop_test.lua` (#12) runs two
 devices in one process over a loopback hub that stands in for the network:
 hosting a new campaign, finding it nearby (once per campaign), joining under a
 typed name, the players and LAST USED on the hosting page, STOP HOSTING with a

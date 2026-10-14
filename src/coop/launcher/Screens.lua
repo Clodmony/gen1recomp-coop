@@ -409,13 +409,81 @@ function S.solo(p, menu, c)
 end
 
 function S.controls(p, menu, c)
+  local rows = menu:items()
   local y = c.y + heading(p, c, c.y, L("Controls"),
-    L("The launcher answers keyboard, pad, mouse and touch the same way."), false)
+    L("The game's buttons, and each player's device for couch co-op."), false)
+  -- a capture under way: the prompt, and nothing else takes a press (#4)
+  local prompt = menu:capturing()
+  if prompt then
+    local lines = Ui.wrap(prompt, c.w - 24)
+    local h = #lines * LINE + 16
+    p:rect(c.x, y, c.w, h, "lcd")
+    p:frame(c.x, y, c.w, h, "accent", 2)
+    for i, line in ipairs(lines) do p:text(c.x + 12, y + 8 + (i - 1) * LINE, line, "ink") end
+    y = y + h + 10
+  end
   local a, b, wide = columns(c, 0.55)
+  -- the game's buttons
   local close = panel(p, a.x, y, a.w)
   local ly = y + 10
-  sectionLabel(p, a.x + 10, ly, L("IN THE LAUNCHER"))
+  sectionLabel(p, a.x + 10, ly, L("IN THE GAME"))
   ly = ly + LINE + 4
+  for _, e in ipairs(rowsWith(rows, "bind")) do
+    rowButton(p, a.x + 10, ly, a.w - 20, 22, e.index, e.row, { detail = e.row.detail })
+    ly = ly + 26
+  end
+  local ri, rrow = rowOf(rows, "reset")
+  if ri then
+    rowButton(p, a.x + 10, ly + 2, fitWidth(rrow.label), 22, ri, rrow, { style = "quiet" })
+    ly = ly + 28
+  end
+  ly = ly + p:para(a.x + 10, ly + 2, a.w - 20,
+    L("A key and a pad button for each. The game's own CONTROLS menu shows the same."), "muted") + 4
+  close(ly + 6)
+  -- the players' devices
+  local by = wide and y or ly + 18
+  local close2 = panel(p, b.x, by, b.w)
+  local ry = by + 10
+  sectionLabel(p, b.x + 10, ry, L("PLAYER DEVICES"))
+  ry = ry + LINE + 4
+  for _, e in ipairs(rowsWith(rows, "seat")) do
+    rowButton(p, b.x + 10, ry, b.w - 20, 22, e.index, e.row, { detail = e.row.detail })
+    ry = ry + 26
+  end
+  local ci, crow = rowOf(rows, "clear")
+  if ci then
+    rowButton(p, b.x + 10, ry + 2, fitWidth(crow.label), 22, ci, crow, { style = "quiet" })
+    ry = ry + 28
+  end
+  if menu.controls then
+    sectionLabel(p, b.x + 10, ry + 4, L("CONNECTED PADS"))
+    ry = ry + LINE + 6
+    local pads = menu.controls:padList()
+    if #pads == 0 then
+      ry = ry + p:para(b.x + 10, ry, b.w - 20, L("No pad connected."), "muted") + 4
+    end
+    for _, e in ipairs(pads) do
+      local tag = e.player and L("P%d", e.player)
+      local room = b.w - 20 - (tag and width(tag) + 12 or 0)
+      p:text(b.x + 10, ry, Ui.fit(e.name, room), "ink")
+      if tag then
+        local tx = b.x + 10 + width(Ui.fit(e.name, room)) + 6
+        p:frame(tx, ry, width(tag) + 6, LINE - 1, "muted")
+        p:text(tx + 3, ry, tag, "muted")
+      end
+      ry = ry + LINE + 2
+    end
+  end
+  ry = ry + p:para(b.x + 10, ry + 4, b.w - 20,
+    L("Couch co-op seats each player at the device claimed here, remembered by pad. Without a claim, player 1 uses any device, as in solo play."),
+    "muted") + 4
+  close2(ry + 8)
+  -- the launcher itself
+  y = math.max(ly + 6, ry + 8) + 12
+  local close3 = panel(p, c.x, y, c.w)
+  local ky = y + 10
+  sectionLabel(p, c.x + 10, ky, L("IN THE LAUNCHER"))
+  ky = ky + LINE + 4
   for _, pair in ipairs({
     { L("MOVE"), L("Arrows or WASD · D-pad or stick") },
     { L("CONFIRM"), L("Z, Enter or Space · A or START") },
@@ -423,24 +491,11 @@ function S.controls(p, menu, c)
     { L("MOUSE"), L("A click chooses, a right click goes back.") },
     { L("TOUCH"), L("A tap chooses.") },
   }) do
-    p:text(a.x + 10, ly, pair[1], "ink")
-    ly = ly + p:para(a.x + 90, ly, a.w - 100, pair[2], "muted") + 4
+    p:text(c.x + 10, ky, pair[1], "ink")
+    ky = ky + p:para(c.x + 100, ky, c.w - 110, pair[2], "muted") + 4
   end
-  close(ly + 6)
-  local by = wide and y or ly + 18
-  local close2 = panel(p, b.x, by, b.w)
-  local ry = by + 10
-  sectionLabel(p, b.x + 10, ry, L("PLAYER DEVICES"))
-  p:frame(b.x + 14 + width(L("PLAYER DEVICES")), ry, width(L("PLANNED")) + 6, LINE - 1, "muted")
-  p:text(b.x + 17 + width(L("PLAYER DEVICES")), ry, L("PLANNED"), "muted")
-  ry = ry + LINE + 4
-  ry = ry + p:para(b.x + 10, ry, b.w - 20,
-    L("Couch co-op gives each player a controller of their own. It comes with a later version."),
-    "muted") + 6
-  ry = ry + p:para(b.x + 10, ry, b.w - 20,
-    L("In a game, the game's own controls apply, as in solo play."), "muted")
-  close2(ry + 8)
-  return math.max(ly + 6, ry + 8)
+  close3(ky + 6)
+  return ky + 6
 end
 
 function S.settings(p, menu, c)
