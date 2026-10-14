@@ -145,6 +145,13 @@ function Data:seedDefaults(version)
     boot = {}
     self.field.boot = boot
   end
+  -- co-op (#25): a German game's default names are its first presets, read
+  -- from the cartridge, not the English RED and BLUE
+  local presetNames = self.field.presetNames
+  if require("src.core.GameVersion").isGerman(version) and type(presetNames) == "table" then
+    if boot.playerName == nil then boot.playerName = (presetNames.player or {})[1] end
+    if boot.rivalName == nil then boot.rivalName = (presetNames.rival or {})[1] end
+  end
   for key, value in pairs(BOOT_DEFAULTS) do
     if boot[key] == nil then boot[key] = copy(value) end
   end

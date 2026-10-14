@@ -334,8 +334,9 @@ function Credits:drawTheEnd()
     love.graphics.setColor(1, 1, 1, 1)
     for i, letter in ipairs(te.pattern) do
       if letter >= 0 then
+        -- co-op (#25): German's E N D E starts at column 7
         love.graphics.draw(self.endImg, self.endQuads[letter],
-                           32 + (i - 1) * 8, 64)
+                           (te.column or 4) * 8 + (i - 1) * 8, 64)
       end
     end
   else

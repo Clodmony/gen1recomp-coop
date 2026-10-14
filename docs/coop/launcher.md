@@ -12,13 +12,16 @@ with no ROM and a scripted import (`POKEPORT_IMPORT_ROM`) all land in it.
 A Game Boy style menu at the game's 160x144 resolution, scaled to the window
 in whole steps:
 
-- **Title**: RED, BLUE, YELLOW (each marked NO ROM until imported), CREDITS,
-  QUIT (not on mobile).
+- **Title**: RED, BLUE, YELLOW, ROT (DE) and BLAU (DE) (each marked NO ROM
+  until imported; seven rows close up to one line apart), CREDITS, QUIT (not
+  on mobile).
 - **A game with no ROM**: drop the ROM file on the window, or type or paste
   (Ctrl+V) its path and press Enter. The ROM is checked by SHA-1 (clean US
-  dumps, `.zip`/`.7z` where the platform opens them); a Gold or FireRed ROM is
-  refused, since this launcher plays Red, Blue and Yellow. A dropped ROM is
-  routed to its game whatever screen is showing.
+  dumps and the German Rote and Blaue Edition, `.zip`/`.7z` where the
+  platform opens them, [german.md](german.md)); a Gold or FireRed ROM is
+  refused, since this launcher plays Gen 1. A dropped ROM is routed to its
+  game whatever screen is showing. A scripted import (`POKEPORT_IMPORT_ONLY`)
+  that fails prints the error and exits with 1.
 - **An imported game**: CONTINUE (when the active save slot holds a save; name,
   badges and play time shown), NEW GAME, CO-OP (see *Co-op screens*), NEW ROM
   (import again), BACK. NEW GAME over a save starts in a new save slot, so the

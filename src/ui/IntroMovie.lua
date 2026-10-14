@@ -202,6 +202,7 @@ function IntroMovie.new(game, onDone)
   -- ..(pokeyellow engine/movie/title.asm CopyrightTextString / NineTile)
   self.yellowCopy = GameVersion.isYellow()
     or titleCfg.layout == "yellow_pikachu"
+    or GameVersion.isGerman() -- co-op (#25): ©1995-1999 as in Yellow
   self.copyPrefix = self.yellowCopy and COPY_PREFIX_YELLOW or COPY_PREFIX_RB
   self.nineImg = self.yellowCopy and (
     img(titleCfg.nine) or tryImage("assets/generated/title/nine.png")) or nil

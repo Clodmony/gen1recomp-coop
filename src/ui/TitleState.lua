@@ -276,10 +276,15 @@ function TitleState.new(game, opts)
   self.blue = GameVersion.isBlue()
   self.yellow = GameVersion.isYellow()
     or title.layout == "yellow_pikachu"
+  -- co-op (#25): the German title spells ©1995-1999 as Yellow does and
+  -- prints its 10-tile "Rote/Blaue Edition" ribbon whole at column 6
+  -- (pokered-de engine/movie/title.asm PrintGameVersionOnTitleScreen)
+  self.german = GameVersion.isGerman()
+  local yellowCopy = self.yellow or self.german
   -- ..(pokeyellow engine/movie/title.asm .tileScreenCopyrightTiles / NineTile)
-  self.nineImg = self.yellow and tryImage(imagePath(title.nine)
+  self.nineImg = yellowCopy and tryImage(imagePath(title.nine)
     or "assets/generated/title/nine.png") or nil
-  self.copyPrefix = self.yellow
+  self.copyPrefix = yellowCopy
     and { 0, 1, 2, 3, 1, 2 } or { 0, 1, 2, 1, 3, 1, 4 }
   -- Yellow title is a fixed Pikachu composition (title_yellow.asm), not
   -- TitleMons cycling.  Prefer composed pikachu.png from the Yellow import.
@@ -772,6 +777,8 @@ function TitleState:draw()
       if self.versionFull then
         -- a continuous ribbon (versionRibbon) centers as one piece
         love.graphics.draw(self.version, math.floor((160 - iw) / 2) + rx, 64)
+      elseif self.german then
+        love.graphics.draw(self.version, 48 + rx, 64) -- co-op (#25)
       elseif self.blue then
         love.graphics.draw(self.version,
           love.graphics.newQuad(0, 0, 64, 8, iw, ih), 56 + rx, 64)
