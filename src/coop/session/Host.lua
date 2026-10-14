@@ -14,9 +14,18 @@
 -- remembers one, or types the same name, gets that player back.
 --
 -- Clients send intentions; the host checks each one (Protocol.sanitize, then
--- its own rules) and answers every player with the state it may see.  This
--- issue covers joining, moving, leaving and rejoining; the campaign, world,
--- battles and saves build on it (#13 onward).
+-- its own rules) and answers every player with the state it may see.  #10
+-- covers joining, moving, leaving and rejoining; the world, battles and the
+-- rest build on it (#14 onward).
+--
+-- The campaign (#13, design A3): opts.state is the campaign's state
+-- (src/coop/campaign/Campaign.lua; an empty one in memory without it) and
+-- opts.store its file (Store.lua; nothing is written without it).  Each
+-- player gets their world from it after the welcome; a window's `world`
+-- (its game saved) goes into the player's section, and one that asks for a
+-- checkpoint saves the campaign unless a battle runs or a join is pending
+-- (design A3.7, A3.10): everyone hears `saved`.  The host saves by itself
+-- as Store.lua says, and when a player leaves and on shutdown.
 --
 -- Per-link limits (#32): each frame the host decodes at most FRAME_BUDGET of
 -- one link's messages (the rest waits for the next frame), so one link cannot
@@ -33,6 +42,8 @@ local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
 local Random = require("src.coop.session.Random")
 local SessionLog = require("src.coop.session.SessionLog")
+local Campaign = require("src.coop.campaign.Campaign")
+local World = require("src.coop.campaign.World")
 
 local Host = {}
 Host.__index = Host
@@ -85,12 +96,26 @@ function Host.new(opts)
     status = "running", -- running, ending, ended
     dropped = 0,
     floods = 0,
+    -- running battles and pending battle joins by id (#18 fills them); a
+    -- campaign saves only when both are empty (design A3.7)
+    battles = {}, joins = {},
   }, Host)
-  for _, known in ipairs(type(opts.players) == "table" and opts.players or {}) do
-    if type(known) == "table" and Protocol.playerId(known.id) and Protocol.name(known.name)
-        and not self.byId[known.id] and #self.players < self.maxPlayers then
-      local p = { id = known.id, name = known.name, lastSeq = 0, connected = false,
-                  game = Protocol.gameId(known.game) and known.game or nil }
+  self.state = opts.state or Campaign.new({
+    id = self.campaign.id, title = self.campaign.title,
+    game = self.cartridge.game, sha1 = self.cartridge.sha1,
+  })
+  self.store = opts.store
+  -- the campaign's players are known players too
+  local known = {}
+  for _, k in ipairs(type(opts.players) == "table" and opts.players or {}) do known[#known + 1] = k end
+  for _, p in ipairs(self.state.players) do
+    known[#known + 1] = { id = p.id, name = p.name, game = p.game }
+  end
+  for _, k in ipairs(known) do
+    if type(k) == "table" and Protocol.playerId(k.id) and Protocol.name(k.name)
+        and not self.byId[k.id] and #self.players < self.maxPlayers then
+      local p = { id = k.id, name = k.name, lastSeq = 0, connected = false,
+                  game = Protocol.gameId(k.game) and k.game or nil }
       self.players[#self.players + 1] = p
       self.byId[p.id] = p
     end
@@ -228,6 +253,76 @@ function Host:_disconnect(link, why)
     p.connected = false
     self.dirty = true
     self:_log("left", { why = why }, p)
+    -- a player leaving saves the campaign (design A3.9); nobody has to save
+    -- before leaving (A3.12)
+    if self.status == "running" then self:_autosave("leave") end
+  end
+end
+
+-- campaign saves (#13) ---------------------------------------------------
+
+-- why a checkpoint would be refused now, or nil (design A3.7)
+function Host:busy()
+  if next(self.battles) or next(self.joins) then return "battle_in_progress" end
+  return nil
+end
+
+-- a save the host makes by itself, when something changed and it is safe
+function Host:_autosave(reason)
+  if not self.store or not self.store:changed() then return false end
+  if self:busy() then return false end
+  local ok = self.store:checkpoint(reason)
+  if ok then self.dirty = true end
+  return ok
+end
+
+-- a player's world from the campaign, after the welcome
+function Host:_sendWorld(link, p)
+  local entry = self.state:player(p.id)
+  local msg = { type = "world", fresh = true }
+  if entry and entry.world then
+    msg.fresh = false
+    msg.save = World.encode(entry.world)
+  end
+  self:_send(link, msg)
+end
+
+-- A window's world: its game saved.  With checkpoint, a real SAVE asks for
+-- the campaign to be saved: refused while busy, and then nothing is taken.
+function Host:_world(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  local busy = msg.checkpoint and self:busy()
+  if busy then
+    self:_send(link, { type = "saved", ok = false, by = p.name, you = true,
+                       reason = busy, kind = msg.kind })
+    return self:_refuse(link, msg.seq, busy)
+  end
+  local save, why = World.decode(msg.save)
+  if save then
+    self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+    local ok, bad = self.state:setWorld(p.id, save)
+    if not ok then save, why = nil, bad end
+  end
+  if not save then
+    self:_log("world_refused", { why = why }, p)
+    if msg.checkpoint then
+      self:_send(link, { type = "saved", ok = false, by = p.name, you = true,
+                         reason = "bad_world", kind = msg.kind })
+    end
+    return self:_refuse(link, msg.seq, "bad_world")
+  end
+  self:_log("world", { revision = self.state.revision, checkpoint = msg.checkpoint,
+                       kind = msg.kind, bytes = #msg.save }, p)
+  if not msg.checkpoint then return end
+  local ok = true
+  if self.store then ok = self.store:checkpoint(msg.kind or "menu") end
+  self.dirty = true
+  for _, l in ipairs(self.links) do
+    if l.player and not l.conn.closed and (ok or l == link) then
+      self:_send(l, { type = "saved", ok = ok == true, by = p.name, you = l == link,
+                      reason = not ok and "save_failed" or nil, kind = msg.kind })
+    end
   end
 end
 
@@ -279,6 +374,8 @@ function Host:_hello(link, msg)
   })
   self:_log("joined", { name = p.name, seat = p.seat, device = p.device,
                         logs = link.shareLogs }, p)
+  self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+  self:_sendWorld(link, p)
   self:_sendLogBacklog(link)
 end
 
@@ -403,7 +500,7 @@ function Host:_shareOwnLog(now)
 end
 
 local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
-                   log = Host._logBatch }
+                   log = Host._logBatch, world = Host._world }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -422,8 +519,8 @@ function Host:_receive(link, raw)
     self:_log("dropped", { why = why }, link.player)
     return
   end
-  -- a log batch is logged by its handler, as a summary
-  if msg.type ~= "log" then self:_log("message", msg, link.player) end
+  -- a log batch and a world are logged by their handlers, as a summary
+  if msg.type ~= "log" and msg.type ~= "world" then self:_log("message", msg, link.player) end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
   return HANDLERS[msg.type](self, link, msg)
 end
@@ -437,6 +534,9 @@ local function publicView(p)
 end
 
 function Host:_broadcast()
+  local ago = self.store and self.store:savedAgo()
+  local savedAgo = ago and math.floor(ago) or -1
+  local busy = self:busy() or ""
   local players = {}
   for i, p in ipairs(self.players) do players[i] = publicView(p) end
   for _, link in ipairs(self.links) do
@@ -449,7 +549,8 @@ function Host:_broadcast()
         end
       end
       self:_send(link, { type = "state", players = players, you = p.id,
-                         last_seq = p.lastSeq, nearby = nearby })
+                         last_seq = p.lastSeq, nearby = nearby,
+                         saved_ago = savedAgo, busy = busy })
     end
   end
 end
@@ -491,6 +592,14 @@ function Host:update()
     end
   end
   self.links = keep
+  if self.status == "running" and self.store then
+    local busy = self:busy()
+    if busy ~= self.wasBusy then self.dirty = true end
+    self.wasBusy = busy
+    local saved = self.store.savedAt
+    self.store:poll(busy ~= nil)
+    if self.store.savedAt ~= saved then self.dirty = true end
+  end
   if self.dirty and self.status == "running" then
     self.dirty = false
     self:_broadcast()
@@ -507,6 +616,9 @@ end
 function Host:shutdown(reason)
   if self.status ~= "running" then return end
   self:_log("shutdown", { reason = reason or "host_quit" })
+  -- the campaign is saved on shutdown; with a battle running, the state
+  -- without it goes to the journal (design A3.9)
+  if self.store and not self:_autosave("shutdown") then self.store:poll(true) end
   self:_shareOwnLog(true) -- the host's last lines go out before `ended`
   self.status = "ending"
   self.endAt = self.clock() + Host.GRACE
@@ -530,6 +642,14 @@ function Host:_finish()
 end
 
 function Host:player(id) return self.byId[id] end
+
+-- the hosting app is paused (a phone put it away): save now (design A3.9)
+function Host:pause()
+  if self.status ~= "running" or not self.store then return false end
+  if self:_autosave("pause") then return true end
+  self.store:poll(true)
+  return false
+end
 
 -- every player the session has seen, for the campaign card (#12): id, name,
 -- game, connected, and the address they dialled (`via`)

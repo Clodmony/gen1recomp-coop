@@ -9,7 +9,13 @@
 --   c:join()             -- hello; status becomes "joined" on welcome
 --   every frame: c:update()
 --   c:move("PALLET_TOWN", 5, 6, "down", false, "walk")
+--   c:sendWorld(text, true, "menu")  -- the game saved; ask for a campaign save
 --   c:leave()
+--
+-- The campaign (#13): after the welcome the host sends this player's world
+-- (c.world: { fresh, save }), the game's save text the window plays from;
+-- each `saved` lands in c.saves (the notices take them) and the last
+-- state's saved_ago sets c.savedAt.
 --
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
@@ -44,6 +50,9 @@ function Client.new(conn, opts)
     seq = 0, player = nil, campaign = nil,
     lobby = nil, state = nil,
     rejections = {}, -- { seq, reason } for intentions the host refused
+    world = nil, -- the player's world from the campaign: { fresh, save }
+    saves = {}, -- `saved` messages not yet taken: { ok, by, you, reason }
+    savedAt = nil, -- clock time the campaign was last saved, by the host's word
     dropped = 0,
     onWelcome = opts.onWelcome,
     log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
@@ -89,6 +98,21 @@ function Client:move(map, x, y, facing, warp, travel)
                      travel = travel or "walk" })
 end
 
+-- The player's world as the game just saved it (World.encode's text);
+-- checkpoint asks the host to save the campaign (a real SAVE, design
+-- A3.11), kind says which.  Returns the seq, or nil when not joined.
+function Client:sendWorld(text, checkpoint, kind)
+  return self:send({ type = "world", save = text, checkpoint = checkpoint and true or false,
+                     kind = kind })
+end
+
+-- the `saved` messages since the last call, oldest first
+function Client:takeSaves()
+  local out = self.saves
+  self.saves = {}
+  return out
+end
+
 -- this device's lines since the last batch, every SHARE_INTERVAL seconds
 -- (or `now`); true when a batch went out
 function Client:shareLog(now)
@@ -127,6 +151,14 @@ function Client:_handle(msg)
     if self.onWelcome then self.onWelcome(self, msg) end
   elseif t == "state" then
     self.state = msg
+    if msg.saved_ago and msg.saved_ago >= 0 then
+      self.savedAt = self.clock() - msg.saved_ago
+    end
+  elseif t == "world" then
+    self.world = { fresh = msg.fresh, save = msg.save }
+  elseif t == "saved" then
+    if msg.ok then self.savedAt = self.clock() end
+    self.saves[#self.saves + 1] = msg
   elseif t == "log" then
     -- other devices' lines; this device's own never come back
     if self.log then

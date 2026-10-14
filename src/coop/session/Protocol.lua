@@ -16,8 +16,10 @@ local Protocol = {}
 -- raised whenever a message's shape or meaning changes; a peer of another
 -- version is refused with protocol_mismatch (design A1.6).  2: shared session
 -- logs (#31) and the flood refusal (#32).  3: how a player travels
--- (`travel` on moves and players, #15).
-Protocol.VERSION = 3
+-- (`travel` on moves and players, #15).  4: campaign files (#13): a
+-- window's `world` and save requests, the host's `world` and `saved`, and
+-- the last save and the save gate in `state`.
+Protocol.VERSION = 4
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -46,7 +48,15 @@ Protocol.REASONS = {
   protocol_mismatch = true, content_mismatch = true, duplicate = true,
   hello_first = true, already_joined = true, bad_step = true,
   session_full = true, shutting_down = true, flood = true,
+  bad_world = true, battle_in_progress = true, save_failed = true,
 }
+
+-- a player's world travels as the game's save text (World.lua checks it):
+-- this long at most, newlines and all
+Protocol.MAX_WORLD = 1536 * 1024
+-- what asked for a save (design A3.11): START > SAVE, a box change, the
+-- Hall of Fame, a link room, the quick save key
+Protocol.SAVE_KINDS = { menu = true, box = true, hall = true, link = true, quick = true }
 
 local FACINGS = { up = true, down = true, left = true, right = true }
 -- how a player moves: the sprite they wear and how fast their steps are
@@ -104,6 +114,16 @@ local function pattern(p, maxLen)
     if type(v) ~= "string" or #v > maxLen or not v:find(p) then
       return nil, "bad format"
     end
+    return v
+  end
+end
+
+-- text of any bytes, at most maxBytes long (a save's text; its own parser
+-- reads it)
+local function blob(maxBytes)
+  return function(v)
+    if type(v) ~= "string" then return nil, "not a string" end
+    if #v > maxBytes then return nil, "too long" end
     return v
   end
 end
@@ -299,6 +319,11 @@ Protocol.TO_HOST = {
   bye = record(withType("bye", { seq = seq })),
   -- the device's own session log lines since its last batch (#31)
   log = logBatch,
+  -- the player's world as their game just saved it (#13); checkpoint: a
+  -- real SAVE that asks the host to save the campaign (design A3.10, A3.11)
+  world = record(withType("world", {
+    seq = seq, save = blob(Protocol.MAX_WORLD), checkpoint = bool,
+  }), { kind = enum(Protocol.SAVE_KINDS) }),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -313,11 +338,20 @@ Protocol.TO_CLIENT = {
     protocol = version, player = Protocol.playerId,
     last_seq = int(0, Protocol.MAX_SEQ), campaign = Protocol.campaignId,
   })),
+  -- saved_ago: seconds since the campaign was last saved (-1: never);
+  -- busy: why a save would be refused now ("" when it would not), #13
   state = record(withType("state", {
     players = listOf(publicPlayer, Protocol.MAX_PLAYERS),
     you = Protocol.playerId, last_seq = int(0, Protocol.MAX_SEQ),
     nearby = listOf(Protocol.playerId, Protocol.MAX_PLAYERS),
-  })),
+  }), { saved_ago = int(-1, Protocol.MAX_SEQ), busy = text(Protocol.MAX_REASON) }),
+  -- the player's world from the campaign, once after welcome (#13); none
+  -- for a player who never saved in this campaign
+  world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),
+  -- a save of the campaign (#13, design A3.12): `you` when this player
+  -- asked for it; ok false with the reason when it was refused
+  saved = record(withType("saved", { ok = bool, by = name, you = bool }),
+                 { reason = text(Protocol.MAX_REASON), kind = enum(Protocol.SAVE_KINDS) }),
   rejected = record(withType("rejected", {
     seq = int(-1, Protocol.MAX_SEQ), reason = text(Protocol.MAX_REASON),
   })),
