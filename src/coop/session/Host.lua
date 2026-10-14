@@ -316,7 +316,7 @@ function Host:_world(link, msg)
                        kind = msg.kind, bytes = #msg.save }, p)
   if not msg.checkpoint then return end
   local ok = true
-  if self.store then ok = self.store:checkpoint(msg.kind or "menu") end
+  if self.store then ok = self.store:checkpoint(msg.kind or "save") end
   self.dirty = true
   for _, l in ipairs(self.links) do
     if l.player and not l.conn.closed and (ok or l == link) then

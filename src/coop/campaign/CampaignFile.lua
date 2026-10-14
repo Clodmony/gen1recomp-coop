@@ -62,7 +62,10 @@ function CampaignFile.loveFs()
       return lfs.read(p)
     end,
     write = function(p, text) return lfs.write(p, text) end,
-    append = function(p, text) return lfs.append(p, text) end,
+    append = function(p, text)
+      if lfs.append then return lfs.append(p, text) end
+      return lfs.write(p, (lfs.getInfo(p) and lfs.read(p) or "") .. text)
+    end,
     remove = function(p) if lfs.getInfo(p) then return lfs.remove(p) end return true end,
     exists = function(p) return lfs.getInfo(p) ~= nil end,
     mkdir = function(p) return lfs.createDirectory(p) end,
