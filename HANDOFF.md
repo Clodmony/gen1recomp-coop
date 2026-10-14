@@ -6,12 +6,15 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-14 (after Group 4 part 1 and the workspace pull request).
+Last updated 2026-10-14 (after merging the workspace pull request #47).
 
 ## Repository state
 
-- Default branch `gen1recomp-coop`; `main` = upstream main. Nothing of
-  Groups 2a to 4 is merged yet; no owner comments on #42-#46.
+- Default branch `gen1recomp-coop`; `main` = upstream main. The workspace
+  pull request #47 (this file, `.superset/`, the AGENTS.md pointers) is merged
+  (`5c6a3523`), and `gen1recomp-coop` was merged down the stack #42 -> #46 so
+  every branch has it. Nothing of Groups 2a to 4 is merged yet; no owner
+  comments on #42-#46.
 
 ## Open pull requests (all draft, stacked; the owner reviews and says which to merge)
 
@@ -22,7 +25,7 @@ Last updated 2026-10-14 (after Group 4 part 1 and the workspace pull request).
 - **#44** `coop/group2a-yellow-de` on #43's branch: German Yellow (#40), G16.
 - **#45** `coop/group3-launcher-screens` on #44's branch: Group 3, closes #4,
   #5, #6 (G17-G19).
-- **#46** `coop/group4-campaign-state` on #45's branch (head 1f0136b4): closes
+- **#46** `coop/group4-campaign-state` on #45's branch (head 72619cf6): closes
   #13. `src/coop/campaign/` (Campaign, World, CampaignFile, Store), protocol 4
   (`world`, `saved`, state `saved_ago`/`busy`), host saves (gate on
   `host.battles`/`host.joins`, autosave, journal), game hooks
@@ -34,8 +37,6 @@ Last updated 2026-10-14 (after Group 4 part 1 and the workspace pull request).
   36/37 (only the javac tier fails locally). Live run (US Red, two processes,
   dev entry, new `--coop-campaign=ID`) passed both phases; not seen live: uids
   (no Pokémon), journal line, battle gate, launcher slot fill.
-- The workspace pull request (`coop/workspace-handoff`): this file,
-  `.superset/`, the AGENTS.md pointers.
 - Merge order: #42, #43, #44, #45, #46, each locally as Claude
   (`git merge --no-ff`), never `gh pr merge`.
 
@@ -71,8 +72,8 @@ In a driver, wait for `src.ui.ChoiceBox` on top before pressing YES.
 ## Worktrees and background processes
 
 - Main checkout on local `dev` (leave it). One Superset worktree on
-  `coop/group4-campaign-state`, pushed, clean. One scratch worktree on
-  `coop/workspace-handoff`. No background processes.
+  `coop/group4-campaign-state`, pushed, clean. No scratch worktrees, no
+  background processes.
 
 ## Still open
 
@@ -86,4 +87,4 @@ In a driver, wait for `src.ui.ChoiceBox` on top before pressing YES.
   2a), `g2a/` (after #42/#43 merge), `shot/`, `launcher-run*.log`, `verify/`
   runs.
 - Merged local branches `coop/group1-cleanup`, `coop/group2-first-playable`,
-  `coop/25-german`.
+  `coop/25-german` (`coop/workspace-handoff` is already deleted).
