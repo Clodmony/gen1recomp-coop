@@ -1,104 +1,100 @@
--- The launcher's co-op screens (#12, design A2) as a model with no drawing
--- and no love.*: Co-op (HOST, JOIN, LAST SESSION, LOGS), the host's
--- campaign cards (new, rename, delete to a backup), the Hosting screen (the
--- addresses partners join at, the players in, ENTER WORLD, STOP), Join
--- (nearby hosts from the LAN beacon, by address, recent addresses) and the
--- Connecting sheet (each step, retries with a countdown, the exact reason
--- for a refusal, a checklist when nobody answered).
+-- The launcher's co-op screens (#12, design A2; laid out anew in #38) as a
+-- model with no drawing and no love.*: the campaign cards (choose one to
+-- host, new, rename, delete to a backup and restore it), the hosting lobby
+-- (the addresses partners join at, the players in, ENTER THE WORLD, STOP
+-- HOSTING), Join (nearby hosts from the LAN beacon, by address, recent
+-- addresses) and the connection check (each step, retries with a
+-- countdown, the exact reason for a refusal, a checklist when nobody
+-- answered).
 --
--- Every screen is laid out in Game Boy text cells (20 columns, rows 0-11
--- above the credit line) by view(); Launcher.lua draws it and turns taps
--- into rows.  The session, campaigns and settings are reached through
--- `env` (Launcher.lua passes the real ones, tests their own):
+-- Screens.lua lays a screen out from items() and details(); the session,
+-- campaigns and settings are reached through `env` (Launcher.lua passes the
+-- real ones, tests their own):
 --
---   env.version            the cartridge picked on the title screen
+--   env.version            the cartridge picked on PLAY
 --   env.ready(v)           the game's ROM is imported here
 --   env.settings           a CoopSettings
---   env.campaigns          Campaigns (list, create, rename, delete, get, touch)
+--   env.campaigns          Campaigns (list, create, rename, delete, restore,
+--                          get, touch)
 --   env.host(campaign, name, version) -> a hosting Session
 --   env.dial(address, version, name)  -> a dialling Session
 --   env.nearby()           -> a Beacon listener, or nil and why
 --   env.closeNearby()
 --   env.addresses()        -> { { ip, kind } }, this device's addresses
---   env.canOpenLogs        the logs folder can be opened (desktop)
 --
 -- Actions: "up", "down", "left", "right", "a", "b", "start".  A press or
 -- update() may return a command for the launcher:
 --   { kind = "coop_enter", version = v, campaign = { id, title } }
 --   { kind = "copy", text = "…" }
---   { kind = "open_logs" }
---   { kind = "coop_exit" }        back to the game's own screen
+--   { kind = "coop_exit", notice = text? }   back to PLAY
 
 local Addresses = require("src.coop.session.Addresses")
+local Games = require("src.coop.launcher.Games")
 local Keypad = require("src.coop.launcher.Keypad")
 local Protocol = require("src.coop.session.Protocol")
+local L = require("src.coop.launcher.Text").get
 
 local CoopMenu = {}
 CoopMenu.__index = CoopMenu
 
-CoopMenu.COLS = 20
-CoopMenu.LIST_ROWS = { 2, 4, 6, 8, 10 } -- a list's rows inside the box
 CoopMenu.TITLE_MAX = 16
+CoopMenu.NAME_MAX = 7
 CoopMenu.DEFAULT_PORT = 24680
 
-local GAMES = { red = "RED", blue = "BLUE", yellow = "YELLOW" }
-local function label(v) return GAMES[v] or tostring(v or "?"):upper() end
+local label = Games.label
 CoopMenu.gameLabel = label
 
--- Word wrap to `width` columns (Menu.wrap's rule).
-local function wrap(text, width)
-  local lines, line = {}, ""
-  for word in tostring(text):gmatch("%S+") do
-    local candidate = line == "" and word or (line .. " " .. word)
-    if #candidate <= width then
-      line = candidate
-    elseif line ~= "" and #word <= width then
-      lines[#lines + 1] = line
-      line = word
-    else
-      local rest = candidate
-      while #rest > width do
-        lines[#lines + 1] = rest:sub(1, width)
-        rest = rest:sub(width + 1)
-      end
-      line = rest
-    end
-  end
-  if line ~= "" or #lines == 0 then lines[#lines + 1] = line end
-  return lines
+local function languageName(version)
+  return Games.language(version) == "de" and L("German") or L("English")
 end
-CoopMenu.wrap = wrap
+CoopMenu.languageName = languageName
 
 -- the sentence for a refusal (design A2.5: a mismatch is named exactly)
 function CoopMenu.reasonText(reason, lobby, version)
   if reason == "content_mismatch" and lobby then
-    if lobby.game ~= version then
-      return ("The host plays %s. This game is %s."):format(label(lobby.game), label(version))
+    if Games.language(lobby.game) ~= Games.language(version) then
+      return L("The host plays %s in %s, this game is %s in %s. Both need the same language.",
+        label(lobby.game), languageName(lobby.game), label(version), languageName(version))
     end
-    return ("The host's %s ROM is another dump than this one."):format(label(version))
+    if lobby.game ~= version then
+      return L("The host plays %s. This game is %s.", label(lobby.game), label(version))
+    end
+    return L("The host's %s ROM is another dump than this one.", label(version))
   elseif reason == "protocol_mismatch" then
-    return "The host runs another version of this co-op game. Both need the same one."
+    return L("The host runs another version of this co-op game. Both need the same one.")
   elseif reason == "session_full" then
-    return "The session is full."
+    return L("The session is full.")
   elseif reason == "shutting_down" then
-    return "The host is closing the session."
+    return L("The host is closing the session.")
   elseif reason == "flood" then
-    return "The host dropped this game: it sent too much at once."
+    return L("The host dropped this game: it sent too much at once.")
   end
-  return ("The host turned this game away (%s)."):format(tostring(reason))
+  return L("The host turned this game away (%s).", tostring(reason))
 end
 
 local function hostOnly(address)
   return (tostring(address or ""):gsub(":%d+$", ""))
 end
 
+-- opts.start: the screen to open, "host" (the campaigns of this cartridge),
+-- "campaigns" (every campaign), "join" or "last" (resume() follows)
 function CoopMenu.new(env, opts)
   opts = opts or {}
+  local start = opts.start or "host"
   local self = setmetatable({
     env = env, version = env.version, settings = env.settings,
-    screen = "coop", cursor = 1, scroll = 0, clock = 0,
+    screen = "host", cursor = 1, clock = 0,
+    root = start == "last" and "host" or start,
   }, CoopMenu)
   if opts.notice then self.notice = opts.notice end
+  if start == "join" then
+    self.joinName = self:_playerName()
+    self:go("join")
+  elseif start == "campaigns" then
+    self:_openList("campaigns")
+  elseif start ~= "last" then
+    self:_openList("host")
+  end
   return self
 end
 
@@ -109,116 +105,99 @@ function CoopMenu:go(screen, cursor)
     self.env.closeNearby()
   end
   self.screen = screen
-  self.cursor, self.scroll = cursor or 1, 0
+  self.cursor = cursor or 1
+  if screen == "join" then self.env.nearby() end
 end
 
-local function playerName(self)
+-- leaving the co-op screens: the nearby listener stops (a session that
+-- entered the world keeps running)
+function CoopMenu:close()
+  if self.screen == "join" or self.screen == "connecting" then self.env.closeNearby() end
+  if self.session and not self.entered then self:_cancelSession() end
+end
+
+function CoopMenu:_playerName()
   local name = self.settings.name
   if Protocol.name(name) then return name end
-  return label(self.version):sub(1, 7)
+  return label(self.version):sub(1, CoopMenu.NAME_MAX)
 end
 
 -- ------------------------------------------------------------ rows
 
--- The rows of the current screen: { id, label, detail?, value?, row?,
--- enabled? }.  Rows without `row` are a list laid out on LIST_ROWS with
--- scrolling; `value` is a second line under the label.
+-- The rows of the current screen: { id, label, detail?, value?, enabled? }.
+-- Their order is the order the focus walks without a layout.
 function CoopMenu:items()
   local s, rows = self.screen, {}
   local function add(row) rows[#rows + 1] = row; return row end
-  if s == "coop" then
-    add({ id = "host", label = "HOST", row = 2 })
-    add({ id = "join", label = "JOIN", row = 4 })
-    local last = self.settings.last
-    local r = 6
-    if last then
-      local what = last.kind == "host" and self:_lastCampaign() or nil
-      if last.kind == "join" or what then
-        add({ id = "last", label = "LAST SESSION", row = 6,
-          value = last.kind == "host" and ("HOST " .. what.title)
-            or ("JOIN " .. (last.title or hostOnly(last.address))) })
-        r = 8
-      end
-    end
-    add({ id = "logs", label = "LOGS", row = r })
-    add({ id = "back", label = "BACK", row = r + 2 })
-  elseif s == "logs" then
-    add({ id = "share", label = "SHARE LOGS", detail = self.settings.shareLogs and "ON" or "OFF",
-          row = 8 })
-    if self.env.canOpenLogs then add({ id = "open", label = "OPEN FOLDER", row = 9 }) end
-    add({ id = "back", label = "BACK", row = 10 })
-  elseif s == "host" then
+  if s == "host" or s == "campaigns" then
+    -- each card: HOST (its cartridge imported here), RENAME, DELETE
     for _, c in ipairs(self.campaigns or {}) do
-      add({ id = "campaign", campaign = c, label = c.title:sub(1, 12),
-            detail = #c.players > 0 and (#c.players .. "P") or nil })
+      add({ id = "campaign", campaign = c, label = L("HOST"), enabled = self.env.ready(c.game) })
+      add({ id = "rename", campaign = c, label = L("RENAME") })
+      add({ id = "delete", campaign = c, label = L("DELETE") })
     end
-    add({ id = "new", label = "NEW CAMPAIGN" })
-    add({ id = "back", label = "BACK" })
-  elseif s == "card" then
-    add({ id = "host", label = "HOST", row = 7 })
-    add({ id = "rename", label = "RENAME", row = 8 })
-    add({ id = "delete", label = "DELETE", row = 9 })
-    add({ id = "back", label = "BACK", row = 10 })
-  elseif s == "delete" or s == "stop" then
-    add({ id = "yes", label = "YES", row = 8 })
-    add({ id = "no", label = "NO", row = 10 })
+    if self.deleted then add({ id = "restore", label = L("RESTORE BACKUP") }) end
+    add({ id = "new", label = L("NEW CAMPAIGN"), enabled = self.env.ready(self.version) })
+  elseif s == "delete" then
+    add({ id = "no", label = L("CANCEL") })
+    add({ id = "yes", label = L("DELETE AND KEEP BACKUP") })
+  elseif s == "stop" then
+    add({ id = "no", label = L("CANCEL") })
+    add({ id = "yes", label = L("CLOSE SESSION") })
   elseif s == "new" then
-    add({ id = "title", label = "NAME", value = self.form.title, row = 2 })
-    add({ id = "you", label = "YOUR NAME", value = self.form.you, row = 5 })
-    add({ id = "go", label = "HOST", row = 8 })
-    add({ id = "back", label = "BACK", row = 10 })
+    add({ id = "title", label = L("CAMPAIGN NAME"), value = self.form.title })
+    add({ id = "you", label = L("TRAINER NAME"), value = self.form.you })
+    add({ id = "go", label = L("CREATE AND HOST") })
   elseif s == "hosting" then
-    add({ id = "enter", label = "ENTER WORLD", row = 2 })
-    local r = 4
-    for i, a in ipairs(self:_hostAddresses()) do
-      if i > 2 then break end
-      add({ id = "address", address = a.text, label = a.text, row = r, value = a.note })
-      r = r + 2
+    for _, a in ipairs(self:_hostAddresses()) do
+      add({ id = "address", address = a.text, label = L("COPY"), value = a.text, detail = a.note })
     end
-    add({ id = "stop", label = "STOP", row = 10 })
+    add({ id = "stop", label = L("STOP HOSTING") })
+    add({ id = "enter", label = L("ENTER THE WORLD") })
   elseif s == "join" then
     local listener, why = self.env.nearby()
     self.nearbyError = not listener and why or nil
-    local hosts = CoopMenu.oneEach(listener and listener:hosts() or {})
-    for _, h in ipairs(hosts) do
-      local fit = self:_fitFor(h.lobby)
-      add({ id = "nearby", host = h, label = (h.lobby.title or "?"):sub(1, 12),
-            detail = fit and label(fit) or ("NEEDS " .. label(h.lobby.game)):sub(1, 6) })
+    for _, h in ipairs(CoopMenu.oneEach(listener and listener:hosts() or {})) do
+      add({ id = "nearby", host = h, label = L("CHECK") })
     end
-    if #hosts == 0 then
-      add({ id = "searching", label = listener and "SEARCHING..." or "NEARBY OFF",
-            enabled = false })
-    end
-    add({ id = "address", label = "BY ADDRESS" })
+    add({ id = "address", label = L("BY ADDRESS") })
     for _, a in ipairs(self.settings.recent) do
-      add({ id = "recent", address = a, label = a:sub(1, 17) })
+      add({ id = "recent", address = a, label = a })
     end
-    add({ id = "back", label = "BACK" })
   elseif s == "connecting" then
     local session = self.session
     local st = session and session.status
     if st == "dialling" or st == "waiting" then
-      add({ id = "retry", label = "TRY NOW", row = 8 })
-      add({ id = "cancel", label = "CANCEL", row = 10 })
+      add({ id = "cancel", label = L("CANCEL") })
+      add({ id = "retry", label = L("TRY NOW") })
     elseif st == "probed" then
       local you = session.lobby and session.lobby.you
-      add({ id = "join", label = "JOIN AS " .. ((you and you.name) or self.joinName), row = 8 })
-      if not (you and you.player) then add({ id = "name", label = "NEW NAME", row = 9 }) end
-      add({ id = "cancel", label = "CANCEL", row = 10 })
+      add({ id = "cancel", label = L("CANCEL") })
+      if not (you and you.player) then add({ id = "name", label = L("NEW NAME") }) end
+      add({ id = "join", label = L("JOIN AS %s", (you and you.name) or self.joinName) })
     elseif st == "unreachable" then
-      add({ id = "retry", label = "TRY AGAIN", row = 9 })
-      add({ id = "back", label = "BACK", row = 10 })
+      add({ id = "back", label = L("CANCEL") })
+      add({ id = "retry", label = L("TRY AGAIN") })
     elseif st == "joining" then
-      add({ id = "cancel", label = "CANCEL", row = 10 })
+      add({ id = "cancel", label = L("CANCEL") })
     else -- refused, ended, closed
-      local other = st == "refused" and session.reason == "content_mismatch"
-        and session.lobby and session.lobby.game ~= session.cartridge.game
-        and self.env.ready(session.lobby.game) and session.lobby.game
-      if other then add({ id = "switch", label = "USE " .. label(other), game = other, row = 9 }) end
-      add({ id = "back", label = "BACK", row = 10 })
+      add({ id = "back", label = L("BACK") })
+      local other = self:_otherCartridge()
+      if other then add({ id = "switch", label = L("USE %s", label(other)), game = other }) end
     end
   end
   return rows
+end
+
+-- after a refusal for the cartridge: another imported one that fits
+function CoopMenu:_otherCartridge()
+  local session = self.session
+  if not session or session.status ~= "refused" or session.reason ~= "content_mismatch" then
+    return nil
+  end
+  local game = session.lobby and session.lobby.game
+  if game and game ~= session.cartridge.game and self.env.ready(game) then return game end
+  return nil
 end
 
 function CoopMenu:_lastCampaign()
@@ -254,7 +233,11 @@ function CoopMenu:_fitFor(lobby)
   return nil
 end
 
--- the addresses partners join at, VPN first, the one used last marked
+local KIND_LABELS = { vpn = "VPN", home = "HOME NETWORK", public = "INTERNET",
+                      here = "THIS DEVICE", name = "NAME" }
+
+-- the addresses partners join at, VPN first (up to two), the one used last
+-- marked
 function CoopMenu:_hostAddresses()
   if not self.addressList then
     self.addressList = Addresses.sort(self.env.addresses() or {})
@@ -263,9 +246,10 @@ function CoopMenu:_hostAddresses()
   local lastVia = self.campaign and self.campaign.via and hostOnly(self.campaign.via)
   local out = {}
   for _, a in ipairs(self.addressList) do
+    if #out == 2 then break end
     local text = port == CoopMenu.DEFAULT_PORT and a.ip or (a.ip .. ":" .. port)
-    local note = Addresses.LABELS[a.kind] or ""
-    if lastVia == a.ip then note = note .. ", LAST USED" end
+    local note = L(KIND_LABELS[a.kind] or "")
+    if lastVia == a.ip then note = L("%s · LAST USED", note) end
     out[#out + 1] = { text = text, note = note }
   end
   return out
@@ -292,12 +276,25 @@ local function settle(self)
     self.cursor = self.cursor % #rows + 1
   end
 end
+CoopMenu.settle = settle
 
 -- ------------------------------------------------------------ flows
 
-function CoopMenu:_openHost()
-  self.campaigns = self.env.campaigns.list(self.version)
-  self:go("host")
+-- the campaign cards: of this cartridge ("host") or all ("campaigns")
+function CoopMenu:_openList(screen, focusId)
+  screen = screen or self.root
+  if screen ~= "campaigns" then screen = "host" end
+  self.campaigns = self.env.campaigns.list(screen == "host" and self.version or nil)
+  self:go(screen)
+  if focusId then
+    for i, r in ipairs(self:items()) do
+      if r.campaign and r.campaign.id == focusId then
+        self.cursor = i
+        break
+      end
+    end
+  end
+  settle(self)
 end
 
 function CoopMenu:_entry(purpose, prompt, kind, text, max)
@@ -320,6 +317,7 @@ function CoopMenu:_entryDone(text)
   elseif p == "rename" then
     local c = self.env.campaigns.rename(self.campaign.id, text)
     if c then self.campaign = c end
+    self:_openList(self.root, self.campaign.id)
   elseif p == "address" then
     self:_dial(text, self.version)
   elseif p == "joinname" then
@@ -329,24 +327,28 @@ end
 
 function CoopMenu:_startHost(campaign, name)
   local settings = self.settings
+  self.version = campaign.game or self.version
   settings.name = name
   settings.last = { kind = "host", campaign = campaign.id, version = self.version }
   settings:save()
   self.env.campaigns.touch(campaign.id)
   self.campaign = self.env.campaigns.get(campaign.id) or campaign
   self.addressList = nil
+  self.deleted = nil
   self.session = self.env.host(self.campaign, name, self.version)
   self:go("hosting")
+  self.cursor = #self:items()
 end
 
 function CoopMenu:_dial(address, version, auto)
   address = tostring(address or ""):gsub("^%s+", ""):gsub("%s+$", "")
   if address == "" then return end
-  self.joinName = self.joinName or playerName(self)
+  self.joinName = self.joinName or self:_playerName()
   self.dialVersion = version
   self.autoJoin = auto
   self.session = self.env.dial(address, version, self.joinName)
   self:go("connecting")
+  self.cursor = #self:items()
 end
 
 function CoopMenu:_cancelSession()
@@ -374,6 +376,23 @@ function CoopMenu:_enter()
   return { kind = "coop_enter", version = s.cartridge.game, campaign = campaign }
 end
 
+local function exit(notice) return { kind = "coop_exit", notice = notice } end
+
+-- LAST SESSION on PLAY: host that campaign again, or dial the last host and
+-- join at once when it knows this device (design A2.1: one press)
+function CoopMenu:resume()
+  local last = self.settings.last
+  if not last then return exit() end
+  if last.kind == "host" then
+    local c = self:_lastCampaign()
+    if c then return self:_startHost(c, self:_playerName()) end
+    return exit()
+  end
+  self.root = "join"
+  local version = self.env.ready(last.version) and last.version or self.version
+  return self:_dial(last.address, version, true)
+end
+
 -- ------------------------------------------------------------ input
 
 function CoopMenu:press(action)
@@ -395,110 +414,89 @@ function CoopMenu:press(action)
     end
     return nil
   end
-  if action == "up" then move(self, -1) return nil end
-  if action == "down" then move(self, 1) return nil end
+  if action == "up" or action == "left" then move(self, -1) return nil end
+  if action == "down" or action == "right" then move(self, 1) return nil end
   if action ~= "a" and action ~= "start" and action ~= "b" then return nil end
   local s = self.screen
   local rows = self:items()
   local row = rows[self.cursor]
   local back = action == "b"
-  if row and not selectable(row) and not back then return nil end
-  local id = not back and row and row.id or "back"
+  if not back and (not row or not selectable(row)) then return nil end
+  local id = not back and row.id or "back"
 
-  if s == "coop" then
-    if id == "back" then return { kind = "coop_exit" } end
-    if id == "host" then return self:_openHost() end
-    if id == "join" then
-      self.joinName = playerName(self)
-      self:go("join")
-      settle(self)
+  if s == "host" or s == "campaigns" then
+    if id == "back" then return exit() end
+    if id == "new" then
+      self.form = { title = L("%s CO-OP", label(self.version)), you = self:_playerName() }
+      return self:go("new", 3)
+    end
+    if id == "restore" then
+      local restored = self.env.campaigns.restore(self.deleted.id)
+      local title = self.deleted.title
+      self.deleted = nil
+      self:_openList(s, restored and restored.id)
+      self:notify(restored and L("Restored %s.", title) or L("The backup could not be restored."))
       return nil
     end
-    if id == "logs" then return self:go("logs") end
-    if id == "last" then return self:_last() end
-  elseif s == "logs" then
-    if id == "back" then return self:go("coop", self:_cursorOf("coop", "logs")) end
-    if id == "share" then
-      self.settings.shareLogs = not self.settings.shareLogs
-      self.settings:save()
-    elseif id == "open" then
-      return { kind = "open_logs" }
+    self.campaign = row.campaign
+    if id == "campaign" then return self:_startHost(row.campaign, self:_playerName()) end
+    if id == "rename" then
+      return self:_entry("rename", L("CAMPAIGN NAME"), "name", row.campaign.title,
+        CoopMenu.TITLE_MAX)
     end
-  elseif s == "host" then
-    if id == "back" then return self:go("coop", 1) end
-    if id == "new" then
-      self.form = { title = label(self.version) .. " CO-OP", you = playerName(self) }
-      return self:go("new")
-    end
-    if id == "campaign" then
-      self.campaign = row.campaign
-      return self:go("card")
-    end
+    if id == "delete" then return self:go("delete", 1) end
   elseif s == "new" then
-    if id == "back" then return self:_openHost() end
+    if id == "back" then return self:_openList(self.root) end
     if id == "title" then
-      return self:_entry("title", "CAMPAIGN NAME?", "name", self.form.title, CoopMenu.TITLE_MAX)
+      return self:_entry("title", L("CAMPAIGN NAME"), "name", self.form.title, CoopMenu.TITLE_MAX)
     end
     if id == "you" then
-      return self:_entry("you", "YOUR NAME?", "name", self.form.you, 7)
+      return self:_entry("you", L("TRAINER NAME"), "name", self.form.you, CoopMenu.NAME_MAX)
     end
     if id == "go" then
       local c = self.env.campaigns.create({ title = self.form.title, game = self.version })
       return self:_startHost(c, self.form.you)
     end
-  elseif s == "card" then
-    if id == "back" then
-      self:_openHost()
-      for i, r in ipairs(self:items()) do
-        if r.campaign and r.campaign.id == self.campaign.id then self.cursor = i end
-      end
-      return nil
-    end
-    if id == "host" then return self:_startHost(self.campaign, playerName(self)) end
-    if id == "rename" then
-      return self:_entry("rename", "CAMPAIGN NAME?", "name", self.campaign.title,
-        CoopMenu.TITLE_MAX)
-    end
-    if id == "delete" then return self:go("delete", 2) end
   elseif s == "delete" then
     if id == "yes" then
-      local backup = self.env.campaigns.delete(self.campaign.id)
+      local c = self.campaign
+      local backup = self.env.campaigns.delete(c.id)
       local last = self.settings.last
-      if last and last.kind == "host" and last.campaign == self.campaign.id then
+      if last and last.kind == "host" and last.campaign == c.id then
         self.settings.last = nil
         self.settings:save()
       end
       self.campaign = nil
-      self:_openHost()
-      self:notify(backup and ("Deleted. A backup is kept as " .. backup .. ".")
-        or "The campaign could not be deleted.")
+      self.deleted = backup and { id = c.id, title = c.title } or nil
+      self:_openList(self.root)
+      if not backup then self:notify(L("The campaign could not be deleted.")) end
       return nil
     end
-    return self:go("card", 3)
+    return self:_openList(self.root, self.campaign.id)
   elseif s == "hosting" then
     if id == "enter" then return self:_enter() end
     if id == "address" then
-      self:notify("Copied " .. row.address .. ".")
+      self:notify(L("Copied %s.", row.address))
       return { kind = "copy", text = row.address }
     end
     if id == "stop" or id == "back" then
-      if self.session and self.session:partners() > 0 then return self:go("stop", 2) end
+      if self.session and self.session:partners() > 0 then return self:go("stop", 1) end
       self:_cancelSession()
-      return self:go("coop", 1)
+      return exit()
     end
   elseif s == "stop" then
     if id == "yes" then
       self:_cancelSession()
-      self:go("coop", 1)
-      self:notify("The session is closed.")
-      return nil
+      return exit(L("The session is closed."))
     end
-    return self:go("hosting", 3)
+    self:go("hosting")
+    self.cursor = #self:items()
+    return nil
   elseif s == "join" then
-    if id == "back" then return self:go("coop", 2) end
+    if id == "back" then return exit() end
     if id == "address" then
       local start = self.settings.address or ""
-      return self:_entry("address", "HOST ADDRESS?", "address", start, 40)
+      return self:_entry("address", L("HOST NAME OR ADDRESS"), "address", start, 40)
     end
     if id == "recent" then return self:_dial(row.address, self.version) end
     if id == "nearby" then
@@ -508,8 +506,8 @@ function CoopMenu:press(action)
         if lobby.protocol ~= Protocol.VERSION then
           return self:notify(CoopMenu.reasonText("protocol_mismatch"))
         end
-        return self:notify(("%s plays %s. Import %s on the title screen to join."):format(
-          lobby.host or "The host", label(lobby.game), label(lobby.game)))
+        return self:notify(L("%s plays %s. Import %s on PLAY to join.",
+          lobby.host or L("The host"), label(lobby.game), label(lobby.game)))
       end
       return self:_dial(row.host.address, fit)
     end
@@ -521,7 +519,7 @@ function CoopMenu:press(action)
       local you = self.session.lobby and self.session.lobby.you
       self.session:join((you and you.player) and you.name or self.joinName)
     elseif id == "name" then
-      return self:_entry("joinname", "YOUR NAME?", "name", self.joinName, 7)
+      return self:_entry("joinname", L("TRAINER NAME"), "name", self.joinName, CoopMenu.NAME_MAX)
     elseif id == "switch" then
       local address = self.session.address
       self:_cancelSession()
@@ -534,28 +532,6 @@ function CoopMenu:press(action)
     end
   end
   return nil
-end
-
-function CoopMenu:_cursorOf(screen, id)
-  local saved = self.screen
-  self.screen = screen
-  local index = 1
-  for i, r in ipairs(self:items()) do if r.id == id then index = i end end
-  self.screen = saved
-  return index
-end
-
--- LAST SESSION: host that campaign again, or dial the last host and join at
--- once when it knows this device (design A2.1: one press)
-function CoopMenu:_last()
-  local last = self.settings.last
-  if last.kind == "host" then
-    local c = self:_lastCampaign()
-    if c then return self:_startHost(c, playerName(self)) end
-    return nil
-  end
-  local version = self.env.ready(last.version) and last.version or self.version
-  return self:_dial(last.address, version, true)
 end
 
 -- Typing on a text entry screen (a keyboard).
@@ -600,164 +576,124 @@ function CoopMenu:update(dt)
   if s.kind == "join" and s.status == "joined" then return self:_enter() end
   if s.kind == "host" and (s.status == "ended" or s.status == "closed") then
     self.session = nil
-    self:go("coop", 1)
-    self:notify("The session stopped.")
+    return exit(L("The session stopped."))
+  end
+  if self.screen == "connecting" then
+    -- a new step of the check: its main action (the last row) is preselected
+    if s.status ~= self.seenStatus then
+      self.seenStatus = s.status
+      self.cursor = #self:items()
+    end
+    settle(self)
   end
   return nil
 end
 
--- ------------------------------------------------------------ view
+-- ------------------------------------------------------------ details
 
-local function lines(view, text, col, row, maxRows, width)
-  for i, line in ipairs(wrap(text, width or (CoopMenu.COLS - col - 1))) do
-    if maxRows and i > maxRows then break end
-    view.lines[#view.lines + 1] = { col = col, row = row + i - 1, text = line }
-  end
-end
-
--- The current screen in text cells: { title, lines = { {col,row,text} },
--- items = { {label,detail,value,row,index} }, cursor (an item index),
--- more (rows below the list), keypad = { rows, row, col, text } }.
-function CoopMenu:view()
+-- What the current screen shows besides its rows, for Screens.lua:
+--   host/campaigns: { cards = self.campaigns, deleted = { id, title }? }
+--   delete:     { campaign }
+--   hosting:    { campaign, players = { { name, game, host } }, max,
+--                 warning?, game }
+--   join:       { nearby = { { title, game, players, fit, needs } },
+--                 searching, nearbyOff }
+--   connecting: { address, title?, steps = { found, protocol, fits }
+--                 ("ok", "no", "wait" or "skip"), status line?, reason?,
+--                 tips?, countdown? }
+--   stop:       { partners }
+--   entry:      { prompt, keypad = { rows, row, col, text, max } }
+function CoopMenu:details()
   local s = self.screen
-  local v = { title = "", lines = {}, items = {}, cursor = self.cursor }
-  if s == "entry" then
-    local e = self.entry
-    v.title = e.prompt
-    v.keypad = { rows = e.keypad:rows(), row = e.keypad.row, col = e.keypad.col,
-                 text = e.keypad.text, max = e.keypad.max }
-    return v
-  end
-  local rows = self:items()
+  local d = {}
   local session = self.session
-  if s == "coop" then
-    v.title = "CO-OP " .. label(self.version)
-  elseif s == "logs" then
-    v.title = "SESSION LOGS"
-    lines(v, "Shared logs go to the players of a session. They hold names and "
-      .. "addresses: never post them.", 1, 2, 5)
-  elseif s == "host" then
-    v.title = "HOST " .. label(self.version)
-  elseif s == "card" then
-    local c = self.campaign
-    v.title = c.title:sub(1, CoopMenu.COLS)
-    v.lines[#v.lines + 1] = { col = 1, row = 2, text = "STARTED ON " .. label(c.game) }
-    local names = {}
-    for _, p in ipairs(c.players) do names[#names + 1] = p.name end
-    lines(v, #names > 0 and ("PLAYERS " .. table.concat(names, ", ")) or "NO PLAYERS YET",
-      1, 3, 2)
-    v.lines[#v.lines + 1] = { col = 1, row = 5,
-      text = c.hosted and ("HOSTED " .. os.date("!%Y-%m-%d", c.hosted)) or "NEVER HOSTED" }
-  elseif s == "delete" then
-    v.title = "DELETE"
-    lines(v, ("Delete %s? Its last state is kept as a backup."):format(self.campaign.title),
-      1, 2, 5)
-  elseif s == "new" then
-    v.title = "NEW CAMPAIGN"
+  if s == "host" or s == "campaigns" then
+    d.cards = self.campaigns or {}
+    d.deleted = self.deleted
+  elseif s == "entry" then
+    local e = self.entry
+    d.prompt = e.prompt
+    d.keypad = { rows = e.keypad:rows(), row = e.keypad.row, col = e.keypad.col,
+                 text = e.keypad.text, max = e.keypad.max, kind = e.keypad.kind }
   elseif s == "hosting" then
-    v.title = "HOSTING " .. (self.campaign and self.campaign.title or ""):sub(1, 12)
+    d.campaign = self.campaign
+    d.game = session and session.cartridge.game or self.version
+    d.max = session and session.host and session.host.maxPlayers or 8
     if session and session.listenError then
-      lines(v, "Network port busy: only this device can join.", 1, 4, 2)
+      d.warning = L("The network port is busy: only this device can join.")
     elseif #self:_hostAddresses() == 0 then
-      lines(v, "No network found: only this device can join.", 1, 4, 2)
+      d.warning = L("No network found: only this device can join.")
     end
-    local names = {}
-    local mine = session and session.cartridge.game
+    d.players = {}
+    local me = session and session.client and session.client.player
     for _, p in ipairs(session and session:roster() or {}) do
       if p.connected then
-        names[#names + 1] = p.name .. ((p.game and p.game ~= mine) and (" " .. label(p.game)) or "")
+        d.players[#d.players + 1] = { name = p.name, game = p.game, host = p.id == me }
       end
     end
-    lines(v, "IN: " .. table.concat(names, ", "), 1, 8, 2)
   elseif s == "stop" then
-    v.title = "STOP"
-    local n = session and session:partners() or 0
-    lines(v, ("%d partner%s still in. Stop the session for everyone?"):format(
-      n, n == 1 and " is" or "s are"), 1, 2, 5)
+    d.partners = session and session:partners() or 0
+  elseif s == "delete" then
+    d.campaign = self.campaign
   elseif s == "join" then
-    v.title = "JOIN " .. label(self.version)
-  elseif s == "connecting" then
-    v.title = "JOIN"
-    self:_connectingLines(v)
-  end
-  -- rows: fixed ones where they say, a list on LIST_ROWS with scrolling
-  local list = {}
-  for i, r in ipairs(rows) do
-    if r.row then
-      v.items[#v.items + 1] = { label = r.label, detail = r.detail, value = r.value,
-                                row = r.row, index = i, enabled = r.enabled }
-    else
-      list[#list + 1] = i
-    end
-  end
-  if #list > 0 then
-    local visible = #CoopMenu.LIST_ROWS
-    local pos
-    for k, i in ipairs(list) do if i == self.cursor then pos = k end end
-    if pos then
-      if pos <= self.scroll then self.scroll = pos - 1 end
-      if pos > self.scroll + visible then self.scroll = pos - visible end
-    end
-    self.scroll = math.max(0, math.min(self.scroll, math.max(0, #list - visible)))
-    for k = 1, visible do
-      local i = list[self.scroll + k]
-      if i then
-        local r = rows[i]
-        v.items[#v.items + 1] = { label = r.label, detail = r.detail, value = r.value,
-                                  row = CoopMenu.LIST_ROWS[k], index = i, enabled = r.enabled }
+    local listener = self.env.nearby()
+    d.nearbyOff = listener == nil
+    d.nearby = {}
+    for _, h in ipairs(CoopMenu.oneEach(listener and listener:hosts() or {})) do
+      local lobby = h.lobby
+      local count = 0
+      for _, p in ipairs(lobby.players or {}) do
+        if p.connected then count = count + 1 end
       end
+      d.nearby[#d.nearby + 1] = { title = lobby.title or "?", game = lobby.game,
+        host = lobby.host, players = count, fit = self:_fitFor(lobby) }
     end
-    v.more = self.scroll + visible < #list
+    d.searching = listener ~= nil and #d.nearby == 0
+  elseif s == "connecting" and session then
+    self:_connectingDetails(d)
   end
-  return v
+  return d
 end
 
-function CoopMenu:_connectingLines(v)
+function CoopMenu:_connectingDetails(d)
   local session = self.session
-  if not session then return end
   local st = session.status
-  local add = function(row, text) v.lines[#v.lines + 1] = { col = 1, row = row, text = text } end
-  local function steps(found, version, fits)
-    add(4, "HOST FOUND     " .. found)
-    add(5, "SAME VERSION   " .. version)
-    add(6, "CARTRIDGE FITS " .. fits)
-  end
-  if st ~= "refused" or not session.lobby then add(2, hostOnly(session.address):sub(1, 18)) end
+  d.address = hostOnly(session.address)
+  d.status = st
+  d.game = session.cartridge.game
   if st == "dialling" or st == "waiting" then
     local left, nextIn = session:dialTimes()
-    add(3, st == "waiting" and ("TRYING IN %dS"):format(math.ceil(nextIn)) or "CALLING...")
-    steps("..", "..", "..")
-    add(7, ("GIVES UP IN %d:%02d"):format(math.floor(left / 60), math.floor(left % 60)))
+    d.line = st == "waiting" and L("No answer yet. Trying again in %d s.", math.ceil(nextIn))
+      or L("Calling the host...")
+    d.countdown = L("Gives up in %d:%02d", math.floor(left / 60), math.floor(left % 60))
+    d.steps = { found = "wait", protocol = "wait", fits = "wait" }
   elseif st == "unreachable" then
-    add(3, "COULD NOT REACH IT")
-    local tips = Addresses.checklist(Addresses.kind(session.address), CoopMenu.DEFAULT_PORT)
-    local row = 4
-    for _, tip in ipairs(tips) do
-      for _, line in ipairs(wrap(tip, CoopMenu.COLS - 2)) do
-        if row <= 8 then add(row, line) end
-        row = row + 1
-      end
-    end
-  elseif st == "probed" or st == "joining" then
+    d.line = L("No host answered within a minute.")
+    d.tips = Addresses.checklist(Addresses.kind(session.address), CoopMenu.DEFAULT_PORT, L)
+    d.steps = { found = "no", protocol = "skip", fits = "skip" }
+  elseif st == "probed" or st == "joining" or st == "joined" then
     local lobby = session.lobby or {}
-    add(3, (lobby.title or ""):sub(1, 18))
-    steps("OK", "OK", "OK")
-    if st == "joining" then add(8, "JOINING...") end
+    d.title = lobby.title
+    d.steps = { found = "ok", protocol = "ok", fits = "ok" }
+    if st == "joining" then d.line = L("Joining...") end
+    local you = lobby.you
+    if you and you.player then d.known = you.name end
   elseif st == "refused" then
     local lobby = session.lobby
     local reason = session.reason
+    d.title = lobby and lobby.title or nil
     if lobby then
-      -- the steps one row up, so the reason has three rows
-      add(2, "HOST FOUND     OK")
-      add(3, "SAME VERSION   " .. (reason == "protocol_mismatch" and "NO" or "OK"))
-      add(4, "CARTRIDGE FITS " .. (reason == "content_mismatch" and "NO"
-        or (reason == "protocol_mismatch" and "--" or "OK")))
+      d.steps = { found = "ok",
+        protocol = reason == "protocol_mismatch" and "no" or "ok",
+        fits = reason == "content_mismatch" and "no"
+          or (reason == "protocol_mismatch" and "skip" or "ok") }
+    else
+      d.steps = { found = "ok", protocol = "skip", fits = "skip" }
     end
-    lines(v, CoopMenu.reasonText(reason, lobby, session.cartridge.game), 1, lobby and 6 or 4,
-      lobby and 3 or 4)
+    d.reason = CoopMenu.reasonText(reason, lobby, session.cartridge.game)
   else -- ended or closed before the world
-    lines(v, session.status == "ended" and "The host closed the session."
-      or ("The link was lost (" .. tostring(session.reason or "closed") .. ")."), 1, 4, 4)
+    d.reason = st == "ended" and L("The host closed the session.")
+      or L("The link was lost (%s).", tostring(session.reason or "closed"))
   end
 end
 

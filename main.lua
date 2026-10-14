@@ -1571,7 +1571,8 @@ function love.wheelmoved(x, y)
   end
   if TouchEditor then return end
   if Studio then return Studio.wheelmoved(x, y) end
-  if Importer then return end
+  -- co-op (#38): the fork's launcher scrolls a long page
+  if Importer then return Importer.wheelmoved and Importer:wheelmoved(x, y) end
   if not Game then return end
   Game:wheelmoved(x, y)
 end

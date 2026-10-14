@@ -108,33 +108,40 @@ end
 
 -- What to check after a dial that got no answer, by the kind of address
 -- (design A2.6): a VPN address gets VPN advice, a home address the same
--- network and the firewall, a public one port forwarding.
-function Addresses.checklist(kind, port)
+-- network and the firewall, a public one port forwarding.  `tr(text, ...)`
+-- puts a line in the reader's language (the launcher's Text.get, #41).
+local function plain(text, ...)
+  if select("#", ...) > 0 then return text:format(...) end
+  return text
+end
+
+function Addresses.checklist(kind, port, tr)
   port = port or 24680
+  tr = tr or plain
   if kind == "vpn" then
     return {
-      "Is the VPN on, on both devices?",
-      "Are both in the same VPN network?",
-      "Is the host still hosting?",
+      tr("Is the VPN on, on both devices?"),
+      tr("Are both in the same VPN network?"),
+      tr("Is the host still hosting?"),
     }
   elseif kind == "home" then
     return {
-      "Are both on the same Wi-Fi or network?",
-      ("Does the host's firewall let UDP %d in?"):format(port),
-      "Is the host still hosting?",
+      tr("Are both on the same Wi-Fi or network?"),
+      tr("Does the host's firewall let UDP %d in?", port),
+      tr("Is the host still hosting?"),
     }
   elseif kind == "public" then
     return {
-      ("Does the host's router forward UDP %d to the host?"):format(port),
-      "Is the address the host's current one?",
-      "Is the host still hosting?",
+      tr("Does the host's router forward UDP %d to the host?", port),
+      tr("Is the address the host's current one?"),
+      tr("Is the host still hosting?"),
     }
   elseif kind == "here" then
-    return { "Is a game on this device hosting?" }
+    return { tr("Is a game on this device hosting?") }
   end
   return {
-    "Is the address spelled right?",
-    "Is the host still hosting?",
+    tr("Is the address spelled right?"),
+    tr("Is the host still hosting?"),
   }
 end
 
