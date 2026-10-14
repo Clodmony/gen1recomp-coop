@@ -44,23 +44,25 @@ end
 -- title screen
 do
   local m = newMenu({ ready = { red = true } })
-  eq(ids(m), "red,blue,yellow,credits,quit", "title lists the three games, credits, quit")
+  eq(ids(m), "red,blue,yellow,red_de,blue_de,credits,quit",
+    "title lists the five games (German Red and Blue too, #25), credits, quit")
   eq(m:items()[1].detail, nil, "an imported game shows no NO ROM")
   eq(m:items()[2].detail, "NO ROM", "a game without a ROM says so")
-  eq(ids(newMenu({ canQuit = false })), "red,blue,yellow,credits", "no QUIT on mobile")
+  eq(ids(newMenu({ canQuit = false })), "red,blue,yellow,red_de,blue_de,credits",
+    "no QUIT on mobile")
   eq(newMenu({ initial = "yellow" }).cursor, 3, "initial game is preselected")
   m:press("up")
-  eq(m.cursor, 5, "cursor wraps from the top to QUIT")
+  eq(m.cursor, 7, "cursor wraps from the top to QUIT")
   m:press("down")
   eq(m.cursor, 1, "and back")
-  m.cursor = 5
+  m.cursor = 7
   eq(m:press("a").kind, "quit", "QUIT asks the host to quit")
-  m.cursor = 4
+  m.cursor = 6
   m:press("a")
   eq(m.screen, "credits", "CREDITS opens the credits")
   m:press("b")
   eq(m.screen, "title", "B leaves the credits")
-  eq(m.cursor, 4, "back on CREDITS")
+  eq(m.cursor, 6, "back on CREDITS")
 end
 
 -- a game with no ROM: the import screen takes a path

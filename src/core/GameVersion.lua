@@ -53,6 +53,36 @@ GameVersion.VERSIONS = {
     saveSuffix = "_yellow",   -- save_yellow.lua / .bak / .tmp
     engine = "gen1",
   },
+  -- co-op (#25): German Rote and Blaue Edition, games of their own (D95, G7)
+  -- so caches, saves and sessions never mix languages.  `base` is the US
+  -- game they translate: the engine plays them as that game (isBlue() and
+  -- friends answer for the base), with the German cartridge's data.
+  red_de = {
+    id = "red_de",
+    label = "Rot",
+    displayName = "Pokemon Rote Edition",
+    launcherName = "Rot",
+    sha1 = "87d523fe1a0c548db7c5477b451ddec1eb083c06",
+    manifest = "tools/rom_manifest_red_de.json",
+    cachePrefix = "red_de/",
+    saveSuffix = "_red_de",
+    engine = "gen1",
+    base = "red",
+    language = "de",
+  },
+  blue_de = {
+    id = "blue_de",
+    label = "Blau",
+    displayName = "Pokemon Blaue Edition",
+    launcherName = "Blau",
+    sha1 = "20e72dc6f41493eee1fdd0cef54214e6c3389688",
+    manifest = "tools/rom_manifest_blue_de.json",
+    cachePrefix = "blue_de/",
+    saveSuffix = "_blue_de",
+    engine = "gen1",
+    base = "blue",
+    language = "de",
+  },
   -- Gen 2, Phase 1 (docs/gold-phase1.md): a 2 MiB cart, twice the size of
   -- the Gen 1 ROMs above, imported through RomExtractorGen2 instead of
   -- RomExtractor.
@@ -197,6 +227,9 @@ GameVersion.VERSIONS = {
 local NO_FIXES = {}
 
 -- Launcher column order.
+-- co-op (#25): red_de and blue_de stay out: this is upstream's column list
+-- and what a mod's "gen1" token expands to, and a mod for the US games is
+-- not a mod for the German ones.
 GameVersion.ORDER = { "red", "blue", "yellow", "gold", "silver", "crystal", "firered", "leafgreen", "ruby", "sapphire", "emerald" }
 
 GameVersion.current = "red"
@@ -210,8 +243,25 @@ function GameVersion.get()
   return GameVersion.current
 end
 
+-- co-op (#25): the US game a translation plays as ("red_de" -> "red").
+function GameVersion.base(id)
+  local info = GameVersion.info(id)
+  return info and info.base or id or GameVersion.current
+end
+
+-- co-op (#25): "en" for the US games, "de" for the German ones.
+function GameVersion.language(id)
+  local info = GameVersion.info(id)
+  return info and info.language or "en"
+end
+
+-- co-op (#25): a German cartridge (Rote or Blaue Edition).
+function GameVersion.isGerman(id)
+  return GameVersion.language(id) == "de"
+end
+
 function GameVersion.isBlue()
-  return GameVersion.current == "blue"
+  return GameVersion.base() == "blue" -- co-op (#25): Blaue Edition too
 end
 
 function GameVersion.isYellow()

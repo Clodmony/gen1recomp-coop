@@ -87,7 +87,8 @@ do
   if not l then T.finish() end
   eq(l.menu.screen, "title", "on its title screen")
   check(showsCredit(), "the title screen shows the credit line")
-  love.keypressed("down"); love.keypressed("down"); love.keypressed("down")
+  -- past every game row to CREDITS
+  for _ = 1, #require("src.coop.launcher.Menu").GAMES do love.keypressed("down") end
   love.keypressed("return")
   eq(l.menu.screen, "credits", "keyboard reaches CREDITS")
   check(showsCredit(), "the credits screen shows the credit line")

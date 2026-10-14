@@ -1,5 +1,6 @@
 -- ROM import for the fork's launcher (#3): verify a dropped or typed ROM by
--- SHA-1 and fill that version's private cache, Red, Blue and Yellow only.
+-- SHA-1 and fill that version's private cache: Red, Blue and Yellow, and
+-- the German Rote and Blaue Edition (#25).
 --
 -- Upstream's launcher keeps this flow inside src/import/RomImporter.lua next
 -- to its proprietary UI, so the fork does not call that file.  The steps are
@@ -14,7 +15,7 @@ local CacheContract = require("src.import.CacheContract")
 local RomImport = {}
 
 -- The launcher's games, in menu order.
-RomImport.VERSIONS = { "red", "blue", "yellow" }
+RomImport.VERSIONS = { "red", "blue", "yellow", "red_de", "blue_de" }
 
 local GB_ROM_BYTES = 1024 * 1024
 local PROGRESS_CHANNEL = "coop_rom_import_progress"
@@ -89,11 +90,12 @@ function RomImport.identify(data, displayName)
   local version = GameVersion.forSha1(hash)
   if not version then
     return nil, "Unknown ROM. This needs a clean US Pokemon Red, Blue or "
-      .. "Yellow dump (SHA-1 " .. hash .. ")."
+      .. "Yellow dump, or a German Rote or Blaue Edition (SHA-1 " .. hash .. ")."
   end
   if not isGen1(version) then
     return nil, GameVersion.info(version).displayName
-      .. " is not playable here: this launcher plays Red, Blue and Yellow."
+      .. " is not playable here: this launcher plays Red, Blue and Yellow"
+      .. " (and German Red and Blue)."
   end
   return version, data, displayName, hash
 end

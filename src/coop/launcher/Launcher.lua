@@ -313,6 +313,11 @@ function Launcher:_pollJob()
   self.saveCache = {}
   if state == "failed" then
     self.menu:importFailed("Import failed: " .. tostring(job.error))
+    -- A scripted import-only run has nobody to read the menu.
+    if os.getenv("POKEPORT_IMPORT_ONLY") == "1" then
+      io.stderr:write("Import failed: " .. tostring(job.error) .. "\n")
+      love.event.quit(1)
+    end
     return
   end
   if not self.cartFont then self:_loadFont() end
@@ -370,8 +375,10 @@ function Launcher:_centered(str, row)
 end
 
 function Launcher:_drawItems(items, cursor)
+  -- every other row while five fit in the box, else one per row
+  local step = #items > 5 and 1 or 2
   for i, item in ipairs(items) do
-    local row = ITEM_ROW + (i - 1) * 2
+    local row = ITEM_ROW + (i - 1) * step
     if i == cursor then self:_text(self:_cursorGlyph(), 1, row) end
     self:_text(item.label, 2, row)
     if item.detail then self:_text(item.detail, COLS - 1 - #item.detail, row) end
