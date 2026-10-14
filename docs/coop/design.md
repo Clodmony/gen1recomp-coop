@@ -1108,3 +1108,11 @@ sibling's D-numbers.
   writer, which the fork keeps calling and never routes through
   `LauncherSettings.lua`. Per-cart overlays (`CART_OPTION_KEYS`) keep
   working, since the writes go through the same path as the game's.
+- **G19. Save slots are upstream's; a campaign's slot is entered from its
+  campaign** (#6, 2026-10-14). The SAVES page lists, plays, adds, deletes,
+  imports and exports the game's own slots through GPL `SaveData`,
+  `SaveFileIO` and `SaveConvert`, so a .sav comes and goes exactly as in
+  the game's own importer. A slot that a campaign plays in (G10) shows its
+  campaign and has no PLAY here: entering it goes through CAMPAIGNS, which
+  keeps the session and the slot together; it can still be exported and
+  deleted. Campaign files (#13) replace this slot per campaign later.

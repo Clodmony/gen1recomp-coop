@@ -30,9 +30,25 @@ language, under every page and every message.
   and not offered until #4 and #11 work; IMPORT ROM for a cartridge with no
   ROM; LAST SESSION with HOST AGAIN or REJOIN.
 - **Solo**: CONTINUE (when the active save slot holds a save; name, badges and
-  play time shown), NEW GAME, IMPORT AGAIN. NEW GAME over a save starts in a
-  new save slot, so the old save stays on disk; choosing between slots comes
-  with #6.
+  play time shown), NEW GAME, SAVES, IMPORT AGAIN. NEW GAME over a save starts
+  in a new save slot, so the old save stays on disk.
+- **SAVES** (#6, from the solo sheet): the game's save slots, one card each
+  with the trainer's name, BADGES, POKéDEX and TIME (what the cartridge's
+  continue screen shows), the active slot marked, a campaign's slot named
+  after its campaign (it is entered from CAMPAIGNS, not here; decision G19).
+  PLAY makes a slot the active one and boots the game to continue it, + NEW
+  SAVE adds an empty slot and boots on it (the game offers NEW GAME), EXPORT
+  writes the slot as a cartridge save to `exports/<game>/gen1recomp-<game>-<slot>.sav`
+  in the save folder and names the file, DELETE asks first and removes the
+  slot for good. IMPORT .SAV takes a 32 KB cartridge save (.sav/.srm, as an
+  emulator or a cartridge reader writes it) by a dropped file or a typed or
+  pasted path and puts it into a new slot, made active; a bigger file asks
+  whether to take its first 32 KB; a file that is no save is refused with
+  the codec's reason. A .sav dropped on any page goes to the SAVES page of
+  the picked game (once its ROM is imported). The slots are upstream's
+  (GPL `SaveData`), the codec upstream's `SaveFileIO.importToSlot` and
+  `exportActiveSlot` (`SaveConvert`, `GenSave`): the same path the game's
+  own importer uses, never the proprietary launcher's screens.
 - **Import**: drop the ROM file on the window, or type or paste (Ctrl+V) its
   path and press Enter. The ROM is checked by SHA-1 (clean US dumps and the
   German Rote, Blaue and Gelbe Edition, `.zip`/`.7z` where the platform opens
@@ -186,6 +202,10 @@ CONTINUE never opens a campaign's save.
   import modules (`RomArchive`, `GameVersion.forSha1`, `CacheFs`,
   `CacheContract`, `ExtractThread`, `RomExtractor`), never `RomImporter.lua`.
 - `Keypad.lua`: the text entry grid.
+- `Saves.lua` (#6): the SAVES page's model: the slots with their summary,
+  PLAY, NEW SAVE, DELETE and its question, IMPORT .SAV (typed, pasted or
+  dropped, the oversized question) and EXPORT of any slot (made active for
+  upstream's export, the active slot put back).
 - `GameOptions.lua` (#5): the game's options on SETTINGS: each row's key
   in `options.lua`, its value's label and how it steps, read and written
   through `SaveData`.
@@ -213,9 +233,9 @@ fullscreen memory) is not on the licence's list and stays.
 Upstream features that only its launcher reaches are not offered yet: mod
 management and mod updates before a shortcut boot (`main.lua` asks for none),
 the save editor, the skin studio, the touch-controls editor, the Box, carts and
-the other games. Save slots and mobile are #6 and #7; the game's CONTROLS
-and OPTIONS menus stay in the game and agree with the launcher's pages
-(#4, #5).
+the other games. Mobile is #7; the game's CONTROLS and OPTIONS menus stay
+in the game and agree with the launcher's pages (#4, #5), and the save
+editor stays upstream's (the SAVES page lists, imports and exports, #6).
 
 ## Save folder and upstream services
 
@@ -292,6 +312,15 @@ the game's save options held the six values, its window was 320 x 288 for
 on a screen: the offscreen driver has none, so it is covered by the reader
 (`VideoMode.applyOptions`) and the ROM-free tests only.
 
+The SAVES page (#6) was run on the same private US Red import: the solo
+sheet, the empty page, the import screen, then a fixture-built cartridge
+save (`tests/fixtures/save/gen1_build.lua`, trainer BRIO, three badges)
+imported by its typed path, the list with the slot, EXPORT (the file landed
+in the save folder's `exports/red/`), the DELETE question, the page in
+German at 1024 x 768 and 480 x 400, and PLAY booting Red on the slot: the
+game's save held BRIO with the badges. A real cartridge dump's .sav, a
+dropped file under LÖVE and a phone have not been run.
+
 ## Tests
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
@@ -305,7 +334,14 @@ headless on the fixture dataset and drives the launcher with keys, a pad, the
 mouse, the wheel and a file drop; `upstream_services_test.lua` checks that no
 boot path reaches the updater or cloud sync and that `conf.lua` uses the
 fork's identity; and `driver_launcher_boot_test.lua` runs a frame driver that
-boots a game from the launcher (#28). `game_options_test.lua` (#5) reads the defaults from no file, steps every
+boots a game from the launcher (#28). `saves_test.lua` (#6) feeds the Gen 1 save codec from the fixture dataset
+and drives the page on an in-memory save folder: the list with names,
+badges, Pokédex and time, the active and a campaign's slot, PLAY, NEW SAVE,
+DELETE and its question, the import of a fixture-built .sav (and of an
+oversized one after the question, and the refusal of a wrong file), EXPORT
+of a slot that is not active, and the round trip of the export back in;
+the boot test drops a .sav on the launcher, exports, asks DELETE and plays.
+`game_options_test.lua` (#5) reads the defaults from no file, steps every
 row and reads each change back from `options.lua`, falls back from a broken
 file, and walks the rows in the menu (A, left, right); the boot test sets
 the options on the page through the real callbacks, boots Red on the

@@ -373,4 +373,68 @@ do
   SaveData.invalidateOptionsCache()
 end
 
+-- 10. SAVES (#6): a .sav dropped on the launcher lands in a new slot of the
+-- picked game, PLAY boots it, EXPORT writes a .sav, DELETE asks first
+do
+  Launcher.current = nil
+  local SaveData = require("src.core.SaveData")
+  local SaveConvert = require("src.save_convert.SaveConvert")
+  local G1 = require("tests.fixtures.save.gen1_build")
+  -- the codec's crosswalk from the fixture dataset (no ROM cache here)
+  local stub = {}
+  for _, name in ipairs({ "pokemon", "moves", "items", "maps", "encounters", "field",
+                          "text_pointers", "trainer_headers", "tilesets" }) do
+    local chunk = loadfile("tests/fixture_data/" .. name .. ".lua")
+    if chunk then stub[name] = chunk() end
+  end
+  SaveConvert.setGen1DataStub(stub, "red")
+  love.filesystem.remove("options.lua")
+  SaveData.invalidateOptionsCache()
+  SaveData.resetSlotState()
+  ready = { red = true }
+  love.load({})
+  frames(2)
+  local l = Launcher.current
+  l.menu:select("red")
+  local bytes = G1.build({ player = "BRIO", badges = 0x07 })
+  local dropped = { open = function() return true end, getSize = function() return #bytes end,
+                    read = function() return bytes end, close = function() end,
+                    getFilename = function() return "/tmp/brio.sav" end }
+  love.filedropped(dropped)
+  frames(1)
+  eq(l.menu.screen, "saves", "a dropped .sav opens the SAVES page of the picked game")
+  check(l.menu:currentNotice() and l.menu:currentNotice():find("BRIO", 1, true), "and says what came in")
+  love.keypressed("return")
+  local slots = l.menu.saves:details().slots
+  eq(#slots, 1, "one slot")
+  eq(slots[1].name .. "/" .. tostring(slots[1].active), "BRIO/true", "the imported save, active")
+  check(table.concat(drawnText(), " "):find("BRIO", 1, true), "the page shows it")
+  -- EXPORT
+  click(l, "export", nil)
+  check(l.menu:currentNotice() and l.menu:currentNotice():find("exports/red/gen1recomp%-red%-" .. slots[1].id .. "%.sav"),
+    "EXPORT names the file: " .. tostring(l.menu:currentNotice()))
+  check(love.filesystem.read("exports/red/gen1recomp-red-" .. slots[1].id .. ".sav") ~= nil, "and wrote it")
+  love.keypressed("return")
+  -- DELETE asks, B says no
+  click(l, "delete", nil)
+  eq(l.menu.saves.screen, "delete", "DELETE asks first")
+  love.keypressed("x")
+  eq(l.menu.saves.screen, "list", "B keeps the save")
+  eq(#l.menu.saves:details().slots, 1, "still there")
+  -- PLAY boots the game on the slot (the game itself booted twice above; a
+  -- third boot in one process trips the mod registry, so the boot is
+  -- recorded and the save the game would load is read instead)
+  local booted
+  l.onBoot = function(version) booted = version end
+  click(l, "play", nil)
+  eq(booted, "red", "PLAY boots Red")
+  eq(SaveData.activeSlot("red"), slots[1].id, "on the imported slot")
+  local loaded = SaveData.load("red")
+  eq(loaded and loaded.player and loaded.player.name, "BRIO", "whose save the game loads")
+  Launcher.current = nil
+  SaveConvert.setGen1DataStub(nil)
+  love.filesystem.remove("options.lua")
+  SaveData.invalidateOptionsCache()
+end
+
 T.finish()
