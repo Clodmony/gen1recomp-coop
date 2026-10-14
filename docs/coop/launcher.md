@@ -9,93 +9,132 @@ with no ROM and a scripted import (`POKEPORT_IMPORT_ROM`) all land in it.
 
 ## What it does
 
-A Game Boy style menu at the game's 160x144 resolution, scaled to the window
-in whole steps:
+The launcher follows #38's design (decision G13 in [design.md](design.md)):
+a quiet shell, green LCD panels, one ink and an accent, in a light and a dark
+set, drawn in the bundled Plain Pixel face. No cartridge graphics, fonts or
+upstream launcher assets appear in it. Its words come from one catalog in
+English and German (#41, decision G14): see *Language* below.
 
-- **Title**: RED, BLUE, YELLOW, ROT (DE) and BLAU (DE) (each marked NO ROM
-  until imported; seven rows close up to one line apart), CREDITS, QUIT (not
-  on mobile).
-- **A game with no ROM**: drop the ROM file on the window, or type or paste
-  (Ctrl+V) its path and press Enter. The ROM is checked by SHA-1 (clean US
-  dumps and the German Rote and Blaue Edition, `.zip`/`.7z` where the
-  platform opens them, [german.md](german.md)); a Gold or FireRed ROM is
-  refused, since this launcher plays Gen 1. A dropped ROM is routed to its
-  game whatever screen is showing. A scripted import (`POKEPORT_IMPORT_ONLY`)
-  that fails prints the error and exits with 1.
-- **An imported game**: CONTINUE (when the active save slot holds a save; name,
-  badges and play time shown), NEW GAME, CO-OP (see *Co-op screens*), NEW ROM
-  (import again), BACK. NEW GAME over a save starts in a new save slot, so the
-  old save stays on disk; choosing between slots comes with #6.
-- **Credits**: the credit line, the fork, the AI disclosure, the Plain Pixel
-  font licence and the trademark notice.
+Every page has the top bar (GEN1 CO·OP, UNOFFICIAL FORK and the tabs PLAY,
+CAMPAIGNS, CONTROLS, SETTINGS, HELP, and QUIT on desktop), the page itself and
+the footer: the controls of the device in use and the credit line ("Based on
+the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC
+(https://github.com/bryanthaboi/gen1recomp)"), word for word in every
+language, under every page and every message.
 
-The credit line ("Based on the Pokemon Gen 1 Recompilation Project by BOIS
-CLUB GAMES, LLC (https://github.com/bryanthaboi/gen1recomp)") fills the
-bottom six rows of every screen.
+- **PLAY**: the hero ("One story. Two journeys."), the cartridges RED, BLUE,
+  YELLOW, ROT and BLAU (Rote and Blaue Edition, [german.md](german.md)), each
+  READY or IMPORT ROM; what fits today (the same cartridge on both sides);
+  PLAY SOLO; HOST A CAMPAIGN, JOIN A FRIEND, and COUCH CO-OP marked PLANNED
+  and not offered until #4 and #11 work; IMPORT ROM for a cartridge with no
+  ROM; LAST SESSION with HOST AGAIN or REJOIN.
+- **Solo**: CONTINUE (when the active save slot holds a save; name, badges and
+  play time shown), NEW GAME, IMPORT AGAIN. NEW GAME over a save starts in a
+  new save slot, so the old save stays on disk; choosing between slots comes
+  with #6.
+- **Import**: drop the ROM file on the window, or type or paste (Ctrl+V) its
+  path and press Enter. The ROM is checked by SHA-1 (clean US dumps and the
+  German Rote and Blaue Edition, `.zip`/`.7z` where the platform opens them);
+  a Gold or FireRed ROM is refused, since this launcher plays Gen 1. A dropped
+  ROM is routed to its game whatever page is showing. A scripted import
+  (`POKEPORT_IMPORT_ONLY`) that fails prints the error and exits with 1.
+- **CAMPAIGNS**: every campaign on this device (see *Co-op screens*).
+- **CONTROLS**: the launcher's keys, pad buttons, mouse and touch; per-player
+  devices are marked PLANNED (#4).
+- **SETTINGS**: LANGUAGE (ENGLISH or DEUTSCH) and THEME (LIGHT or DARK).
+  Video, sound and game options stay in each game's own OPTIONS menu until #5.
+- **HELP**: how partners connect, SHARE LOGS (on by default; session logs go
+  to the session's players and hold trainer names and addresses) and OPEN LOGS
+  FOLDER on desktop, and the credits: the credit line, the fork, the AI
+  disclosure, the Plain Pixel font licence and the trademark notice.
 
-Text is drawn by the game's own `Font` renderer with the cartridge's font and
-text box frames once any of the three games is imported. Before that there is
-no cartridge font, so the launcher uses the bundled Plain Pixel face on a
-canvas of twice the resolution (its glyphs are taller than a Game Boy row).
+**Size.** The launcher's pixels are whole multiples of the window's: the
+largest scale that leaves at least 480 x 400 launcher pixels (a 1024 x 768
+window shows it at 1x, 1920 x 1080 at 2x as 960 x 540). Pages are laid out
+for the size they get: a centred column up to 640 pixels wide, two columns
+side by side from 460, the cartridges three to a row when five do not fit, a
+page shorter than the window a third of the way down, a taller one scrolled
+(the focus is kept in view; the wheel and Page Up/Down scroll too). The game
+keeps its own 160 x 144 renderer.
 
-Controls: arrows or WASD move, Z / Enter / Space confirm, X / Backspace /
-Escape go back; a pad's d-pad or left stick, A, B and Start; a mouse click or
-a tap picks a row, a right click goes back.
+**Controls.** Arrows or WASD, a pad's d-pad or left stick move the focus to
+the nearest target in that direction; Z, Enter or Space and A or START
+confirm; X, Escape or Backspace and B go back. A mouse click or a tap picks a
+target and a right click goes back; hovering moves the focus. Keys, pads,
+mouse and touch walk one order of targets, and the footer names the controls
+of the device used last.
+
+## Language
+
+Every player-facing launcher string goes through `Text.lua` (#41), keyed by
+its English source like upstream's `Strings`; the German entries are in
+`TextDe.lua` and listed for review in [german-wording.md](german-wording.md).
+The launcher's language is the SETTINGS choice, kept in `coop/launcher.json`;
+before one is made it follows the system's locale (`LC_ALL`, `LC_MESSAGES`,
+`LANGUAGE`, `LANG`: German starts the launcher in German, anything else in
+English). Windows and an app opened from macOS' Finder set none of these, so
+there the launcher starts in English. A game's own text follows its cartridge,
+not this setting (D95, D102). Plain Pixel has the umlauts and ß, and the
+launcher no longer draws with a cartridge's font, so an English cartridge
+needs no fallback. The credit line stays English, as licence term 1 asks.
+
+`luajit tools/launcher_strings.lua` lists the catalog keys found in the
+launcher's source (`--missing`: those with no German entry).
 
 ## Co-op screens
 
-CO-OP on a game's screen opens the co-op screens of that cartridge (#12,
-design A2). They are drawn like the rest of the launcher, in Game Boy text
-cells with the cartridge's font, boxes and cursor.
+HOST A CAMPAIGN, JOIN A FRIEND, LAST SESSION and the CAMPAIGNS tab open the
+co-op screens of the picked cartridge (#12, design A2). A session started
+there keeps running while the launcher shows it and on into the game.
 
-- **Co-op**: HOST, JOIN, LAST SESSION (when there is one: hosts the last
-  campaign again, or dials the last host and joins at once when it knows this
-  device), LOGS, BACK.
-- **Host**: one card per campaign of this cartridge, latest hosted first,
-  with its player count; NEW CAMPAIGN asks for the campaign's name and the
-  player's own. A card shows the game it was started on, its players and when
-  it was hosted last, and offers HOST, RENAME and DELETE. DELETE asks again
-  and keeps the last state as `coop/campaigns/<id>.json.bak` in the save
-  folder; renaming it back to `<id>.json` restores the card.
-- **Hosting**: ENTER WORLD (at any time; partners can join later), the
+- **Choose your campaign** (HOST A CAMPAIGN) and **Your campaigns** (the
+  CAMPAIGNS tab, every cartridge): one card per campaign, latest hosted first,
+  with its cartridge, players and when it was hosted last, and HOST, RENAME and
+  DELETE. HOST is offered when the card's cartridge is imported here. DELETE
+  asks again and keeps the last state as `coop/campaigns/<id>.json.bak` in the
+  save folder; RESTORE BACKUP brings the card back. NEW CAMPAIGN asks for the
+  campaign's name and the trainer's (16 and 7 characters) and hosts it.
+- **Hosting**: the players in (this device's player marked, a partner on
+  another cartridge named with it) out of the host's player limit, the
   addresses partners join at (up to two, a VPN address first, then the home
-  network, each labelled, the one a partner used last marked LAST USED; A
-  copies one), the players in with the cartridge each plays when it differs,
-  and STOP. STOP with a partner in asks first; the partner's game goes back to
-  its launcher with "The host closed the session." The session keeps running
-  while the launcher shows it and on into the game.
-- **Join**: the hosts heard on the LAN beacon (one row per campaign, with the
-  cartridge this device joins with, or NEEDS <GAME> when none fits), BY
-  ADDRESS (an address with an optional `:port`), the recent addresses, BACK. A
-  nearby host on another cartridge this device has imported is joined with
-  that cartridge.
-- **Connecting**: the address, then HOST FOUND, SAME VERSION, CARTRIDGE FITS.
-  While nobody answers, the dial is tried again every 3 s for a minute, with
-  a countdown, TRY NOW and CANCEL; after the minute "could not reach" and a
-  checklist for the kind of address (a VPN address: the VPN on both devices;
-  a home address: the same network and the firewall; a public address: port
-  forwarding). A device the host knows sees one JOIN AS <name>; a new player
-  can type a NEW NAME first. A refusal is named exactly ("The host plays RED.
-  This game is BLUE."), with USE <GAME> when another imported cartridge fits.
-  Once joined, the game starts.
-- **Logs**: SHARE LOGS on or off (sharing of session logs with the session's
-  players, #31) and, on desktop, OPEN FOLDER.
+  network, each labelled, the one a partner used last marked LAST USED; COPY
+  copies one), a warning when the port is busy or no network was found (then
+  only this device can join), STOP HOSTING and ENTER THE WORLD (at any time;
+  partners can join later). STOP HOSTING with a partner in asks first; the
+  partner's game goes back to its launcher with "The host closed the
+  session."
+- **Join a friend**: the hosts heard on the LAN beacon (one card per
+  campaign, with its cartridge, language and players, and whether this
+  device's cartridge fits, which other imported one joins, or which one it
+  needs), BY ADDRESS (a host name or address with an optional `:port`), the
+  recent addresses. A nearby host on another cartridge this device has
+  imported is joined with that cartridge.
+- **The connection check**: HOST FOUND, CO-OP PROTOCOL MATCHES and CARTRIDGE
+  FITS, each ticked, crossed or waiting. While nobody answers, the dial is
+  tried again every 3 s for a minute, with a countdown, TRY NOW and CANCEL;
+  after the minute "could not reach" and a checklist for the kind of address
+  (a VPN address: the VPN on both devices; a home address: the same network
+  and the firewall; a public address: port forwarding). A device the host
+  knows sees one JOIN AS <name>; a new player can type a NEW NAME first. A
+  refusal is named exactly ("The host plays RED. This game is BLUE.", another
+  language, another dump, another protocol, a full or closing session), with
+  USE <GAME> when another imported cartridge fits. Once joined, the game
+  starts.
 - **Text entry**: a grid in the style of the cartridge's naming screen, so a
   pad or a touch screen can type; an address opens on the digits. A keyboard
   types directly (Enter finishes, Escape cancels, Ctrl+V pastes).
 
 Leaving a session in the game (closing its window, or the host stopping)
-brings the launcher back on the co-op screen with the reason ("You left the
-session.", "The host closed the session.").
+brings the launcher back on PLAY with the reason ("You left the session.",
+"The host closed the session.").
 
-The co-op screens remember on this device (`coop/launcher.json`): the
-player's name, the last address and up to four recent ones, the cartridge
-picked (preselected on the title screen), the last session and the
-log-sharing switch.
+The launcher remembers on this device (`coop/launcher.json`): the player's
+name, the last address and up to four recent ones, the cartridge picked, the
+last session, the log-sharing switch, the language and the colours.
 
 **Progress until campaign files (#13).** Each device plays a campaign in a
 save slot of its own, created and named after the campaign the first time
-(decision G10 in [design.md](design.md)). ENTER WORLD and a join make that
+(decision G10 in [design.md](design.md)). ENTER THE WORLD and a join make that
 slot the game's active one, so the cartridge's title screen offers NEW GAME
 the first time and CONTINUE after. The launcher puts the solo slot back when
 it opens again (a fresh empty slot when the game had none), so a solo
@@ -104,18 +143,22 @@ CONTINUE never opens a campaign's save.
 ## Files
 
 - `Launcher.lua`: the object `main.lua` drives (update, draw, input callbacks,
-  file drop), the font set-up, the import job and the boot.
-- `Menu.lua`: the screens and cursor as a model with no `love.*` calls, plus
-  the credit text.
+  file drop, wheel), the import job, the boot, painting a page and the focus.
+- `Menu.lua`: tabs, PLAY, solo, import and settings as a model with no
+  `love.*` calls, plus the credit text.
+- `CoopMenu.lua`: the co-op screens as a model; the session, campaigns and
+  settings come in through an `env` (Launcher.lua passes the real ones, tests
+  their own).
+- `Screens.lua`: every page laid out from the models' rows and details.
+- `Ui.lua`: the page's nodes, text widths and wrapping, and the focus moves.
+- `Theme.lua`: the light and dark colours. `Games.lua`: the cartridges.
+- `Text.lua`, `TextDe.lua`: the launcher's words and their German.
 - `RomImport.lua`: verify a ROM and fill its private cache. It uses the GPL
   import modules (`RomArchive`, `GameVersion.forSha1`, `CacheFs`,
   `CacheContract`, `ExtractThread`, `RomExtractor`), never `RomImporter.lua`.
-- `CoopMenu.lua`: the co-op screens as a model, laid out in text cells; the
-  session, campaigns and settings come in through an `env` (Launcher.lua
-  passes the real ones, tests their own).
 - `Keypad.lua`: the text entry grid.
-- `CoopSettings.lua`: what the co-op screens remember on this device, and
-  each campaign's save slot.
+- `CoopSettings.lua`: what the launcher remembers on this device, and each
+  campaign's save slot.
 - `../Campaigns.lua`: the hosting device's campaign cards.
 
 ## What it leaves out
@@ -167,58 +210,45 @@ are not affected.
 
 ## Checked
 
-Run on Linux desktop (LÖVE 11.5) with a US Red ROM, driven through
-`main.lua`'s input callbacks: the Plain Pixel title, typing the ROM path,
-the import, the cartridge font afterwards, NEW GAME into the game's intro,
-the credits screen, and closing the game back to the launcher (the restart
-path); no upstream launcher module was loaded. Pads, mouse, file drops and
-the ROM checks are covered headless only; `.zip`/`.7z` ROMs, Ctrl+V,
-Windows, macOS and mobile have not been run.
+The first shell (#3) was run on Linux desktop (LÖVE 11.5) with a US Red ROM,
+driven through `main.lua`'s input callbacks: typing the ROM path, the import,
+NEW GAME into the game's intro and closing the game back to the launcher (the
+restart path); no upstream launcher module was loaded. The co-op screens
+(#12) were run in two game processes on one machine (host, nearby join, enter
+the world, the host closing the session, LAST SESSION on both sides). Two
+machines on a LAN, pads, touch, Windows, macOS and phones have not been run.
 
-The co-op screens (#12) were run on the same Linux desktop with US Red, in
-two game processes on one machine, each with its own save folder, driven by
-frame drivers through the launcher's own press calls (no window, the
-offscreen video driver):
-
-- the host made a new campaign and hosted it; the partner's Join screen heard
-  it on the LAN beacon (once, after the fix below), probed it (all three
-  steps OK), typed a new name on the grid and joined; its game started in a
-  new save slot named after the campaign;
-- the hosting screen listed the partner, and the address the partner used as
-  LAST USED; the host entered the world, both players' maps reached the
-  other side, and the card kept both players;
-- the host quit its game, which ended the session: the partner's game went
-  back to its launcher's co-op screen with "The host closed the session.",
-  and its solo save slot came back;
-- a second run: LAST SESSION on the host hosted the campaign again, LAST
-  SESSION on the partner rejoined in one press as the same player, and STOP
-  with the partner in asked first, then sent the partner back to its
-  launcher with the reason.
-
-Screenshots of these screens were looked at locally (they show the
-cartridge's font and stay out of the repository). The run found three
-faults, now fixed and tested: a host on the same machine was listed twice
-(heard on 127.0.0.1 and on its LAN address); a device with no save slot kept
-the campaign's slot active for solo play afterwards; the cartridge font has
-no `_` for the text field's blanks. Two machines on a LAN, pads, touch,
-Windows, macOS and phones have not been run.
+The redesign (#38, #41) was run on Linux desktop (LÖVE 11.5, the offscreen
+video driver) by a frame driver that opened every page and saved each frame:
+English and German at 1024 x 768, German at 480 x 400 and 540 x 960, and the
+dark colours in English at 960 x 864; the pages were looked at locally. The cartridges' ready
+flags were set by the driver, so no ROM was imported and no game booted in
+that run; the session in the hosting page was a real in-process host with
+networking off, and the join and connection pages showed sessions the driver
+made up. Pads, touch, the system-language default on a German desktop,
+Windows, macOS and phones have not been run with the new pages.
 
 ## Tests
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
-coop-ci): `launcher_menu_test.lua` drives the menu model and ROM checks,
-`launcher_boot_test.lua` boots `main.lua` headless on the fixture dataset,
-`upstream_services_test.lua` checks that no boot path reaches the updater or
-cloud sync and that `conf.lua` uses the fork's identity, and
-`driver_launcher_boot_test.lua` runs a frame driver that boots a game from the
-launcher (#28). `launcher_coop_test.lua` (#12) runs two devices in one
-process over a loopback hub that stands in for the network: hosting a new
-campaign, finding it nearby (once per campaign), joining under a typed name,
-the players and LAST USED on the hosting screen, STOP with a partner in and
-the partner's return note, LAST SESSION on both sides, renaming and deleting
-a card to its backup, the refusals and USE <GAME>, the retries every 3 s for
-a minute and the checklists, a host that starts after the partner dialled,
-the logs switch, the cartridge pick, each campaign's save slot and the solo
-slot afterwards, the keypad and address kinds, and that every co-op screen
-fits the 20x12 text cells. The ENet suite (`love tests/coop/enet`) has the
+coop-ci): `launcher_menu_test.lua` drives the menu model (tabs, cartridges,
+solo, import, settings) and the ROM checks; `launcher_ui_test.lua` (#38, #41)
+lays out every page in English and German at four sizes and checks that each
+keeps the credit line, fits the page and can be walked with the arrows, that
+no German page falls back to English and that every catalog key has a German
+entry with the same directives; `launcher_boot_test.lua` boots `main.lua`
+headless on the fixture dataset and drives the launcher with keys, a pad, the
+mouse, the wheel and a file drop; `upstream_services_test.lua` checks that no
+boot path reaches the updater or cloud sync and that `conf.lua` uses the
+fork's identity; and `driver_launcher_boot_test.lua` runs a frame driver that
+boots a game from the launcher (#28). `launcher_coop_test.lua` (#12) runs two
+devices in one process over a loopback hub that stands in for the network:
+hosting a new campaign, finding it nearby (once per campaign), joining under a
+typed name, the players and LAST USED on the hosting page, STOP HOSTING with a
+partner in and the partner's return note, LAST SESSION on both sides,
+renaming, deleting and restoring a card, the refusals and USE <GAME>, the
+retries every 3 s for a minute and the checklists, a host that starts after
+the partner dialled, each campaign's save slot and the solo slot afterwards,
+the keypad and address kinds, and that every co-op page fits a 480 x 400
+launcher with the credit line. The ENet suite (`love tests/coop/enet`) has the
 late host over real sockets.

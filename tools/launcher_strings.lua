@@ -2,7 +2,9 @@
 -- launcher puts through Text.get, found in the source, one per line.
 --   luajit tools/launcher_strings.lua            -- the keys
 --   luajit tools/launcher_strings.lua --missing  -- keys with no German entry
--- tests/coop/launcher_ui_test.lua uses keys() for its check.
+--   luajit tools/launcher_strings.lua --markdown -- the German as tables for
+--                                                   docs/coop/german-wording.md
+-- tests/coop/launcher_ui_test.lua uses keys() and markdown() for its checks.
 
 local M = {}
 
@@ -45,11 +47,44 @@ function M.keys(root)
   return out
 end
 
+-- The German entries of TextDe.lua as one markdown table per section (its
+-- "--" comment lines), in the file's order.
+function M.markdown(root)
+  root = root or "."
+  local f = assert(io.open(root .. "/src/coop/launcher/TextDe.lua", "r"))
+  local src = f:read("*a")
+  f:close()
+  local de = assert(load(src, "=TextDe.lua", "t", {}))()
+  local out = {}
+  local function cell(s) return (s:gsub("|", "\\|"):gsub("\n", " / ")) end
+  local open = false
+  for line in src:gmatch("[^\n]+") do
+    local section = line:match("^  %-%- (.+)$")
+    local key = line:match('^  %[(".-[^\\]")%]')
+    if section then
+      out[#out + 1] = ""
+      out[#out + 1] = "### " .. section:sub(1, 1):upper() .. section:sub(2)
+      out[#out + 1] = ""
+      out[#out + 1] = "| English | German now | Better German |"
+      out[#out + 1] = "| --- | --- | --- |"
+      open = true
+    elseif key and open then
+      local english = assert(load("return " .. key))()
+      out[#out + 1] = ("| %s | %s | |"):format(cell(english), cell(de[english]))
+    end
+  end
+  return table.concat(out, "\n"):gsub("^\n", "") .. "\n"
+end
+
 if arg and arg[0] and arg[0]:find("launcher_strings%.lua$") then
   package.path = "./?.lua;" .. package.path
-  local de = arg[1] == "--missing" and require("src.coop.launcher.TextDe") or nil
-  for _, k in ipairs(M.keys()) do
-    if not de or not de[k] then print(k) end
+  if arg[1] == "--markdown" then
+    io.write(M.markdown())
+  else
+    local de = arg[1] == "--missing" and require("src.coop.launcher.TextDe") or nil
+    for _, k in ipairs(M.keys()) do
+      if not de or not de[k] then print(k) end
+    end
   end
 end
 
