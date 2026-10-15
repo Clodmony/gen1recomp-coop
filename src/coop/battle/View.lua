@@ -112,20 +112,31 @@ function View.follow(b, dt)
       elseif b.menuIndex == 2 then
         View.openRoster(b, { suggest = true })
       end
-      c.suggested = nil
+      View.again(b)
     end
   elseif b.phase == "moveSelect" then
     local n = b.player and #b.player.curMoves or 1
     if input:wasPressed("up") then b.moveIndex = b.moveIndex > 1 and b.moveIndex - 1 or n
     elseif input:wasPressed("down") then b.moveIndex = b.moveIndex < n and b.moveIndex + 1 or 1
     elseif input:wasPressed("b") then b.phase = "menu"
-    elseif input:wasPressed("a") then c.suggested = nil end
+    elseif input:wasPressed("a") then View.again(b) end
   end
   local now = b.phase .. (b.menuIndex or 0) .. (b.moveIndex or 0)
   if now ~= before then c.restFrames = 0 else c.restFrames = (c.restFrames or 0) + 1 end
   if c.restFrames == View.REST or (c.suggested == nil and c.restFrames >= View.REST) then
     View.suggest(b, View.cursorCmd(b))
   end
+end
+
+-- A suggests the row again, at most once every AGAIN frames (a held or
+-- mashed A must not flood the link)
+View.AGAIN = 30
+function View.again(b)
+  local c = b.coop
+  local now = b.frame or 0
+  if c.againAt and now - c.againAt < View.AGAIN then return end
+  c.againAt = now
+  c.suggested = nil
 end
 
 -- the decider's own presses (for the idle alternation)

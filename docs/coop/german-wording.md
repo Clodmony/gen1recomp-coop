@@ -741,6 +741,9 @@ characters, a menu row fewer.
 | %s joined / the battle! | %s hilft / im Kampf! | |
 | decides | wählt | |
 | %s suggests | %s rät zu | |
+| IN A BATTLE | IM KAMPF | |
+| %s is in a battle against wild %s. START > CO-OP to join. | %s kämpft gegen ein wildes %s. START > KOOP zum Helfen. | |
+| %s is in a battle against %s. START > CO-OP to join. | %s kämpft gegen %s. START > KOOP zum Helfen. | |
 
 #### battle
 
