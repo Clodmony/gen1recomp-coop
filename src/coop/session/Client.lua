@@ -25,7 +25,8 @@
 -- (Window.lua applies each once and drops it).  Pokémon (#17): the window
 -- sends its holdings at rest points (c:sendHoldings(world, boxes), Window
 -- decides when); c.uids lists the uids the host gave its rows, for the
--- window to stamp.
+-- window to stamp.  A new player's start (#57): c:sendStart(how, text), and
+-- c.started holds the seq of the start the host kept.
 --
 -- Co-op battles (#18): c.battles holds each battle this player is in or
 -- joining, as the host sent it: { id, seed, open, inputs, rev, players, ask,
@@ -151,6 +152,14 @@ function Client:sendOpening(done, rival, chose)
                      chose = chose })
 end
 
+-- How a new player starts (#57, design A4.1 to A4.3): the world the
+-- launcher started, whole (World.encode's text); how: "pallet" or "save".
+-- The host answers `started` (c.started: that seq; c.seeded: it began the
+-- campaign's story) or refuses it.  Returns the seq, or nil when not joined.
+function Client:sendStart(how, text)
+  return self:send({ type = "start", how = how, save = text })
+end
+
 -- co-op battles (#18, design A8) ----------------------------------------
 
 -- a battle this window's world opened: opening = { kind, enemy, map,
@@ -274,6 +283,8 @@ function Client:_handle(msg)
     self:_battle(msg)
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
+  elseif t == "started" then
+    self.started, self.seeded = msg.seq, msg.seeded -- #57
   elseif t == "uids" then
     for _, u in ipairs(msg.list) do self.uids[#self.uids + 1] = u end
   elseif t == "saved" then

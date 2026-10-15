@@ -29,8 +29,10 @@ local Protocol = {}
 -- opening is, and in `state`; a walk-in joins the running one.  10: the
 -- opening (#22): a window's `opening` (in it or done, the rival's name,
 -- the starter chosen), and who is in it, the rival's name and the
--- starter he counters in `state`.
-Protocol.VERSION = 10
+-- starter he counters in `state`.  11: how a new player starts (#57): a
+-- window's `start` (a world started in Pallet Town or brought from a solo
+-- save) and the host's `started`, and the `returning` refusal.
+Protocol.VERSION = 11
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -66,6 +68,8 @@ Protocol.REASONS = {
   no_pokemon = true, run_initiator = true,
   -- leaving and taking over (#20)
   opener_stays = true, not_away = true,
+  -- how a new player starts (#57): the campaign has this player's world
+  returning = true,
 }
 
 -- a player's world travels as the game's save text (World.lua checks it):
@@ -487,6 +491,12 @@ Protocol.TO_HOST = {
   -- the name it gave the rival in Oak's speech
   opening = record(withType("opening", { seq = seq, done = bool }),
                    { rival = name, chose = enum(Protocol.STARTERS) }),
+  -- how a new player starts (#57, design A4.1 to A4.3): the world the
+  -- launcher started, in Pallet Town or brought from a solo save, whole
+  -- (the game's save text, the PC included), at the window's first rest
+  -- point
+  start = record(withType("start", { seq = seq, how = enum({ pallet = true, save = true }),
+                                     save = blob(Protocol.MAX_WORLD) })),
   -- co-op battles (#18, design A8): a battle this window's world opened,
   -- with this player's team (otId: their trainer id; expAll: an EXP.ALL in
   -- their bag)
@@ -544,6 +554,10 @@ Protocol.TO_CLIENT = {
   -- the player's world from the campaign, once after welcome (#13); none
   -- for a player who never saved in this campaign
   world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),
+  -- the host kept the world a window started with (#57): `seq` is its
+  -- `start`, `seeded` when it began the campaign's story; the story came
+  -- first
+  started = record(withType("started", { seq = int(1, Protocol.MAX_SEQ), seeded = bool })),
   -- a save of the campaign (#13, design A3.12): `you` when this player
   -- asked for it; ok false with the reason when it was refused
   saved = record(withType("saved", { ok = bool, by = name, you = bool }),

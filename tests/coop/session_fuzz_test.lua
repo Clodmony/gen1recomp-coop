@@ -80,6 +80,9 @@ local VALID = {
     battle_takeover = { type = "battle_takeover", seq = 10, battle = "b00000001",
                         owner = "p00000002" },
     opening = { type = "opening", seq = 11, done = true, rival = "GARY", chose = "SQUIRTLE" },
+    -- how a new player starts (#57)
+    start = { type = "start", seq = 12, how = "save",
+              save = 'return { player = { name = "FUZZ" }, money = 5, party = {} }\n' },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -100,6 +103,7 @@ local VALID = {
     saved = { type = "saved", ok = false, by = "RED", you = true,
               reason = "battle_in_progress", kind = "menu" },
     rejected = { type = "rejected", seq = 4, reason = "duplicate" },
+    started = { type = "started", seq = 12, seeded = true }, -- #57
     ended = { type = "ended", reason = "host_quit" },
     log = logBatch(),
     story = { type = "story", rev = 7, base = true, applied = 2,
