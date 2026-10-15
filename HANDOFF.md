@@ -47,11 +47,15 @@ Last updated 2026-10-15 (after Group 6, #51, PR #52 stacked on #50).
   - Live (US Red, offscreen, mix written to a WAV by OpenAL Soft's wave
     driver): player 2's START sounds alone in the mix with player 1's
     music at 0, on top of the song at 7; player 1's song played on.
-  - The owner's check with real pads (#50) can include listening for
-    player 2's sounds.
+  - **Owner (2026-10-15): merge #50 first, then #52**, both after their
+    check with two real pads (now also listening for player 2's sounds).
+    Merge each locally as Claude (`git merge --no-ff`), push, run
+    `tools/verify.sh` after each.
   - Verify: 36/37 (only the javac tier fails locally; no luacheck locally).
 
 ## Next candidates
+
+- **Owner (2026-10-15): the next session takes Group 7** (battles).
 
 - **Group 7 (#18, #19, #20, #34)**, battles: co-op battles against the game
   (rules), then their presentation with the cartridge's menus. Split-screen
