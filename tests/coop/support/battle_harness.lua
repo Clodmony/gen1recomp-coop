@@ -50,7 +50,7 @@ function H.newGame(name, otId, party)
       if not press or k ~= "a" then return false end
       local b = g and g.stack:top()
       if b and b.coop then
-        local q, by = Replica.question(b)
+        local q, by = Replica.decider(b)
         if q == "menu" and by == b.coop.me then return false end
       end
       return true
@@ -94,7 +94,7 @@ function H.autopilot(g)
   local b = g.stack:top()
   if not (b and b.coop) then return end
   Replica.step(b) -- the question goes to the host before its answer
-  local kind, by = Replica.question(b)
+  local kind, by = Replica.decider(b)
   if kind == "menu" and by == b.coop.me and not b.coop.sent then
     -- wait for the partner to be in, then fight with the first move
     -- unless the scenario decides otherwise
@@ -130,8 +130,16 @@ function H.frame(host, clients, games)
     local top = g.stack:top()
     if top and top.update then top:update(1 / 60) end
     g.taps = {}
+    -- copies away from the screen go on (src/coop/game/Battles.lua does
+    -- this in the game)
+    for _, b in ipairs(g.away or {}) do
+      if not b.coop.done then require("src.coop.battle.Replica").runAway(b) end
+    end
   end
 end
+
+-- the clock the host reads, for timers (TAKE OVER, abandoned battles)
+function H.advance(seconds) clock = clock + seconds end
 
 function H.run(host, clients, games, untilFn, limit)
   for i = 1, limit or 20000 do

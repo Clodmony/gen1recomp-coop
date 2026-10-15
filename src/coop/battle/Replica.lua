@@ -407,9 +407,107 @@ end
 
 -- the menus of the player asked ----------------------------------------------
 
+-- Who decides the copy's current question (#20, design A11.5): the host's
+-- word once it has the question (the owner, a stand-in, or the first
+-- present player for an owner who left; nobody while a dropped owner is
+-- waited for), else the owner unless the record has them away.
+function Replica.decider(b)
+  local c = b.coop
+  local kind, owner = questionOf(b)
+  if not kind then return nil end
+  local rec = c.client and c.client.battles[c.id]
+  if rec and rec.rev == c.applied and rec.ask == kind and rec.owner == owner then
+    return kind, rec.by, owner
+  end
+  for _, e in ipairs(rec and rec.players or {}) do
+    if e.id == owner and not e.present then return kind, nil, owner end
+  end
+  return kind, owner, owner
+end
+
 function Replica.mine(b)
-  local kind, by = questionOf(b)
-  return kind ~= nil and by == b.coop.me and b.coop.sent == nil, kind
+  local kind, by = Replica.decider(b)
+  return kind ~= nil and by == b.coop.me and b.coop.sent == nil and not b.coop.away, kind
+end
+
+-- LEAVE BATTLE (#20, design A11.1): the player goes back to their world,
+-- which never moved; their copy runs on out of sight (Battles.lua steps
+-- it) so their Pokemon still get what the battle does to them
+function Replica.leave(b)
+  local c = b.coop
+  if c.away or not c.client then return end
+  c.client:battleLeave(c.id)
+  c.away = true
+  local stack = c.real.stack
+  for i = #stack.states, 1, -1 do
+    if stack.states[i] == b then
+      if i == #stack.states then stack:pop() else table.remove(stack.states, i) end
+      break
+    end
+  end
+  require("src.core.Music").restoreMap(b.data)
+  if c.onLeave then c.onLeave(b) end
+end
+
+-- the question a player gets for RUN when the battle is not theirs to flee
+-- (design A9.5): leave it?  Their team stays.
+function Replica.askLeave(b)
+  local TextBox = require("src.render.TextBox")
+  b.coop.real.stack:push(TextBox.new(b.coop.real, Strings("Leave the battle?\nYour team stays."), nil, {
+    defaultNo = true,
+    choice = function(yes) if yes then Replica.leave(b) end end,
+  }))
+end
+
+-- Play what the record holds without a screen (a copy away from its
+-- window, #20): inputs at questions, the queue, the end.
+function Replica.runAway(b, budget)
+  local c = b.coop
+  local rec = c.client and c.client.battles[c.id]
+  if not rec or c.done then return end
+  local game = b.game
+  local input, stack = game.input, game.stack
+  game.input, game.stack = AUTO_INPUT, silentStack(b)
+  c.silent = true
+  local ok, err = pcall(muted, function()
+    for _ = 1, budget or 4000 do
+      if c.done then break end
+      if questionOf(b) then
+        if c.applied >= #rec.inputs then
+          Replica.report(b)
+          break
+        end
+        applyInput(b, rec.inputs[c.applied + 1])
+      elseif b.phase == "messages" then
+        b:tickFx()
+        if not b:updateQueue() then afterDrain(b) end
+      elseif b.phase == "menu" and b.player and b.player.mon.hp > 0
+             and b:menuLockedAction(b.player) then
+        c.applying = true
+        b:clearTurnFlinches()
+        engine().resolveTurn(b, b:menuLockedAction(b.player))
+        c.applying = false
+      else
+        break
+      end
+    end
+  end)
+  c.silent = false
+  game.input, game.stack = input, stack
+  if not ok then Logger.warn("co-op battle away: %s", tostring(err)) end
+  -- the host ended it without this copy getting there (it was abandoned,
+  -- or the host shut down): it ends here as the host says
+  if rec.ended and not c.done and c.applied >= #rec.inputs then
+    Replica.forceEnd(b, rec.ended)
+  end
+end
+
+-- the host ended the battle before this copy did: it ends as the host says
+function Replica.forceEnd(b, result)
+  if b.coop.done then return end
+  b.result = b.result or result
+  b.coop.forced = true
+  b:finish()
 end
 
 -- this window's answer goes to the host; the copy waits for it as an input
@@ -582,7 +680,8 @@ function Replica.make(b, rec, opts)
   b.coop = {
     id = opts.id, client = opts.client, me = opts.me, real = real, save = save,
     roster = {}, owners = {}, names = {}, otIds = {}, expAll = {}, liveOf = {},
-    live = opts.live, applied = 0, onEnd = opts.onEnd, opener = rec.open.by,
+    live = opts.live, applied = 0, onEnd = opts.onEnd, onLeave = opts.onLeave,
+    opener = rec.open.by,
   }
   local c = b.coop
   save.party = c.roster
@@ -634,12 +733,13 @@ function Replica.make(b, rec, opts)
       s.moveIndex = math.min(s.moveIndex, #s.player.curMoves)
       s.moveSwapIndex = nil
     elseif choice == "run" then
-      if s.kind == "trainer" then return BattleState.tryRun(s) end -- only says no
+      -- RUN flees for the opener; the others are asked whether to leave
+      -- the battle (design A9.5, A11.1)
       if s.coop.me ~= s.coop.opener then
-        s:say(Strings("Only %s can\nrun from this\nbattle!", playerName(s, s.coop.opener)))
-        s.phase, s.afterQueue = "messages", "menu"
+        Replica.askLeave(s)
         return true
       end
+      if s.kind == "trainer" then return BattleState.tryRun(s) end -- only says no
       Replica.send(s, { kind = "run" })
     elseif choice == "item" then
       Replica.openItems(s)
@@ -713,6 +813,14 @@ function Replica.make(b, rec, opts)
       if onFinish then onFinish(result) end
       if cc.onEnd then cc.onEnd(s, result) end
     end
+    if cc.away or cc.forced and cc.real.stack:top() ~= s then
+      -- out of sight: the end without the battle screen (design A11.3)
+      s:restoreMimicked(s.player)
+      s:restoreMimicked(s.enemy)
+      local result = s.result or "run"
+      s.onFinish(result)
+      return
+    end
     return BattleState.finish(s)
   end
   b.draw = function(s)
@@ -744,7 +852,13 @@ function Replica.make(b, rec, opts)
     local mine, kind = Replica.mine(s)
     local cc = s.coop
     cc.autoA = View.autoLines(s)
-    local _, by = questionOf(s)
+    local rec = cc.client and cc.client.battles[cc.id]
+    if rec and rec.ended and not cc.done and cc.applied >= #rec.inputs and questionOf(s) then
+      -- the host ended it (abandoned, shut down): it ends as the host says
+      return Replica.forceEnd(s, rec.ended)
+    end
+    View.offerTakeover(s)
+    local _, by = Replica.decider(s)
     if kind == "menu" and by ~= cc.me and not cc.ask then
       -- a player not asked walks the menus and suggests (design A9.4)
       s:tickFx()

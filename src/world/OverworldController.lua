@@ -1260,9 +1260,10 @@ end
 -- wipe picked by trainer/level/dungeon (GetBattleTransitionID).
 function OverworldState:pushBattle(battle, trainerNpc)
   local BattleTransition = require("src.render.BattleTransition")
-  -- co-op (#18): in a co-op session the battle is the host's co-op battle
+  -- co-op (#18, #20): in a co-op session the battle is the host's co-op
+  -- battle, or waits for another one the player is away from
   -- (src/coop/game/Battles.lua); a solo game returns at once
-  require("src.coop.game.Battles").take(Game, battle)
+  if require("src.coop.game.Battles").take(Game, battle, trainerNpc) == "held" then return end
   local lead
   for _, mon in ipairs(Game.save.party) do
     if mon.hp > 0 then lead = mon break end
