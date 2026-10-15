@@ -601,6 +601,10 @@ A9.3 and A9.4; A8.11's marks in the move list), and the catch's name list
 
 ### A9. Co-op battles: presentation and menus
 
+In place (#19, [battles.md](battles.md)): every rule below but A9.5's
+question to leave the battle (#20) and the bag's battle-only list (the
+cartridge's bag stays, refusing the rest).
+
 1. **adapt** A co-op battle uses the cartridge's own battle screen and menus: FIGHT /
    PKMN / ITEM / RUN, the move list with TYPE/PP, a party list six rows at a
    time over every player's Pokémon (the text box names the owner of the row
