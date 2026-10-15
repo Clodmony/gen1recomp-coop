@@ -52,28 +52,19 @@
 -- refused `beaten`: its world counts it as won without a fight.  A loss, a
 -- flight, an abandoned battle or a shutdown release it.  `state` names the
 -- running ones, so a partner's trainer spots nobody (the sight gate, A10.4).
+-- The League's rooms are one run for the team (#55, A10.6): their
+-- encounters stay done until the run's clear (src/coop/battle/League.lua).
 --
 -- State lives on the host: host.battles (id -> battle) and host.joins
 -- (player id -> queued join); Host:busy() reads both (design A3.7).
 
 local Protocol = require("src.coop.session.Protocol")
+local League = require("src.coop.battle.League")
 
 local HostBattles = {}
 
 HostBattles.TAKEOVER = 30 -- seconds without a dropped decider before TAKE OVER is offered
 HostBattles.ABANDON = 120 -- seconds a battle nobody is present in waits (a redial's budget)
-
--- the League's rooms: the cartridge fights everyone there again on every
--- run, so their encounters are never kept done (#21; the team's League
--- run, design A10.6, is still to come)
-HostBattles.LEAGUE = { LORELEIS_ROOM = true, BRUNOS_ROOM = true, AGATHAS_ROOM = true,
-                       LANCES_ROOM = true, CHAMPIONS_ROOM = true }
-
--- whether an encounter is kept done once won (#21)
-function HostBattles.keeps(encounter)
-  local map = encounter:match("^%l+:(.+)_obj_%d+$")
-  return not (map and HostBattles.LEAGUE[map])
-end
 
 local function count(t)
   local n = 0
@@ -329,12 +320,14 @@ local function finish(host, b, result, by, why)
   host.dirty = true
   host:_log("battle_end", { battle = b.id, result = result, rev = #b.inputs, why = why }, by)
   -- a unique encounter won or caught is done for the campaign; anything
-  -- else releases it (#21, A10.1, A10.3)
+  -- else releases it (#21, A10.1, A10.3).  The League's are done until
+  -- the run's clear forgets them (#55, A10.6, League.lua)
   local enc = b.open.encounter
-  if enc and (result == "win" or result == "caught") and HostBattles.keeps(enc) then
+  if enc and (result == "win" or result == "caught") then
     host.state:commit("victory:" .. enc, function(c) c.encounters[enc] = { state = "done" } end)
     host:_log("encounter_done", { encounter = enc, battle = b.id }, by)
   end
+  League.ended(host, b, result)
   -- a participant whose link is down hears the end once back (A11.8)
   for _, e in ipairs(b.players) do
     local p = host.byId[e.id]

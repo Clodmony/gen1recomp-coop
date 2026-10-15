@@ -84,7 +84,7 @@ function Client.new(conn, opts)
     seq = 0, player = nil, campaign = nil,
     lobby = nil, state = nil,
     rejections = {}, -- { seq, reason } for intentions the host refused
-    world = nil, -- the player's world from the campaign: { fresh, save }
+    world = nil, -- the player's world from the campaign: { fresh, save, restart }
     saves = {}, -- `saved` messages not yet taken: { ok, by, you, reason }
     savedAt = nil, -- clock time the campaign was last saved, by the host's word
     story = nil, -- the shared story as the host last sent it (#14)
@@ -191,6 +191,20 @@ end
 -- campaign's story) or refuses it.  Returns the seq, or nil when not joined.
 function Client:sendStart(how, text)
   return self:send({ type = "start", how = how, save = text })
+end
+
+-- The team's League run (#55, design A10.6): "lobby" (this window entered
+-- the Indigo Plateau lobby) or "inducted" (it went through the Hall of
+-- Fame).  Returns the seq, or nil when not joined.
+function Client:sendLeague(event)
+  return self:send({ type = "league", event = event })
+end
+
+-- The window restarts (#55, design A10.7): "hall" after the Hall of Fame,
+-- "reset" otherwise; the host answers with this player's world (c.world
+-- with `restart` = this seq).  Returns the seq, or nil when not joined.
+function Client:sendRestart(kind)
+  return self:send({ type = "restart", kind = kind })
 end
 
 -- co-op battles (#18, design A8) ----------------------------------------
@@ -368,7 +382,7 @@ function Client:_handle(msg)
       self.savedAt = self.clock() - msg.saved_ago
     end
   elseif t == "world" then
-    self.world = { fresh = msg.fresh, save = msg.save }
+    self.world = { fresh = msg.fresh, save = msg.save, restart = msg.restart }
   elseif t == "story" then
     -- the whole story, or what changed since the last one
     if msg.base or not self.story then self.story = {} end

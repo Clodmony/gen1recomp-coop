@@ -81,6 +81,7 @@ local HostScenes = require("src.coop.session.HostScenes")
 local Versions = require("src.coop.session.Versions")
 local HostCable = require("src.coop.session.HostCable")
 local HostFriends = require("src.coop.friends.HostFriends")
+local League = require("src.coop.battle.League")
 
 local Host = {}
 Host.__index = Host
@@ -339,9 +340,9 @@ end
 
 -- a player's world from the campaign, after the welcome: their own keys
 -- with the story over them, as a Continue opens it (design A5.19)
-function Host:_sendWorld(link, p)
+function Host:_sendWorld(link, p, restart)
   local save = self.state:worldFor(p.id)
-  local msg = { type = "world", fresh = true }
+  local msg = { type = "world", fresh = true, restart = restart }
   if save then
     msg.fresh = false
     msg.save = World.encode(save)
@@ -559,6 +560,18 @@ function Host:_start(link, msg)
   self:_send(link, { type = "started", seq = msg.seq, seeded = seeded == true })
 end
 
+-- A window restarts (#55, design A10.7): after the Hall of Fame or a
+-- reset its game waits for what it sent to be applied, which the link's
+-- order gives here, and reopens this player's world as a Continue: the
+-- answer is their world, naming the restart.
+function Host:_restart(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  self:_log("restart", { kind = msg.kind }, p)
+  self.dirty = true
+  self:_sendWorld(link, p, msg.seq)
+end
+
 -- messages --------------------------------------------------------------
 
 function Host:_probe(link, msg, protocolOk)
@@ -753,6 +766,8 @@ local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    holdings = Host._holdings, opening = Host._opening,
                    wild = Host._wild, -- #9
                    start = Host._start, -- #57
+                   -- the League run and the restart (#55)
+                   league = battleHandler(League.message), restart = Host._restart,
                    battle_open = battleHandler(HostBattles.open),
                    battle_join = battleHandler(HostBattles.join),
                    battle_cmd = battleHandler(HostBattles.cmd),
@@ -891,6 +906,7 @@ function Host:update()
       end
     end
     HostBattles.sweep(self)
+    League.tick(self) -- the run's clear, once nothing holds it (#55)
   end
   if self.status == "running" and self.store then
     local busy = self:busy()

@@ -958,6 +958,9 @@ function Commands.record_hall_of_fame(ctx)
     end)
   end)
   runner:yield()
+  -- co-op (#55): in a co-op window the reset continues the co-op world
+  -- instead (src/coop/game/Restart.lua, design A10.7)
+  if require("src.coop.game.Restart").take(game, "hall") then return end
   -- after the A/B press on THE END the script does `jp Init`: a soft
   -- reset through the boot sequence -- copyright card + attract movie,
   -- then the title screen (the same path Game:load boots through)

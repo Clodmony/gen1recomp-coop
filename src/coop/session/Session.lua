@@ -519,6 +519,7 @@ function Session:update(dt, game)
       require("src.coop.game.Battles").step(game)
       require("src.coop.game.Scenes").step(game) -- rival scenes (#59)
       require("src.coop.game.Friends").step(game) -- #23
+      require("src.coop.game.League").step(self) -- the League run (#55)
     end
     self:_narrate()
   end

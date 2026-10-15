@@ -482,6 +482,16 @@ function Window:_start(f)
   return true
 end
 
+-- The game reopened its world from the host (#55, design A10.7: the Hall
+-- of Fame's continue, a reset): the window opens again as a late one at
+-- its next rest point, and the holdings it opened are the host's.
+function Window:reopen()
+  self.rest, self.sent, self.seen, self.unconfirmed = 0, nil, {}, {}
+  self.owed, self.bag, self.money = nil, nil, nil
+  self.held, self.heldBoxes = nil, nil
+  self.opening = nil
+end
+
 -- true while the player plays the opening (#22)
 function Window:inOpening()
   return self.opening == true

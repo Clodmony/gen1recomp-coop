@@ -43,7 +43,10 @@ local Protocol = {}
 -- `pair_msg`, `pair_end`, `trade_team`, `trade_pick` and `trade_confirm`
 -- to the host, `invite`, `pair` and `pair_msg` to the client, and who
 -- meets whom (`meeting`) in `state`.
-Protocol.VERSION = 15
+-- 16: the team's League run and the Hall of Fame's continue (#55): a
+-- window's `league` (the lobby, an induction) and `restart`, and the
+-- host's `world` naming the restart it answers.
+Protocol.VERSION = 16
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -513,6 +516,11 @@ end
 Protocol.cableLink = cableLink
 local cableUid = pattern("^[%w_:%-]*$", 40) -- a row's uid, "" for none
 Protocol.MAX_CABLE_PARTY = 6
+-- the team's League run (#55, design A10.6): a window entered the Indigo
+-- Plateau lobby (it asks for the run's clear) or was inducted into the Hall
+-- of Fame; a window's restart (A10.7): after the Hall of Fame, or a reset
+Protocol.LEAGUE_EVENTS = { lobby = true, inducted = true }
+Protocol.RESTART_KINDS = { hall = true, reset = true }
 
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
@@ -557,6 +565,11 @@ Protocol.TO_HOST = {
   -- point
   start = record(withType("start", { seq = seq, how = enum({ pallet = true, save = true }),
                                      save = blob(Protocol.MAX_WORLD) })),
+  -- the team's League run and the Hall of Fame's continue (#55, design
+  -- A10.6, A10.7): this window entered the lobby or was inducted; it
+  -- restarts and waits for its world
+  league = record(withType("league", { seq = seq, event = enum(Protocol.LEAGUE_EVENTS) })),
+  restart = record(withType("restart", { seq = seq, kind = enum(Protocol.RESTART_KINDS) })),
   -- co-op battles (#18, design A8): a battle this window's world opened,
   -- with this player's team (otId: their trainer id; expAll: an EXP.ALL in
   -- their bag)
@@ -630,8 +643,10 @@ Protocol.TO_CLIENT = {
          -- the rival scenes being played, one driver a map (#59)
          scenes = listOf(sceneClaim, Protocol.MAX_PLAYERS) }),
   -- the player's world from the campaign, once after welcome (#13); none
-  -- for a player who never saved in this campaign
-  world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),
+  -- for a player who never saved in this campaign; again as the answer to
+  -- a window's restart, naming it (#55)
+  world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD),
+                                                         restart = seq }),
   -- the host kept the world a window started with (#57): `seq` is its
   -- `start`, `seeded` when it began the campaign's story; the story came
   -- first

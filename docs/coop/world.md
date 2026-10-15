@@ -45,6 +45,8 @@ Some flags are each player's although they are flags
 - the Mansion switch;
 - the fossil lab;
 - the Elite Four walk-ins and Lance's door lock;
+- the Elite Four's started bit and the Champion room's run flag (#55,
+  [battles.md](battles.md));
 - gift Pokémon (EEVEE, LAPRAS, the Dojo's pair, the MAGIKARP, Yellow's
   three);
 - the starter choice.
@@ -143,6 +145,10 @@ restores surfing on water.
   and flags (A5.18).
 - **Team rule (A5.14 to A5.16):** the gate drink, badges, Cinnabar's quiz
   gates and Victory Road's switches are flags or badges the campaign owns.
+- **The League (A10.6, #55):** the Indigo Plateau lobby resets only the
+  player's part of a run; the campaign's part waits for the host's clear,
+  which holds while a partner is still inside ([battles.md](battles.md),
+  *The team's League run*).
 - **Not shared (A5.8):** NPC wandering, boulder positions, a scene's boxes
   and sounds, wild encounters, trainer sight rolls.
 

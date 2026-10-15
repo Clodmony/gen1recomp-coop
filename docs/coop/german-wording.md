@@ -824,6 +824,7 @@ characters, a menu row fewer.
 | Waiting for %s... | Warte auf %s... | |
 | %s forfeited / the match! | %s gibt / den Kampf auf! | |
 | %s left the battle. | %s hat den Kampf verlassen. | |
+| Waiting for the host... | Warte auf den Host... | |
 
 #### battle
 

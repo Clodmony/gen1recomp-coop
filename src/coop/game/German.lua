@@ -471,6 +471,8 @@ P["%s left."] = "%s ist fort."
 P["Waiting for %s..."] = "Warte auf %s..."
 P["%s forfeited\nthe match!"] = "%s gibt\nden Kampf auf!"
 P["%s left the battle."] = "%s hat den Kampf verlassen."
+-- the Hall of Fame's continue, a reset (#55)
+P["Waiting for the host..."] = "Warte auf den Host..."
 
 -- battle
 P["FOE"] = "GEGNER"

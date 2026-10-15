@@ -40,7 +40,7 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 15 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 16 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
@@ -51,7 +51,8 @@ uids, #17: [campaign.md](campaign.md); 9 added unique encounters, #21:
 tables of both versions, #9: [versions.md](versions.md); 13 added how a new
 player starts, #57: [opening.md](opening.md); 14 added the Cable Club,
 #60: [cable.md](cable.md); 15 added friend battles and trades, #23:
-[friends.md](friends.md)). Every message is a JSON object with a `type`. Every field from the
+[friends.md](friends.md); 16 added the team's League run and the Hall of
+Fame's continue, #55: [battles.md](battles.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -74,13 +75,15 @@ checks what the host sends.
 | `cable` | `seq`, `room` (`trade`, `colosseum`, or `none` to leave), `with` (optional: the partner this player offered the cable to) (#60): [cable.md](cable.md) |
 | `cable_link` | `seq`, `round`, `link` (a message of upstream's link cable, checked by its own `Wire.sanitize`), `uids` (optional, with a `party`: each Pokémon's uid, "" for none) (#60) |
 | `invite`, `invite_answer`, `pair_msg`, `pair_end`, `trade_team`, `trade_pick`, `trade_confirm` | friend battles and trades (#23): [friends.md](friends.md) |
+| `league` | `seq`, `event` (`lobby`: the window entered the Indigo Plateau lobby and asks for the run's clear; `inducted`: it went through the Hall of Fame) (#55): [battles.md](battles.md) |
+| `restart` | `seq`, `kind` (`hall` after the Hall of Fame, `reset` otherwise): the window froze its world and waits for it (#55) |
 
 | Host to client | Fields |
 |---|---|
 | `probe` | the lobby view (`kind`, `protocol`, `build`, `campaign`, `title`, `game`, `sha1`, `host`, `players` with `name`, `game`, `connected`), `refused` (empty, `protocol_mismatch` or `content_mismatch`), `you` (the player this device or name would get back) and `port` |
 | `welcome` | `protocol`, `player`, `campaign`, `last_seq` |
 | `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map), `saved_ago` (seconds since the campaign was saved, -1 never), `busy` (why a save would be refused now, or empty); since #22 each player's `opening`, and the campaign's `rival` and `chose` ([opening.md](opening.md)); since #59 `scenes`, the rival scenes being played (`map`, `key`, `by`) ([battles.md](battles.md)) |
-| `world` | once after `welcome`: `fresh` (the campaign has no world for this player), `save` (their world) |
+| `world` | once after `welcome`, and as the answer to a `restart` (`restart`: its seq, #55): `fresh` (the campaign has no world for this player), `save` (their world) |
 | `saved` | `ok`, `by` (who saved), `you` (this player asked), `reason` (a refusal: `battle_in_progress`, `bad_world`, `save_failed`), `kind` |
 | `story` | `rev`, `base` (the whole story, replacing the window's), `set`, `unset` (what changed since the last `story` to this player), `applied` (the last of this player's patches the host applied) |
 | `gifts` | `list` (#16): items the campaign owes this player, oldest first, each `seq`, `item`, `qty` (below 0 takes), `once` (not given to a player who holds one), `from` (the partner's name), `race` (a take-back); at most 256 a message |

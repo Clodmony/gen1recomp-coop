@@ -674,13 +674,15 @@ cartridge's bag stays, refusing the rest; accepted by the owner,
 ### A10. Unique encounters, trainers, rival scenes and the League
 
 A10.1 to A10.4 and A10.8 are in place (#21, [battles.md](battles.md), G26),
-with these adaptations: an encounter is named by its map object, and the
-League's rooms are never kept done until A10.6. A10.6 and A10.7 are #55
-(owner, 2026-10-15). A10.5 is in place (#59, split from #55 by the owner
-on 2026-10-16; [battles.md](battles.md), G29 proposed), with this
-adaptation: with no map-script bytes (G21) a scene is a script the runner
-starts on a scene's map that fights the rival while his flag is unset,
-and it ends when that script ends.
+with this adaptation: an encounter is named by its map object. A10.5 is
+in place (#59, split from #55 by the owner on 2026-10-16;
+[battles.md](battles.md), G29 proposed), with this adaptation: with no
+map-script bytes (G21) a scene is a script the runner starts on a
+scene's map that fights the rival while his flag is unset, and it ends
+when that script ends. A10.6 and A10.7 are in place (#55,
+[battles.md](battles.md), G30 proposed), with these adaptations: the
+run's clear is asked by every lobby entry, and a reset reopens the world
+as the host last had it.
 
 1. **carry** A unique encounter (or any carrying victory flags) has at most one active
    instance; beating it marks it done for everybody; losing or fleeing releases
@@ -1110,7 +1112,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
 | A8 Co-op battles: rules | #18 ([battles.md](battles.md)) |
 | A9 Co-op battles: presentation and menus | #19 |
-| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes #59 ([battles.md](battles.md)); the League run and the Hall of Fame #55 |
+| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes #59 ([battles.md](battles.md)); the League run and the Hall of Fame #55 ([battles.md](battles.md)) |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
 | A12 Friend battles and trades | #23; the Cable Club #60 ([cable.md](cable.md)) |
 | A13 Red + Blue mixing, Yellow | #9 ([versions.md](versions.md)) |
@@ -1445,6 +1447,36 @@ sibling's D-numbers.
   Costs: the claims live in host memory; a partner anywhere on a scene's
   map waits, however far from the rival. Protocol 11. Details:
   [battles.md](battles.md).
+- **G30. The League run lives on the host; a reset reopens the co-op world**
+  (#55, 2026-10-16, proposed). A10.6: a League fight won is a unique
+  encounter kept done (G26) until the run's clear, so a window walking
+  into one, the Champion included, counts it as won at once; the members'
+  beaten flags and beaten trainers are story entries, and the started bit
+  and the Champion room's run flag (`EVENT_STARTED_ELITE_4`,
+  `EVENT_BEAT_CHAMPION_RIVAL_THIS_RUN`) join the walk-ins and Lance's lock
+  as each player's, so every window that reaches the Champion's room meets
+  him. The engine erases a run in the Indigo Plateau lobby only (its Hall
+  of Fame keeps the flags until the next lobby visit), so the clear is
+  asked by every lobby entry in a co-op world and by each induction
+  (`league`). The lobby then resets only the player's part; the host
+  erases the campaign's part, the League's encounters and their victory
+  commits once no connected player is in the League (its five rooms and
+  the Hall of Fame) and no League fight runs, and, after the Champion fell,
+  every connected player is inducted. A10.7: the engine's Hall of Fame
+  ends in Game:returnToTitle's path (the boot movie, the title), which
+  every other reset takes too; in a co-op window both freeze the world and
+  send `restart` (after the Hall of Fame with the world just saved, as one
+  that asks for no save, and the induction). The host answers in the
+  link's order with the player's world, the story laid over it, and the
+  game reopens it with its own CONTINUE. A world left in the Hall of Fame
+  goes to the engine's post-game home (`SaveData.applyPostGameHome`:
+  Pallet Town, healed), where the cartridge's fly warp also lands. A player
+  without a world (in the opening) starts the opening again. Costs: a
+  reset loses what the window had not sent yet (the host's world is its
+  last holdings, sent at rest points, and its last SAVE), a gift landed in
+  that time included; the hold lives in host memory, and a disconnected
+  player inside holds nothing. Protocol 16.
+  Details: [battles.md](battles.md).
 - **G31. Friend battles are upstream's link battle; the host trades once**
   (#23, 2026-10-16, proposed). A12.3 left the engine to the issue: the
   co-op battle record (G24) or upstream's lockstep link battle. A friend

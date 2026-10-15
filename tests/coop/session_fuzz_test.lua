@@ -103,6 +103,8 @@ local VALID = {
                    team = 'return { { species = "PIDGEY", level = 12 } }\n' },
     trade_pick = { type = "trade_pick", seq = 17, pair = "t00000001", slot = 2 },
     trade_confirm = { type = "trade_confirm", seq = 18, pair = "t00000001", yes = false },
+    league = { type = "league", seq = 12, event = "inducted" },
+    restart = { type = "restart", seq = 13, kind = "hall" },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -121,7 +123,7 @@ local VALID = {
                             players = { "p00000001" }, foe = "PIDGEY", joinable = true,
                             encounter = "static:ROUTE_12_obj_1" } },
               scenes = { { map = "ROUTE_22", key = "route22_1", by = "p00000001" } } }, -- #59
-    world = { type = "world", fresh = false, save = "return { player = {} }\n" },
+    world = { type = "world", fresh = false, save = "return { player = {} }\n", restart = 13 },
     saved = { type = "saved", ok = false, by = "RED", you = true,
               reason = "battle_in_progress", kind = "menu" },
     rejected = { type = "rejected", seq = 4, reason = "duplicate" },
