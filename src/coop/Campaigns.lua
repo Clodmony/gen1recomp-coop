@@ -39,6 +39,8 @@ local function clean(data)
     created = tonumber(data.created) or 0,
     hosted = tonumber(data.hosted),
     via = type(data.via) == "string" and data.via:sub(1, 64) or nil,
+    -- the rival's name the host gave (#22); none: Oak's speech asks
+    rival = Protocol.name(data.rival) and data.rival or nil,
     players = {},
   }
   if not c.game then return nil end
@@ -93,6 +95,7 @@ function Campaigns.create(opts)
     id = "c" .. (opts.hex or Random.hex)(16),
     title = (opts.title and opts.title ~= "") and opts.title or "CO-OP",
     game = opts.game, created = Campaigns.now(), players = {},
+    rival = Protocol.name(opts.rival) and opts.rival or nil,
   }
   Campaigns.save(c)
   return c

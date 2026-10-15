@@ -301,9 +301,12 @@ The credit line of upstream's licence is not translated.
 | NEW CAMPAIGN | NEUE KAMPAGNE | |
 | + NEW CAMPAIGN | + NEUE KAMPAGNE | |
 | Start a shared adventure | Starte ein gemeinsames Abenteuer | |
-| Name the campaign and the trainer you will play. | Benenne die Kampagne und deinen Trainer. | |
 | CAMPAIGN NAME | KAMPAGNENNAME | |
 | TRAINER NAME | TRAINERNAME | |
+| RIVAL NAME | NAME DES RIVALEN | |
+| PLAYER 2 NAME | NAME VON SPIELER 2 | |
+| ASK IN THE GAME | IM SPIEL FRAGEN | |
+| Name the campaign, the trainer you will play and the rival. | Benenne die Kampagne, deinen Trainer und den Rivalen. | |
 | EDIT | ÄNDERN | |
 | CARTRIDGE | MODUL | |
 | A new campaign uses a save slot of its own. Your solo progress stays separate. | Eine neue Kampagne hat einen eigenen Speicherplatz. Dein Solo-Fortschritt bleibt getrennt. | |

@@ -1,6 +1,6 @@
 -- What the launcher remembers on this device (#12, design A2.1, A2.8): the
--- player's name, the last address and the recent ones, the cartridge
--- picked, the last session (for the LAST SESSION row), the log-sharing
+-- player's name (and player 2's on a split-screen device, #22), the last
+-- address and the recent ones, the cartridge picked, the last session (for the LAST SESSION row), the log-sharing
 -- switch, the save slot each campaign plays in on this device, the
 -- launcher's language and colours (#41, #38; nil: the system's language,
 -- light colours) and each player's device for couch co-op (#4: the
@@ -42,6 +42,8 @@ function CoopSettings.load(fs)
   local ok, data = pcall(Json.decode, type(text) == "string" and text or "null")
   if not ok or type(data) ~= "table" then return self end
   if Protocol.name(data.name) then self.name = data.name end
+  -- player 2's name on a split-screen device (#22)
+  if Protocol.name(data.name2) then self.name2 = data.name2 end
   self.address = address(data.address)
   for _, a in ipairs(type(data.recent) == "table" and data.recent or {}) do
     if address(a) and #self.recent < CoopSettings.MAX_RECENT then
@@ -91,7 +93,7 @@ function CoopSettings:save()
   local f = self.fs
   f.createDirectory("coop")
   return f.write(CoopSettings.FILE, Json.encode({
-    name = self.name, address = self.address, recent = self.recent,
+    name = self.name, name2 = self.name2, address = self.address, recent = self.recent,
     shareLogs = self.shareLogs, pick = self.pick, last = self.last, slots = self.slots,
     restore = self.restore, language = self.language, theme = self.theme,
     seats = self.seats,
