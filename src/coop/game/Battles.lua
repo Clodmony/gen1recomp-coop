@@ -26,11 +26,24 @@
 -- The end (design A8.14 to A8.17): the copy writes this player's Pokémon
 -- back and pays the prize; a loss whites out the joiner here, as the
 -- opener's world does in its own onFinish.
+--
+-- Away from a battle (#20, design A11.1 to A11.4, A11.8): a player who
+-- left (RUN, then YES) is back in their world, which never moved; their
+-- copy runs on out of sight (Battles.step), so their Pokémon get what the
+-- battle does to them, and when it ends they get one line saying how it
+-- went, their evolutions and, after a loss, their whiteout.  They start and
+-- join nothing meanwhile: a fight their world opens waits under "REJOIN?"
+-- until that battle ends.  REJOIN in the CO-OP menu takes them back in.
+-- A battle this player is in that the window has no copy of (they came
+-- back after a drop) is built from the record: one still running comes
+-- back on screen, one that ended while they were away plays out of sight
+-- and ends with its line.
 
 local Strings = require("src.core.Strings")
 local Replica = require("src.coop.battle.Replica")
+local View = require("src.coop.battle.View")
 
-local Battles = {}
+local Battles = { away = {}, held = nil }
 
 Battles.WAIT = 10 -- seconds the opener waits for the host before fighting alone
 
@@ -87,16 +100,39 @@ local function teamOf(game)
 end
 
 -- the end in this window: the record is dropped; a joiner who lost whites
--- out here (the opener's world does it in its own onFinish)
+-- out here (the opener's world does it in its own onFinish); a copy that
+-- ended away from the screen says how it went; a fight that waited for it
+-- goes on (design A11.3)
 local function onEnd(game, joiner)
   return function(b, result)
     local c = b.coop
     if c.client then c.client:dropBattle(c.id) end
+    local wasAway = Battles.away[c.id] ~= nil
+    Battles.away[c.id] = nil
+    if wasAway or c.forced and not c.real.stack:top() then
+      require("src.coop.game.Notices").push(View.endLine(b, result))
+    end
     if joiner and result == "lose" then
       local ow = game.overworld
       if ow and ow.afterBattle then ow:afterBattle("lose", b) end
     end
+    Battles.release(game)
   end
+end
+
+local function onLeave(b)
+  Battles.away[b.coop.id] = b
+end
+
+-- the fight the world opened while this player was away from another
+-- one, once that one is over
+function Battles.release(game)
+  local h = Battles.held
+  if not h or next(Battles.away) then return end
+  Battles.held = nil
+  if h.wait and game.stack:top() == h.wait then game.stack:pop() end
+  local ow = game.overworld
+  if ow and ow.pushBattle then ow:pushBattle(h.battle, h.npc) end
 end
 
 -- the opener's battle becomes the co-op copy of the host's record
@@ -104,7 +140,7 @@ local function bind(game, battle, rec, p)
   battle.coopPending = nil
   battle.draw = nil
   Replica.make(battle, rec, { client = p.client, id = rec.id, me = p.me, real = game,
-                              live = p.live, onEnd = onEnd(game, false) })
+                              live = p.live, onEnd = onEnd(game, false), onLeave = onLeave })
   if p.entered then battle:enter() end
 end
 
@@ -123,8 +159,36 @@ local function recordFor(client, me)
   return nil
 end
 
--- OverworldState:pushBattle's hook (design A8.2)
-function Battles.take(game, battle)
+-- a fight the world opened while this player is away from another battle
+-- waits under "REJOIN?" until that one ends (design A11.3)
+local function hold(game, battle, npc)
+  local id, old = next(Battles.away)
+  local TextBox = require("src.render.TextBox")
+  local foe = old.enemy and old.enemy.name or "?"
+  if old.kind == "trainer" and old.trainer then foe = old.trainer.name end
+  local wait = { isOpaque = false, update = function() end, draw = function()
+    local Font = require("src.render.Font")
+    Font.drawBox(0, 12, 20, 6)
+    love.graphics.setColor(0, 0, 0, 1)
+    Font.draw(Strings("Your battle against"), 8, 112)
+    Font.draw(Strings("%s goes on...", foe), 8, 128)
+    love.graphics.setColor(1, 1, 1, 1)
+  end }
+  Battles.held = { battle = battle, npc = npc, wait = wait }
+  game.stack:push(wait)
+  game.stack:push(TextBox.new(game, Strings("Your battle against\n%s goes on.\fREJOIN?", foe), nil, {
+    choice = function(yes) if yes and Battles.away[id] then Battles.rejoin(game, Battles.away[id]) end end,
+  }))
+end
+
+-- OverworldState:pushBattle's hook (design A8.2); "held" when the battle
+-- waits for another one this player is away from (A11.3)
+function Battles.take(game, battle, npc)
+  if battle and battle.coop then return end
+  if next(Battles.away) and session() then
+    hold(game, battle, npc)
+    return "held"
+  end
   local s = session()
   if not s or not Battles.joinable(battle) then return end
   local client = s.client
@@ -154,15 +218,94 @@ function Battles.take(game, battle)
   end
 end
 
--- a record that came after its opener gave up waiting ends at once
-function Battles.step()
+-- every frame of a joined game: the copies away from the screen go on, a
+-- record that came after its opener gave up waiting ends at once, and a
+-- battle this player is in without a copy here is built (#20)
+function Battles.step(game)
   local s = session()
-  if not s or not (Battles.stray and Battles.stray[s.client]) then return end
+  if not s then return end
+  for id, b in pairs(Battles.away) do
+    if b.coop.client ~= s.client then b.coop.client = s.client end
+    Replica.runAway(b)
+    if b.coop.done then Battles.away[id] = nil end
+  end
+  local stray = Battles.stray and Battles.stray[s.client]
   for id, rec in pairs(s.client.battles) do
-    if rec.open and rec.open.by == s.client.player and not rec.bound and not rec.ended then
+    if stray and rec.open and rec.open.by == s.client.player and not rec.bound and not rec.ended then
       rec.bound = true
       s.client:battleAt(id, #rec.inputs, nil, nil, nil, "run")
       s.client:dropBattle(id)
+    elseif game and not rec.bound and rec.open and Battles.rebuildable(s.client, rec) then
+      Battles.rebuild(game, s.client, rec)
+    end
+  end
+end
+
+-- a record this window has no copy of: this player is in it (not just a
+-- queued join, not one they opened that is still being bound), and it has
+-- inputs to play
+function Battles.rebuildable(client, rec)
+  if Battles.waitingFor(rec.id) then return false end
+  if rec.open.by == client.player and not rec.ended then
+    -- the opener's own record is bound by its pending battle; one with no
+    -- pending battle came back after a drop
+    for _, b in ipairs(Battles.pending or {}) do
+      if b.coopPending then return false end
+    end
+  end
+  for _, input in ipairs(rec.inputs) do
+    if input.kind == "join" and input.player == client.player then return true end
+  end
+  return false
+end
+
+-- a joining box waits for this battle: it builds the copy itself
+function Battles.waitingFor(id)
+  return Battles.joining == id
+end
+
+-- Build a battle this player is in from its record (after coming back):
+-- one still running comes on screen at the next quiet moment, one that
+-- ended plays out of sight and says how it went (design A11.8)
+function Battles.rebuild(game, client, rec)
+  local ow = game.overworld
+  local away = false
+  for _, e in ipairs(rec.players or {}) do
+    if e.id == client.player and e.left then away = true end
+  end
+  if not rec.ended and not away and not (ow and game.stack:top() == ow) then return end
+  rec.bound = true
+  local b = Replica.build(game, rec, { client = client, id = rec.id, me = client.player,
+                                       real = game, onEnd = onEnd(game, true), onLeave = onLeave })
+  if rec.ended or away then
+    b.coop.away = true
+    Battles.away[rec.id] = b
+    Replica.runAway(b)
+    return
+  end
+  Replica.catchUp(b, rec)
+  ow:pushBattle(b)
+end
+
+-- REJOIN (design A11.4): back into a battle this player left, at once
+function Battles.rejoin(game, b)
+  local c = b.coop
+  if not c.client then return end
+  c.client:battleRejoin(c.id)
+  Battles.away[c.id] = nil
+  c.away = false
+  b:snapIdleBars()
+  local ow = game.overworld
+  if ow and ow.pushBattle then ow:pushBattle(b) else game.stack:push(b) end
+end
+
+-- the CO-OP menu's REJOIN rows
+function Battles.rejoinRows(game, items)
+  for _, b in pairs(Battles.away) do
+    if not b.coop.done then
+      items[#items + 1] = { label = Strings("REJOIN"), onSelect = function()
+        Battles.rejoin(game, b)
+      end }
     end
   end
 end
@@ -181,7 +324,9 @@ function JoinWait:update()
   local game = self.game
   local s = session()
   self.frames = self.frames + 1
+  Battles.joining = self.id
   local function close(text)
+    Battles.joining = nil
     if game.stack:top() == self then
       game.stack:pop()
     else
@@ -196,6 +341,11 @@ function JoinWait:update()
   end
   if not s then return close() end
   local client = s.client
+  -- B calls a queued join off (design A11.4)
+  if game.input and game.input:wasPressed("b") then
+    client:battleLeave(self.id)
+    return close()
+  end
   for _, r in ipairs(client.rejections) do
     if r.seq == self.seq then
       return close(r.reason == "roster_full" and Strings("The battle is full.")
@@ -218,7 +368,8 @@ function JoinWait:update()
   if not mine then return end
   if rec.bound then return close() end
   local b = Replica.build(game, rec, { client = client, id = self.id, me = client.player,
-                                       real = game, live = self.live, onEnd = onEnd(game, true) })
+                                       real = game, live = self.live, onEnd = onEnd(game, true),
+                                       onLeave = onLeave })
   rec.bound = true
   Replica.catchUp(b, rec)
   close()
@@ -263,8 +414,10 @@ function Battles.offers()
   return out
 end
 
--- the CO-OP menu's JOIN <NAME> rows
+-- the CO-OP menu's JOIN <NAME> rows; a player away from a battle starts
+-- or joins nothing (design A11.3)
 function Battles.joinRows(game, items)
+  if next(Battles.away) then return Battles.rejoinRows(game, items) end
   for _, o in ipairs(Battles.offers()) do
     items[#items + 1] = { label = Strings("JOIN %s", o.name), onSelect = function()
       Battles.join(game, o.summary, o.name)

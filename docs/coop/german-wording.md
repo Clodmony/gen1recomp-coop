@@ -736,12 +736,23 @@ characters, a menu row fewer.
 | The battle is full. | Der Kampf ist voll. | |
 | The battle is over. | Der Kampf ist vorbei. | |
 | Could not join the battle. | Beitritt zum Kampf ging nicht. | |
-| Only %s can / run from this / battle! | Nur %s kann / aus diesem Kampf / fliehen! | |
 | %s caught / %s! | %s hat / %s gefangen! | |
 | %s joined / the battle! | %s hilft / im Kampf! | |
 | decides | wählt | |
 | %s suggests | %s rät zu | |
 | IN A BATTLE | IM KAMPF | |
+| Leave the battle? / Your team stays. | Kampf verlassen? / Dein Team bleibt. | |
+| %s is away. / TAKE OVER? | %s ist weg. / ÜBERNEHMEN? | |
+| FOR %s | FÜR %s | |
+| is away | ist weg | |
+| REJOIN | ZURÜCK | |
+| Your battle against | Dein Kampf gegen | |
+| %s goes on... | %s läuft... | |
+| Your battle against / %s goes on. / REJOIN? | Dein Kampf gegen / %s läuft noch. / ZURÜCK IN DEN KAMPF? | |
+| The battle against %s was won. | Der Kampf gegen %s ist gewonnen. | |
+| The battle against %s was lost. | Der Kampf gegen %s ist verloren. | |
+| The battle against %s is over. | Der Kampf gegen %s ist vorbei. | |
+| %s was caught. | %s gefangen. | |
 | %s is in a battle against wild %s. START > CO-OP to join. | %s kämpft gegen ein wildes %s. START > KOOP zum Helfen. | |
 | %s is in a battle against %s. START > CO-OP to join. | %s kämpft gegen %s. START > KOOP zum Helfen. | |
 

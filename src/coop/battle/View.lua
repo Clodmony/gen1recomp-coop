@@ -111,6 +111,10 @@ function View.follow(b, dt)
         b.moveIndex = math.min(b.moveIndex or 1, #b.player.curMoves)
       elseif b.menuIndex == 2 then
         View.openRoster(b, { suggest = true })
+      elseif b.menuIndex == 4 and c.me ~= c.opener then
+        -- RUN: a player whose world did not open the battle may leave it
+        -- (design A9.5, A11.1)
+        return Replica().askLeave(b)
       end
       View.again(b)
     end
@@ -269,8 +273,24 @@ end
 function View.draw(b)
   local c = b.coop
   local R = Replica()
-  local kind, by = R.question(b)
+  local kind, by, owner = R.decider(b)
   if not kind or b.phase == "messages" then return end
+  if by and owner and by ~= owner then
+    -- a stand-in decides for an owner who is away: the view names both
+    -- (design A11.6)
+    local label = " " .. Strings("FOR %s", View.name(b, owner)) .. " "
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.rectangle("fill", 8, 96, #label * 8, 8)
+    text(label, 8, 96)
+  end
+  if not by then
+    -- the owner dropped: the battle waits for them (design A11.5)
+    clearLeft()
+    text(View.name(b, owner), 8, 112)
+    text(Strings("is away"), 8, 128)
+    love.graphics.setColor(1, 1, 1, 1)
+    return
+  end
   local mine = by == c.me
   local partners = 0
   for _ in pairs(c.names) do partners = partners + 1 end
@@ -320,6 +340,35 @@ function View.draw(b)
     end
   end
   love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- TAKE OVER (design A11.6): when the host offers it, a present player who
+-- is not the owner is asked once, YES/NO
+function View.offerTakeover(b)
+  local c = b.coop
+  local rec = c.client and c.client.battles[c.id]
+  local owner = rec and rec.offer
+  if not owner or owner == c.me or c.away then return end
+  if c.offerAsked == owner .. ":" .. tostring(rec.rev) then return end
+  c.offerAsked = owner .. ":" .. tostring(rec.rev)
+  local TextBox = require("src.render.TextBox")
+  c.real.stack:push(TextBox.new(c.real,
+    Strings("%s is away.\nTAKE OVER?", View.name(b, owner)), nil, {
+      defaultNo = true,
+      choice = function(yes)
+        if yes and c.client then c.client:battleTakeover(c.id, owner) end
+      end,
+    }))
+end
+
+-- the one line a player away from their battle gets when it ends (A11.3)
+function View.endLine(b, result)
+  local foe = b.enemy and b.enemy.name or "?"
+  if b.kind == "trainer" and b.trainer then foe = b.trainer.name end
+  if result == "win" then return Strings("The battle against %s was won.", foe) end
+  if result == "lose" then return Strings("The battle against %s was lost.", foe) end
+  if result == "caught" then return Strings("%s was caught.", foe) end
+  return Strings("The battle against %s is over.", foe)
 end
 
 -- the party balls: this player's own team (A9.10)
