@@ -107,6 +107,7 @@ local function device(name, opts)
     end,
     closeNearby = function() d.listening = false end,
     splitReady = function() return opts.split == true end,
+    soloSaves = opts.saves and function(v) d.savesAsked = v; return opts.saves end or nil,
     host = function(campaign, playerName, version)
       return Session.startHost({
         campaign = campaign, cartridge = { game = version, sha1 = SHA[version] },
@@ -375,14 +376,14 @@ do
   local d = fits(m, "connecting")
   eq(d.steps.found .. d.steps.protocol .. d.steps.fits, "okokok",
     "host found, same protocol, the cartridges fit")
-  eq(ids(m), "cancel,name,join", "a new player: CANCEL, NEW NAME, JOIN AS")
+  eq(ids(m), "cancel,name,how,join", "a new player: CANCEL, NEW NAME, HOW YOU START (#57), JOIN AS")
   eq(m:items()[m.cursor].id, "join", "JOIN AS is preselected")
-  eq(m:items()[3].label, "JOIN AS BLUE", "under the remembered name")
+  eq(m:items()[4].label, "JOIN AS BLUE", "under the remembered name")
   choose(m, "name")
   for _ = 1, 30 do m:erase() end
   m:text("ash")
   m:press("start")
-  eq(m:items()[3].label, "JOIN AS ASH", "a new player names themself")
+  eq(m:items()[4].label, "JOIN AS ASH", "a new player names themself")
   choose(m, "join")
   eq(s.status, "joining", "the hello goes out")
   frames({ A, B })
@@ -725,7 +726,7 @@ do
   choose(J.menu, "nearby")
   frames({ H, J })
   eq(J.menu.session.status, "probed", "a two-player device found the host")
-  eq(ids(J.menu), "cancel,name,join2,join", "JOIN WITH 2 PLAYERS beside JOIN AS")
+  eq(ids(J.menu), "cancel,name,how,join2,join", "JOIN WITH 2 PLAYERS beside JOIN AS")
   fits(J.menu, "connecting with two players")
   choose(J.menu, "join2")
   eq(J.menu.screen, "entry", "JOIN WITH 2 PLAYERS asks player 2's name first")
@@ -744,6 +745,91 @@ do
   frames({ H, K })
   check(K.command and K.command.kind == "coop_enter" and K.command.split == nil,
         "JOIN AS enters alone")
+end
+
+-- how a new player starts (#57, design A2.3, A2.5, A4.1) -----------------------
+
+do
+  local SAVES = {
+    { id = "slot1", name = "RED", badges = 3, dex = 20, time = "12:34", bringable = true },
+    { id = "slot2", name = "NEW", badges = 0, dex = 0, time = "0:05", bringable = false },
+  }
+  local H = device("OAK", { address = "192.168.1.40", saves = SAVES })
+  local m = H.menu
+  choose(m, "new")
+  local how = cursorTo(m, "how")
+  eq(how.value, "THE OPENING", "a new campaign's player plays the opening by default")
+  eq(ids(m), "title,you,rival,mix,how,go", "HOW YOU START sits under the names")
+  choose(m, "how")
+  eq(cursorTo(m, "how").value, "START IN PALLET", "A steps to START IN PALLET")
+  eq(cursorTo(m, "starter").value, "BULBASAUR", "with a STARTER to pick")
+  fits(m, "new campaign starting in Pallet Town")
+  choose(m, "starter")
+  eq(cursorTo(m, "starter").value, "CHARMANDER", "A steps through the three")
+  choose(m, "starter")
+  eq(cursorTo(m, "starter").value, "SQUIRTLE", "SQUIRTLE")
+  choose(m, "how")
+  eq(m.screen, "bring", "BRING A SAVE opens the device's solo saves")
+  eq(H.savesAsked, "red", "of this game")
+  eq(ids(m), "slot,slot", "one row a save")
+  eq(m:items()[2].enabled, false, "a save still in the opening cannot be brought")
+  fits(m, "bring a trainer")
+  m:press("b")
+  eq(m.screen, "new", "B goes back to the form")
+  eq(cursorTo(m, "how").value, "THE OPENING", "and with no save picked, the opening stays")
+  choose(m, "how")
+  choose(m, "how")
+  choose(m, "slot")
+  eq(m.screen, "new", "a save picked goes back to the form")
+  eq(cursorTo(m, "save").value, "RED", "naming it")
+  fits(m, "new campaign bringing a save")
+  choose(m, "go")
+  frames({ H })
+  local out = choose(m, "enter")
+  check(out and out.kind == "coop_enter", "the host enters")
+  eq(out.start and out.start.how, "save", "bringing the save")
+  eq(out.start.slot, "slot1", "slot1")
+  -- a host who starts in Pallet Town, on a card hosted later: no choice
+  local again = device("OAK", { address = "192.168.1.41", saves = SAVES })
+  choose(again.menu, "new")
+  choose(again.menu, "how")
+  choose(again.menu, "go")
+  frames({ again })
+  out = choose(again.menu, "enter")
+  eq(out.start and out.start.how, "pallet", "START IN PALLET goes to the game")
+  eq(out.start.starter, "BULBASAUR", "with the starter")
+  -- a partner new to the campaign chooses on the connection check
+  local P = device("ASH", { start = "join", saves = SAVES })
+  P.nearbyHosts = { { address = H.address .. ":24680", lobby = H.menu.session.host:lobby() } }
+  frames({ P }, 1)
+  choose(P.menu, "nearby")
+  frames({ H, P })
+  eq(P.menu.session.status, "probed", "the partner found the host")
+  eq(cursorTo(P.menu, "how").value, "THE OPENING", "a new player chooses how they start")
+  choose(P.menu, "how")
+  eq(cursorTo(P.menu, "starter").value, "BULBASAUR", "START IN PALLET with a starter")
+  fits(P.menu, "connecting, starting in Pallet Town")
+  choose(P.menu, "join")
+  frames({ H, P })
+  check(P.command and P.command.kind == "coop_enter", "the partner enters")
+  eq(P.command.start and P.command.start.how, "pallet", "starting in Pallet Town")
+  -- a returning player is asked nothing (A4.3)
+  local R = device("ASH", { start = "join", saves = SAVES })
+  R.identity = P.identity
+  R.menu.env.dial = P.menu.env.dial
+  R.nearbyHosts = P.nearbyHosts
+  P.menu.session:leave()
+  frames({ H, P })
+  frames({ R }, 1)
+  choose(R.menu, "nearby")
+  frames({ H, R })
+  eq(R.menu.session.status, "probed", "the returning partner found the host")
+  eq(ids(R.menu), "cancel,join", "a player the host knows is asked nothing: they start from the campaign's world")
+  -- Yellow has no start in Pallet Town (G28)
+  local Y = device("OAK", { ready = { yellow = true }, version = "yellow", saves = SAVES })
+  choose(Y.menu, "new")
+  choose(Y.menu, "how")
+  eq(Y.menu.screen, "bring", "in Yellow the opening is followed by BRING A SAVE")
 end
 
 -- the return note ----------------------------------------------------------

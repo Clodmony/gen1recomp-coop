@@ -520,6 +520,35 @@ function Host:wildWaiting()
   return nil
 end
 
+-- How a new player starts (#57, design A4.1 to A4.3, G28): the world a
+-- window started with, in Pallet Town or brought from a solo save.  The
+-- host keeps it unless it has this player's world already (A4.3: a
+-- returning player is never replaced), seeds a campaign with no story yet
+-- from it (Campaign:start), and answers once the story is on its way, so
+-- the window opens on the campaign's story.
+function Host:_start(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+  local save, why = World.decode(msg.save)
+  local ok, assigned, seeded = false, nil, false
+  if save then
+    ok, assigned, seeded = self.state:start(p.id, save)
+    if not ok then why = assigned end
+  end
+  if not ok then
+    self:_log("start_refused", { how = msg.how, why = why }, p)
+    return self:_refuse(link, msg.seq, why == "returning" and "returning" or "bad_world")
+  end
+  p.opening = nil
+  self.dirty = true
+  self:_log("start", { how = msg.how, seeded = seeded, chose = self.state.chose,
+                       revision = self.state.revision, bytes = #msg.save }, p)
+  self:_sendStory(link, p)
+  self:_sendUids(link, assigned)
+  self:_send(link, { type = "started", seq = msg.seq, seeded = seeded == true })
+end
+
 -- messages --------------------------------------------------------------
 
 function Host:_probe(link, msg, protocolOk)
@@ -713,6 +742,7 @@ local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    log = Host._logBatch, world = Host._world, patch = Host._patch,
                    holdings = Host._holdings, opening = Host._opening,
                    wild = Host._wild, -- #9
+                   start = Host._start, -- #57
                    battle_open = battleHandler(HostBattles.open),
                    battle_join = battleHandler(HostBattles.join),
                    battle_cmd = battleHandler(HostBattles.cmd),
@@ -745,7 +775,8 @@ function Host:_receive(link, raw)
   -- their handlers, as a summary; a window's battle reports are many
   local t = msg.type
   if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "holdings" and t ~= "battle_open"
-     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" and t ~= "wild" then
+     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" and t ~= "wild"
+     and t ~= "start" then
     self:_log("message", msg, link.player)
   end
   if msg.type == "probe" then return self:_probe(link, msg, true) end

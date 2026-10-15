@@ -199,7 +199,7 @@ do
   local d = device("red", { red = true })
   local m = CoopMenu.new(d.env)
   choose(m, "new")
-  eq(ids(m), "title,you,rival,mix,go", "Red's NEW CAMPAIGN has the switch")
+  eq(ids(m), "title,you,rival,mix,how,go", "Red's NEW CAMPAIGN has the switch")
   eq(m:items()[m.cursor].id, "go", "CREATE AND HOST is still preselected")
   eq(row(m, "mix").value, "THIS VERSION ONLY", "off by default")
   fits(m, "new campaign")
@@ -218,7 +218,7 @@ do
   m:press("b")
   local y = CoopMenu.new(device("yellow", { yellow = true }).env)
   choose(y, "new")
-  eq(ids(y), "title,you,rival,go", "Yellow's has none")
+  eq(ids(y), "title,you,rival,how,go", "Yellow's has none")
 end
 
 -- the switch on the card, changeable later ---------------------------------------

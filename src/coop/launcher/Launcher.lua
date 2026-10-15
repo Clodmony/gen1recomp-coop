@@ -137,17 +137,63 @@ end
 -- The player's world from the campaign into the campaign's slot (#13).  A
 -- player the campaign has no world for keeps what the slot holds: a new
 -- game, or this device's progress from before campaign files, which goes to
--- the host with the first save.
-function Launcher:_coopWorld(SaveData, version, slot)
+-- the host with the first save.  Such a player who chose how they start
+-- (#57, `start`) gets that world instead: in Pallet Town, or a solo save
+-- brought along; a returning player always gets the campaign's (A4.3).
+function Launcher:_coopWorld(SaveData, version, slot, start)
   local s = Session.current
   if not (s and slot and s.takeWorld) then return end
   local save = s:takeWorld()
+  if save == nil and start then
+    local why
+    save, why = self:_startWorld(SaveData, version, start, s)
+    if not save then
+      self.menu:notify(L("Your start could not be made: %s", tostring(why)))
+      return
+    end
+  end
   if save == false then
     self.menu:notify(L("Your world from the campaign could not be read."))
   elseif save then
     local ok, err = SaveData.writeSlot(version, slot, save)
     if not ok then self.menu:notify(L("Your world could not be written: %s", tostring(err))) end
   end
+end
+
+-- the world a new player starts with (#57): in Pallet Town with their
+-- starter, or a solo save of this device; nil and why
+function Launcher:_startWorld(SaveData, version, start, s)
+  local Start = require("src.coop.campaign.Start")
+  if start.how == "pallet" then
+    local state = s.client and s.client.state
+    local name = tostring(s.name or ""):upper():sub(1, 7)
+    return Start.pallet({ version = version, starter = start.starter, name = name,
+                          rival = state and state.rival or nil })
+  end
+  local text = SaveData.readSlotSource(version, start.slot)
+  local ok, save = pcall(SaveData.decode, text or "")
+  if not ok or type(save) ~= "table" then return nil, "the save does not read" end
+  return Start.brought(save)
+end
+
+-- This device's single-player saves of `version` for BRING A SAVE (#57):
+-- every slot that holds a save and is no campaign's, as the SAVES page
+-- lists them, and whether it is past Oak's lab
+function Launcher:_soloSaves(version)
+  local SaveData = require("src.core.SaveData")
+  local Start = require("src.coop.campaign.Start")
+  local details = Saves.new(self:_savesEnv(version)):details()
+  local out = {}
+  for _, slot in ipairs(details.slots) do
+    if slot.exists and not slot.campaign then
+      local text = SaveData.readSlotSource(version, slot.id)
+      local ok, save = pcall(SaveData.decode, text or "")
+      out[#out + 1] = { id = slot.id, name = slot.name or slot.label or slot.id,
+                        badges = slot.badges, dex = slot.dex, time = slot.time,
+                        bringable = ok and Start.bringable(save) or false }
+    end
+  end
+  return out
 end
 
 -- what the co-op screens reach: this device's settings and campaigns, the
@@ -163,6 +209,7 @@ function Launcher:_coopEnv(version)
     campaigns = Campaigns,
     addresses = function() return require("src.coop.session.Addresses").mine() end,
     splitReady = function() return Seats.complete(2) end,
+    soloSaves = function(v) return launcher:_soloSaves(v) end,
     nearby = function()
       if not launcher.nearby and not launcher.nearbyError then
         local listener, why = require("src.coop.session.Beacon").listener()
@@ -321,7 +368,7 @@ function Launcher:_run(command)
     local SaveData = require("src.core.SaveData")
     local slot = self:_coopSettings():enterSlot(SaveData, command.version, command.campaign.id,
       command.campaign.title)
-    self:_coopWorld(SaveData, command.version, slot)
+    self:_coopWorld(SaveData, command.version, slot, command.start)
     if self.nearby then self.nearby:close() end
     self.nearby = nil
     -- two players on this device (#11): the second joins once the game runs

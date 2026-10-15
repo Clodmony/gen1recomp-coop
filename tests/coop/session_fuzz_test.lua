@@ -86,6 +86,9 @@ local VALID = {
     wild = { type = "wild", seq = 12, maps = {
       ROUTE_4 = { grass = { { species = "RATTATA", level = 10 }, { species = "EKANS", level = 6 } } },
       SEAFOAM_ISLANDS_B4F = { water = { { species = "HORSEA", level = 30 } } } } },
+    -- how a new player starts (#57)
+    start = { type = "start", seq = 12, how = "save",
+              save = 'return { player = { name = "FUZZ" }, money = 5, party = {} }\n' },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -107,6 +110,7 @@ local VALID = {
     saved = { type = "saved", ok = false, by = "RED", you = true,
               reason = "battle_in_progress", kind = "menu" },
     rejected = { type = "rejected", seq = 4, reason = "duplicate" },
+    started = { type = "started", seq = 12, seeded = true }, -- #57
     ended = { type = "ended", reason = "host_quit" },
     log = logBatch(),
     story = { type = "story", rev = 7, base = true, applied = 2,

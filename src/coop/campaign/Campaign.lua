@@ -309,6 +309,56 @@ function Campaign:setHoldings(playerId, world)
   return self:setWorld(playerId, world)
 end
 
+-- A new player's start (#57, design A4.1 to A4.3, A4.6, A4.7, G28): the
+-- world a window started with (in Pallet Town, or a brought solo save).
+-- A player the campaign has a world for is never replaced ("returning").
+-- A campaign with no story yet takes the world's entries as its story (a
+-- brought run continues in co-op; a Pallet start brings what a played
+-- opening leaves), and the late joiner's list the items of that story the
+-- world holds (A6.5), owed to every other player too.  The world's starter
+-- is the one the rival counters if nobody set it.  Returns ok, the uids
+-- given (or why not) and whether the story was seeded.
+function Campaign:start(playerId, save)
+  local p = assert(self.byId[playerId], "no such player")
+  if p.world then return false, "returning" end
+  local why = World.check(save)
+  if why then return false, why end
+  save.coopStart = nil
+  Ownership.dropWalk(save)
+  local seeded = false
+  if next(self.story) == nil then
+    local view = Ownership.view(save)
+    for path, value in pairs(view) do
+      self.story[path] = value
+      seeded = true
+    end
+    if seeded then
+      self:touch()
+      local items = {}
+      for _, list in ipairs({ save.inventory, save.pcItems }) do
+        for id, n in pairs(type(list) == "table" and list or {}) do
+          if type(id) == "string" and type(n) == "number" and n > 0 then items[id] = true end
+        end
+      end
+      for id in pairs(items) do
+        local gift = Items.giftId(id, view)
+        if gift and self:commit(gift) then
+          for _, q in ipairs(self.players) do
+            if q ~= p then self:_owe(q, { item = id, qty = 1, once = true, from = p.name }) end
+          end
+        end
+      end
+    end
+  end
+  local flags = type(save.flags) == "table" and save.flags or {}
+  for _, starter in ipairs({ "BULBASAUR", "CHARMANDER", "SQUIRTLE" }) do
+    if flags["EVENT_CHOSE_" .. starter] then self:setChose(starter) end
+  end
+  local ok, assigned = self:setWorld(playerId, save)
+  if not ok then return false, assigned end
+  return true, assigned, seeded
+end
+
 -- A window's change to the shared story (design A5.2): `set` (path ->
 -- value) and `unset` (paths), applied entry by entry, so two windows' flags
 -- set at once both stand.  An entry the campaign does not own, or with a

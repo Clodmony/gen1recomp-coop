@@ -40,7 +40,7 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 12 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 13 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
@@ -48,7 +48,8 @@ added co-op battles, #18: [battles.md](battles.md); 8 added holdings and
 uids, #17: [campaign.md](campaign.md); 9 added unique encounters, #21:
 [battles.md](battles.md); 10 added the opening, #22: [opening.md](opening.md);
 11 added rival scenes, #59: [battles.md](battles.md); 12 added the wild
-tables of both versions, #9: [versions.md](versions.md)). Every message is a JSON object with a `type`. Every field from the
+tables of both versions, #9: [versions.md](versions.md); 13 added how a new
+player starts, #57: [opening.md](opening.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -67,6 +68,7 @@ checks what the host sends.
 | `opening` | `seq`, `done` (the window plays the opening, or finished it), `rival` (optional: the rival's name given in Oak's speech), `chose` (optional, with `done`: the starter it took) (#22): [opening.md](opening.md) |
 | `scene` | `seq`, `map`, `key`, `on`: a claim of a rival scene on that map (on), refused `scene_taken` while another player drives it, or its release (#59): [battles.md](battles.md) |
 | `wild` | `seq`, `maps` (map id to `grass` and `water`, each at most ten slots of `species` and `level` 1 to 100, at most 256 maps): this window's own version's wild slots, once a link (#9): [versions.md](versions.md) |
+| `start` | `seq`, `how` (`pallet` or `save`), `save` (the world the launcher started, the game's save text with the PC, at most 1.5 MiB): a new player's start, sent once per link at the window's first rest point (#57): [opening.md](opening.md) |
 
 | Host to client | Fields |
 |---|---|
@@ -80,6 +82,8 @@ checks what the host sends.
 | `battle` | a battle this player is in or joining (#18): [battles.md](battles.md); `state` then also names each player's `battle` and lists the running `battles` |
 | `wild` | `game`, `maps` (as the client's): the other version's wild slots, once a link while the campaign's switch is on (#9): [versions.md](versions.md) |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
+| `started` | `seq` (the window's `start`), `seeded` (it began the campaign's story): the host kept the start; the story went first (#57) |
+| `rejected` | `seq` (-1 for a refused hello), `reason` (a `start` is refused `returning` when the campaign has the player's world, #57) |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
 
