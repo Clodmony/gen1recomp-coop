@@ -119,6 +119,15 @@ Read before working:
   at an issue boundary, open the pull request for the finished issues, and
   leave the rest of the group for the next session. An issue found on the
   way goes into the milestone where it fits.
+- **The session tests everything itself** (owner, 2026-10-16): every
+  scenario of a feature runs live with the cartridge in scripted
+  multi-process runs, on the **integrated** branch (not only each
+  feature's branch), including desktop situations such as two windows and
+  focus or visibility changes, and bugs are fixed before the owner hears
+  of the work. Never hand the owner a playtest to find bugs; the owner
+  plays through with a friend once most of the work is done. The 3D
+  Dramatic Shape Voxel Mod (#30) is a hard requirement for that
+  playthrough.
 - **GitHub issues are the task list.** New work, bugs found on the way and
   follow-ups become issues; there is no task file in the repository.
 - **The handoff lives in the repository.** `HANDOFF.md` is rewritten at the end
