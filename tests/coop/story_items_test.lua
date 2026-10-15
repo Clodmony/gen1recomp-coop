@@ -228,6 +228,7 @@ local function fakeClient(story)
     return #self.sent
   end
   function c:sendHoldings() return nil end -- holdings are holdings_test.lua's
+  function c:sendOpening() return nil end -- the opening is opening_test.lua's
   return c
 end
 

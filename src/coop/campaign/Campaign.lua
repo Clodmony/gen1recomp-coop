@@ -13,8 +13,9 @@
 -- flat map of Ownership paths to values, the campaign's entries of every
 -- world, merged entry by entry from the windows' patches), the unique-encounter
 -- registry (encounter id -> { state = "active", battle = id } or "done";
--- #21), the set of applied commit ids and a revision that moves with every
--- change.  Player: id, name, game, in-game trainer id, the serial of the
+-- #21), the set of applied commit ids, the rival's name and the starter he
+-- counters (#22: the first player to name him, the first to finish the
+-- opening; nil until then) and a revision that moves with every change.  Player: id, name, game, in-game trainer id, the serial of the
 -- last uid given out, and their world: team, PC and current box, bag,
 -- money, map, cell and facing as their game saved them, without the
 -- story's entries (Ownership.strip); the battle they are in and their
@@ -39,6 +40,7 @@ local SaveSerializer = require("src.core.SaveSerializer")
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
 local Items = require("src.coop.campaign.Items")
+local Protocol = require("src.coop.session.Protocol")
 
 local Campaign = {}
 Campaign.__index = Campaign
@@ -65,8 +67,28 @@ function Campaign.new(opts)
     story = opts.story or {},
     encounters = opts.encounters or {},
     commits = opts.commits or {},
+    rival = Protocol.name(opts.rival) or nil,
+    chose = Protocol.STARTERS[opts.chose] and opts.chose or nil,
     players = {}, byId = {},
   }, Campaign)
+end
+
+-- The rival's name (#22, design A4.5): the first to name him names him for
+-- everyone.  Returns true when this name is now the campaign's.
+function Campaign:nameRival(name)
+  if self.rival or not Protocol.name(name) then return false end
+  self.rival = name
+  self:touch()
+  return true
+end
+
+-- The starter the rival counters (design A4.6): the first player to finish
+-- the opening sets it.  Returns true when it is now the campaign's.
+function Campaign:setChose(starter)
+  if self.chose or not Protocol.STARTERS[starter] then return false end
+  self.chose = starter
+  self:touch()
+  return true
 end
 
 function Campaign:player(id) return self.byId[id] end
@@ -369,6 +391,7 @@ function Campaign:snapshot(skipBoxes)
       created = self.created, revision = self.revision,
       story = self.story, encounters = encounters,
       commits = sortedKeys(self.commits),
+      rival = self.rival, chose = self.chose,
     },
     players = players,
   }
@@ -385,8 +408,6 @@ function Campaign:boxesTexts()
   end
   return out
 end
-
-local Protocol = require("src.coop.session.Protocol")
 
 -- A campaign from its plain data, or nil and why.  `boxesOf(id)` gives the
 -- PC text of a player whose entry left it out (a journal line).
@@ -414,6 +435,7 @@ function Campaign.fromSnapshot(data, boxesOf)
     story = story,
     encounters = type(cs.encounters) == "table" and cs.encounters or {},
     commits = commits,
+    rival = cs.rival, chose = cs.chose,
   })
   if type(data.players) ~= "table" then return nil, "no players" end
   for _, entry in ipairs(data.players) do

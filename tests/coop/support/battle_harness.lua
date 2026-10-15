@@ -37,6 +37,7 @@ end
 function H.newGame(name, otId, party)
   for _, m in ipairs(party) do m.otId, m.ot = otId, name end
   local save = SaveData.newGame()
+  save.flags.EVENT_GOT_STARTER = true -- past the opening (#22)
   save.player.name = name
   save.player.id = otId
   save.party = party

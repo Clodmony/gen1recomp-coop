@@ -79,6 +79,7 @@ local VALID = {
     battle_rejoin = { type = "battle_rejoin", seq = 9, battle = "b00000001" },
     battle_takeover = { type = "battle_takeover", seq = 10, battle = "b00000001",
                         owner = "p00000002" },
+    opening = { type = "opening", seq = 11, done = true, rival = "GARY", chose = "SQUIRTLE" },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -90,8 +91,8 @@ local VALID = {
     state = { type = "state", you = "p00000001", last_seq = 3, nearby = { "p00000002" },
               players = { { id = "p00000001", name = "RED", game = "red", connected = true,
                             map = "ROUTE_1", x = 1, y = 2, facing = "down", travel = "bike",
-                            battle = "b00000001" } },
-              saved_ago = 12, busy = "",
+                            battle = "b00000001", opening = false } },
+              saved_ago = 12, busy = "", rival = "GARY", chose = "BULBASAUR",
               battles = { { id = "b00000001", by = "p00000001", kind = "wild",
                             players = { "p00000001" }, foe = "PIDGEY", joinable = true,
                             encounter = "static:ROUTE_12_obj_1" } } },

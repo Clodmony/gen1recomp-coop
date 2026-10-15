@@ -303,7 +303,7 @@ function Arrow.arrows(game, ow, partners, W, H)
   local last = ow.lastOutdoor and ow.lastOutdoor.id
   local towns = data.field and data.field.townMap and data.field.townMap.locations or {}
   for _, partner in ipairs(partners) do
-    if partner.connected and partner.map then
+    if partner.connected and partner.map and not partner.hidden then -- (#22: the opening)
       local target
       local actor = partner.actor
       if actor and actor.visible then

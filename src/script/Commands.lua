@@ -1070,13 +1070,20 @@ function Commands.rival_battle(ctx, oppClass, baseParty, offsets)
   offsets = offsets
     or (ctx.game.data.field and ctx.game.data.field.starterCounterpicks)
   local offset = 0
+  -- co-op (#22): the campaign's rival counters the starter the first
+  -- player to finish the opening chose (src/coop/game/Opening.lua)
+  local chose = require("src.coop.game.Opening").rivalChoice()
+  local function chosen(flag)
+    if chose then return flag == "EVENT_CHOSE_" .. chose end
+    return Flags.get(ctx.save, flag)
+  end
   if offsets then
     for flag, mapped in pairs(offsets) do
-      if Flags.get(ctx.save, flag) then offset = mapped break end
+      if chosen(flag) then offset = mapped break end
     end
-  elseif Flags.get(ctx.save, "EVENT_CHOSE_SQUIRTLE") then
+  elseif chosen("EVENT_CHOSE_SQUIRTLE") then
     offset = 1
-  elseif Flags.get(ctx.save, "EVENT_CHOSE_BULBASAUR") then
+  elseif chosen("EVENT_CHOSE_BULBASAUR") then
     offset = 2
   end
   Commands.start_battle(ctx, "trainer", oppClass, baseParty + offset)

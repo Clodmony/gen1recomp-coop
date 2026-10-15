@@ -19,6 +19,11 @@
 -- own world opened stands where it started under the "!" bubble; a partner
 -- who joined a battle elsewhere is not drawn; a battle this player is free
 -- to join is told in a notice.
+--
+-- The opening (#22, design A4.4, A4.8): a partner who plays the opening is
+-- not drawn and gets no arrow or TOWN MAP mark, and while this player plays
+-- it they see nobody and hear of no battle to join.  A partner who joins in
+-- the opening is announced so.
 
 local Arrow = require("src.coop.game.Arrow")
 local Colors = require("src.coop.game.Colors")
@@ -207,6 +212,12 @@ Presence.battleOf = battleOf
 -- a partner's new battle this player is free to join (design A14.10)
 local function narrateBattles(self, state, me)
   local now = {}
+  if require("src.coop.game.Opening").active() then
+    -- nothing to join from the opening (#22): its battles are not offered
+    for _, b in ipairs(state.battles or {}) do now[b.id] = true end
+    self.battlesSeen = now
+    return
+  end
   local busy = false
   for _, b in ipairs(state.battles or {}) do
     now[b.id] = true
@@ -232,14 +243,16 @@ end
 -- notices for partners who joined or left since the last state
 local function narrate(self, state, me)
   narrateBattles(self, state, me)
-  local now = {}
+  local now, opening = {}, {}
   for _, p in ipairs(state.players) do
     if p.id ~= me then now[p.id] = p.connected and p.name or false end
+    opening[p.id] = p.opening
   end
   if self.seen then
     for id, name in pairs(now) do
       if name and not self.seen[id] then
-        Notices.push(Strings("%s joined the session.", name))
+        Notices.push(opening[id] and Strings("%s joined the session in the opening.", name)
+                     or Strings("%s joined the session.", name))
       end
     end
     for id, name in pairs(self.seen) do
@@ -318,6 +331,8 @@ function Presence.step(game)
   local ow = Presence.overworld(game)
   local offsetOf = function(mapId) return Presence.offsetOf(ow, mapId) end
   local keep = {}
+  -- nobody is drawn to a player in the opening, and they see nobody (#22)
+  local alone = require("src.coop.game.Opening").active()
   for place, p in ipairs(state.players) do
     if p.id == me then
       if ow then
@@ -325,7 +340,8 @@ function Presence.step(game)
         tintOwn(ow, colors, group)
         Presence.tinted = true
       end
-    elseif p.connected and p.map and not (p.battle and (battleOf(state, p) or {}).by ~= p.id) then
+    elseif p.connected and p.map and not alone and not p.opening
+           and not (p.battle and (battleOf(state, p) or {}).by ~= p.id) then
       -- (a partner who joined a battle elsewhere is not drawn, A14.4)
       local a = Presence.actors[p.id] or Actor.new(p.id)
       keep[p.id] = a
@@ -379,15 +395,19 @@ function Presence.drawUI()
 end
 
 -- the partners as the CO-OP menu and the arrow see them: { id, name,
--- place, connected, map, x, y } in session order, this player left out
+-- place, connected, map, x, y, battle, opening, hidden } in session order,
+-- this player left out; hidden: not shown on the map (an arrow, a TOWN MAP
+-- mark) since one of the two plays the opening (#22)
 function Presence.partners()
   local out = {}
   local state = Presence.state
+  local alone = require("src.coop.game.Opening").active()
   for place, p in ipairs(state and state.players or {}) do
     if p.id ~= Presence.me then
       out[#out + 1] = { id = p.id, name = p.name, place = place, connected = p.connected,
                         map = p.map, x = p.x, y = p.y, actor = Presence.actors[p.id],
-                        battle = p.battle }
+                        battle = p.battle, opening = p.opening,
+                        hidden = alone or p.opening == true }
     end
   end
   return out

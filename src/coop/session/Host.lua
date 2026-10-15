@@ -443,6 +443,21 @@ function Host:_holdings(link, msg)
   return self:_refuse(link, msg.seq, "bad_world")
 end
 
+-- The opening (#22, design A4.4 to A4.6): a window plays it or finished
+-- it.  The first rival's name and the first finisher's starter become the
+-- campaign's; what the window did in the opening never reaches the story.
+function Host:_opening(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  local was = p.opening
+  p.opening = not msg.done or nil
+  local named = msg.rival and self.state:nameRival(msg.rival)
+  local chose = msg.done and msg.chose and self.state:setChose(msg.chose)
+  if was ~= p.opening or named or chose then self.dirty = true end
+  self:_log("opening", { done = msg.done, rival = named and msg.rival or nil,
+                         chose = chose and msg.chose or nil }, p)
+end
+
 -- messages --------------------------------------------------------------
 
 function Host:_probe(link, msg, protocolOk)
@@ -492,6 +507,9 @@ function Host:_hello(link, msg)
   self:_log("joined", { name = p.name, seat = p.seat, device = p.device,
                         logs = link.shareLogs }, p)
   self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+  -- a player the campaign has no world for plays the opening (#22, design
+  -- A4.8) until their window says otherwise
+  p.opening = self.state:player(p.id).world == nil or nil
   self:_sendWorld(link, p)
   self:_sendLogBacklog(link)
   HostBattles.back(self, p)
@@ -629,7 +647,7 @@ end
 
 local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    log = Host._logBatch, world = Host._world, patch = Host._patch,
-                   holdings = Host._holdings,
+                   holdings = Host._holdings, opening = Host._opening,
                    battle_open = battleHandler(HostBattles.open),
                    battle_join = battleHandler(HostBattles.join),
                    battle_cmd = battleHandler(HostBattles.cmd),
@@ -660,7 +678,7 @@ function Host:_receive(link, raw)
   -- their handlers, as a summary; a window's battle reports are many
   local t = msg.type
   if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "holdings" and t ~= "battle_open"
-     and t ~= "battle_join" and t ~= "battle_at" then
+     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" then
     self:_log("message", msg, link.player)
   end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
@@ -672,7 +690,7 @@ end
 local function publicView(p, battle)
   return { id = p.id, name = p.name, game = p.game, connected = p.connected,
            map = p.map, x = p.x, y = p.y, facing = p.facing,
-           travel = p.map and p.travel or nil, battle = battle }
+           travel = p.map and p.travel or nil, battle = battle, opening = p.opening }
 end
 
 function Host:_broadcast()
@@ -695,7 +713,8 @@ function Host:_broadcast()
       end
       self:_send(link, { type = "state", players = players, you = p.id,
                          last_seq = p.lastSeq, nearby = nearby,
-                         saved_ago = savedAgo, busy = busy, battles = battles })
+                         saved_ago = savedAgo, busy = busy, battles = battles,
+                         rival = self.state.rival, chose = self.state.chose })
     end
   end
 end

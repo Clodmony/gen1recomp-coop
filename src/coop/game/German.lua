@@ -445,6 +445,10 @@ P["The battle against %s is over."] = "Der Kampf gegen %s ist vorbei."
 P["%s was caught."] = "%s gefangen."
 P["%s is in a battle against wild %s. START > CO-OP to join."] = "%s kämpft gegen ein wildes %s. START > KOOP zum Helfen."
 P["%s is in a battle against %s. START > CO-OP to join."] = "%s kämpft gegen %s. START > KOOP zum Helfen."
+-- the opening (#22)
+P["%s joined the session in the opening."] = "%s ist der Sitzung beigetreten und spielt den Anfang."
+P["IN THE OPENING"] = "IM SPIELANFANG"
+P["The opening can't\nbe saved.\fLeave OAK's LAB\nfirst!"] = "Der Anfang wird\nnicht gesichert.\fVerlasse erst\nEICHs LABOR!"
 
 -- battle
 P["FOE"] = "GEGNER"

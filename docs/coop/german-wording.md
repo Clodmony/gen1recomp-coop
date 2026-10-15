@@ -761,6 +761,9 @@ characters, a menu row fewer.
 | %s was caught. | %s gefangen. | |
 | %s is in a battle against wild %s. START > CO-OP to join. | %s kämpft gegen ein wildes %s. START > KOOP zum Helfen. | |
 | %s is in a battle against %s. START > CO-OP to join. | %s kämpft gegen %s. START > KOOP zum Helfen. | |
+| %s joined the session in the opening. | %s ist der Sitzung beigetreten und spielt den Anfang. | |
+| IN THE OPENING | IM SPIELANFANG | |
+| The opening can't / be saved. / Leave OAK's LAB / first! | Der Anfang wird / nicht gesichert. / Verlasse erst / EICHs LABOR! | |
 
 #### battle
 

@@ -57,18 +57,31 @@
 --     the world whole (flush), so nothing is sent again.  The uids the host
 --     gives rows (client.uids) are stamped at a rest point on the row that
 --     still stands there with the same fingerprint.
+--   * The opening (#22, design A4.4 to A4.6, A4.9): a window whose world
+--     has no starter yet plays the opening on a private story: it sends
+--     and takes nothing of the campaign's, lands no gifts and sends no
+--     holdings, so nothing of it reaches the host.  The host hears that it
+--     plays the opening, and the rival's name it gave in Oak's speech
+--     (`named`).  The opening ends at a rest point once the player has a
+--     starter and stands outside Oak's lab; the window then opens as a
+--     late one (the campaign's story over its entries, or its entries
+--     seeding a campaign with no story yet, A4.7), tells the host the
+--     starter it chose, sends its world, and takes the campaign's rival
+--     name from then on.
 
 local SaveSerializer = require("src.core.SaveSerializer")
 local Ownership = require("src.coop.campaign.Ownership")
 local Items = require("src.coop.campaign.Items")
 local World = require("src.coop.campaign.World")
 local Campaign = require("src.coop.campaign.Campaign")
+local Protocol = require("src.coop.session.Protocol")
 
 local Window = {}
 Window.__index = Window
 
 Window.REST_FRAMES = 3
 Window.HOLDINGS_EVERY = 60 -- rest frames between two looks at the holdings
+Window.LAB = "OAKS_LAB" -- the opening ends outside it (#22)
 
 function Window.new(client)
   return setmetatable({
@@ -86,6 +99,9 @@ function Window.new(client)
     heldBoxes = nil, -- the PC then, as text
     boxesTo = nil,   -- the client the PC last went to
     holdings = 0,    -- holdings sent (a counter for the tests)
+    opening = nil,   -- #22: true while the player plays the opening, false
+                     -- once past it (nil: not looked at yet)
+    naming = nil,    -- a rival's name given in Oak's speech, not sent yet
   }, Window)
 end
 
@@ -306,12 +322,17 @@ end
 -- a battle the world opens: the holdings so far go out first (#17)
 function Window:flushHoldings(save)
   if not self:_ready() or not self.sent or type(save) ~= "table" then return nil end
+  if self.opening then return nil end
   return self:_holdings(save, true)
 end
 
 function Window:update(f)
   if not self:_ready() or type(f.save) ~= "table" then return end
   self:_confirm()
+  if self:_opening(f) then
+    self.rest = f.busy and 0 or self.rest + 1
+    return
+  end
   if f.busy then
     self.rest = 0
     return
@@ -324,12 +345,71 @@ function Window:update(f)
     self:_send(f.save)
     self:_take(f)
   end
+  self:_rival(f.save)
   self:_gifts(f)
   self:_note(f.save)
   self:_uids(f.save)
   local since = self.rest - Window.REST_FRAMES
   if since % Window.HOLDINGS_EVERY == 0 then self:_holdings(f.save, since == 0) end
   self:_settle(f)
+end
+
+-- the starter a save chose (Red and Blue's three), or nil
+local function chosen(save)
+  local flags = type(save.flags) == "table" and save.flags or {}
+  for starter in pairs(Protocol.STARTERS) do
+    if flags["EVENT_CHOSE_" .. starter] then return starter end
+  end
+  return nil
+end
+
+local function hasStarter(save)
+  return type(save.flags) == "table" and save.flags.EVENT_GOT_STARTER == true
+end
+
+-- The rival's name given in Oak's speech (#22, design A4.5): it goes to
+-- the host, which keeps the first one given in the campaign
+function Window:named(name)
+  self.naming = name
+  if self:_ready() and self.client:sendOpening(false, name) then self.naming = nil end
+end
+
+-- the campaign's rival's name over the player's own (A4.5)
+function Window:_rival(save)
+  local state = self.client.state
+  local name = state and state.rival
+  if name and type(save.player) == "table" and save.player.rival ~= name then
+    save.player.rival = name
+  end
+end
+
+-- One frame of the opening (#22): its first look says whether the world
+-- is in it; a rest point outside the lab with a starter ends it.  Returns
+-- true while the window plays the opening.
+function Window:_opening(f)
+  if self.naming and self.client:sendOpening(false, self.naming) then self.naming = nil end
+  if self.opening == nil then
+    self.opening = not hasStarter(f.save)
+    self.client:sendOpening(not self.opening)
+  end
+  if not self.opening then return false end
+  if f.busy or self.rest + 1 < Window.REST_FRAMES then return true end
+  if not (hasStarter(f.save) and f.map ~= nil and f.map ~= Window.LAB) then return true end
+  self.opening = false
+  self.client:sendOpening(true, nil, chosen(f.save))
+  -- the campaign's story over the private one, as a late window opens
+  self.sent = nil
+  self:_open(f)
+  self:_rival(f.save)
+  -- the world goes to the host now, PC and all
+  self.held, self.heldBoxes = "", ""
+  self:_holdings(f.save, true)
+  return false
+end
+
+-- true while the player plays the opening (#22)
+function Window:inOpening()
+  return self.opening == true
 end
 
 -- true once this window has a rest point behind it
@@ -340,6 +420,7 @@ end
 -- START > SAVE sends the scene so far (A5.5), wherever the player stands
 function Window:flush(save)
   if not self:_ready() or not self.sent or type(save) ~= "table" then return nil end
+  if self.opening then return nil end
   self:_confirm()
   local seq = self:_send(save)
   self:_note(save)

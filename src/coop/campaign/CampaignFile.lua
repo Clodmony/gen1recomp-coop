@@ -33,7 +33,7 @@ local SaveSerializer = require("src.core.SaveSerializer")
 local CampaignFile = {}
 
 CampaignFile.FORMAT = "gen1recomp-coop campaign"
-CampaignFile.VERSION = 3
+CampaignFile.VERSION = 4
 CampaignFile.DIR = "coop/campaigns"
 -- twelve full PCs and more; a campaign file is never this long
 CampaignFile.MAX_FILE = 64 * 1024 * 1024
@@ -72,6 +72,13 @@ CampaignFile.MIGRATIONS[2] = function(data)
       entry.giftSeq = entry.giftSeq or 0
     end
   end
+  return data
+end
+
+-- 3 to 4 (#22): the campaign keeps its rival's name and the starter he
+-- counters (`rival`, `chose`); a file from before has neither yet, so the
+-- next player to name him or finish the opening sets them
+CampaignFile.MIGRATIONS[3] = function(data)
   return data
 end
 

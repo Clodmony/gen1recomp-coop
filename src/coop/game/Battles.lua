@@ -14,7 +14,8 @@
 -- refusal, or no link (A8.22), and it is fought in the world alone, as
 -- the cartridge does.  Battles that stay in the window and cannot be
 -- joined (A8.19): the Safari Zone, a GHOST without the SILPH SCOPE, the
--- old man's demo, and the starter rival in Oak's lab (the opening, #22).
+-- old man's demo, and the starter rival in Oak's lab; every battle of a
+-- player who plays the opening (#22).
 --
 -- Joining (design A8.3): JOIN <NAME> in the CO-OP menu sends this player's
 -- team; the world stands still under a "joining" box until the host puts
@@ -283,6 +284,8 @@ end
 -- waits for another one this player is away from (A11.3)
 function Battles.take(game, battle, npc)
   if battle and battle.coop then return end
+  -- the opening's battles stay in the window (#22, design A4.4)
+  if require("src.coop.game.Opening").active() then return end
   if next(Battles.away) and session() then
     hold(game, battle, npc)
     return "held"
@@ -545,6 +548,7 @@ end
 -- or joins nothing (design A11.3)
 function Battles.joinRows(game, items)
   if next(Battles.away) then return Battles.rejoinRows(game, items) end
+  if require("src.coop.game.Opening").active() then return end -- (#22)
   for _, o in ipairs(Battles.offers()) do
     items[#items + 1] = { label = Strings("JOIN %s", o.name), onSelect = function()
       Battles.join(game, o.summary, o.name)

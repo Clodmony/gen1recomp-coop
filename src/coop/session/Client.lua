@@ -143,6 +143,14 @@ function Client:sendHoldings(world, boxes)
   return self:send({ type = "holdings", world = world, boxes = boxes })
 end
 
+-- The opening (#22, design A4.4 to A4.6): this window plays it (done
+-- false) or finished it (done true, chose: the starter it picked); rival:
+-- the name it gave the rival.  Returns the seq, or nil when not joined.
+function Client:sendOpening(done, rival, chose)
+  return self:send({ type = "opening", done = done and true or false, rival = rival,
+                     chose = chose })
+end
+
 -- co-op battles (#18, design A8) ----------------------------------------
 
 -- a battle this window's world opened: opening = { kind, enemy, map,

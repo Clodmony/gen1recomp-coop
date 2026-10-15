@@ -47,6 +47,7 @@ Game.input = Input; Input:init()
 Game.renderer = Renderer; Renderer:init()
 Game.stack = StateStack; StateStack:init()
 Game.save = SaveData.newGame()
+Game.save.flags.EVENT_GOT_STARTER = true -- past the opening (#22)
 Game.save.player.name, Game.save.player.id = "RED", 1111
 Game.save.party = { Pokemon.new(Data, "FIXMON_A", 14) }
 Game.save.money = 500
@@ -159,6 +160,7 @@ blue = Client.new(s.hub:dial(), { name = "BLUE", game = "red", sha1 = SHA, devic
 blue:join()
 step(3)
 eq(blue.status, "joined", "BLUE joined")
+blue:sendOpening(true) -- past the opening (#22)
 blue:move("FIX_ROUTE", 3, 3, "down", true, "walk")
 step(2)
 
@@ -227,6 +229,7 @@ do
   yellow:join()
   others[#others + 1] = yellow
   step(3)
+  yellow:sendOpening(true) -- past the opening (#22)
   yellow:move("FIX_TOWN", 8, 8, "down", true, "walk")
   step(3)
   check(Presence.actors[yellow.player] ~= nil, "YELLOW is drawn on RED's map")

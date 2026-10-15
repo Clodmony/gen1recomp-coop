@@ -17,7 +17,7 @@ function TownMapMarks.marks(byMap)
   local out = {}
   if not Presence.session() then return out end
   for _, p in ipairs(Presence.partners()) do
-    local loc = p.connected and p.map and byMap and byMap[p.map]
+    local loc = p.connected and not p.hidden and p.map and byMap and byMap[p.map] -- (#22)
     if loc then out[#out + 1] = { place = p.place, loc = loc, id = p.id } end
   end
   return out
