@@ -96,6 +96,8 @@ function SessionLog.open(opts)
                    opts.maxBytes or SessionLog.MAX_BYTES)
   local stamp = opts.stamp or os.date("!%Y%m%d-%H%M%S")
   local path = ("%s/session-%s-%s.jsonl"):format(dir, stamp, opts.device or "0")
+  -- a split-screen device's second seat writes a file of its own (#11)
+  if (opts.seat or 1) > 1 then path = path:gsub("%.jsonl$", "-seat" .. opts.seat .. ".jsonl") end
   local file = fs.open(path)
   return setmetatable({
     file = file, path = path, device = opts.device, name = opts.name,

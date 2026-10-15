@@ -939,10 +939,13 @@ function C.hosting(p, coop, c)
   close2(ry + 10)
   y = math.max(ly, ry) + 18
   local list = {}
-  for _, id in ipairs({ "stop", "enter" }) do
+  -- enter2: two players on this device, when CONTROLS has a device for each (#11)
+  for _, id in ipairs({ "stop", "enter2", "enter" }) do
     local i, row = rowOf(rows, id)
-    list[#list + 1] = { index = i, row = row, style = id == "enter" and "primary" or nil,
-                        label = id == "enter" and L("ENTER THE WORLD →") or nil }
+    if row then
+      list[#list + 1] = { index = i, row = row, style = id == "enter" and "primary" or nil,
+                          label = id == "enter" and L("ENTER THE WORLD →") or nil }
+    end
   end
   actionsRight(p, c, y, list)
   return y + 30
