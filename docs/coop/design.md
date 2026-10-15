@@ -321,6 +321,8 @@ rival's name and how a new player starts (#22); the split-screen entry
 
 ### A5. Shared world: ownership, rest points and per-place rules
 
+In place (#14, [world.md](world.md), G21).
+
 1. **adapt** Ownership table: every world, snapshot, save and runtime field has an
    owner. The campaign's: story/event flags, badges, map-script steps, toggled
    (hidden/shown) objects and other shared keys. The player's: bag, wallet,
@@ -342,7 +344,9 @@ rival's name and how a new player starts (#22); the split-screen entry
    locked screen such as a fade or a trainer's approach); it counts after three
    such frames in a row. A scene is the stretch between two rest points
    (D72, D79). The target needs equivalents for each "busy" signal; in
-   split-screen each view rests on its own.
+   split-screen each view rests on its own. Here (G21) a step the player
+   walks of their own does not hold them, since START opens at the next
+   cell; a reload or refresh waits for a frame between two cells.
 5. **carry** Away from a rest point a window sends and takes nothing, world or
    party. Exceptions: a battle the world asks for sends the party first, and
    START > SAVE sends the scene so far. A scene's world patch and the party
@@ -350,10 +354,13 @@ rival's name and how a new player starts (#22); the split-screen entry
    the host keeps the last resting state and the scene replays from its start
    (D72, D79; the 15 s cap of D67 is gone). Accepted costs: the partner sees a
    scene's result, not the scene; a long scene arrives when it ends (D72).
-6. **carry** A partner's step for the map a window stands on waits until that window
+6. **adapt** A partner's step for the map a window stands on waits until that window
    loads another map, unless its own unconfirmed patch touched it; a pulled
    object hide or show lands at once (else, e.g., a taken fossil or item ball
-   bars the partner's way) (D79).
+   bars the partner's way) (D79). Here (G21) the engine saves no script
+   steps, so a partner's entry lands at once; an object on the standing map
+   rebuilds its people in place, and a flag the map is stamped from owes a
+   reload (A5.7).
 7. **carry** A pulled flag can owe the window a map reload: Vermilion Gym's second
    lock (Surge's door), Cinnabar Gym's quiz gates, Victory Road's switches, the
    League rooms' exits (D75, D86, D89, D93).
@@ -368,6 +375,9 @@ rival's name and how a new player starts (#22); the split-screen entry
    Champion's room, Seafoam B3F and B4F, the four Elite Four rooms and the Hall
    of Fame. Bill's house stays the campaign's (the partner sees Bill come out)
    (D74, D79, D87, D93). Yellow's script bytes and offsets differ (pokeyellow).
+   Here (G21) the engine keeps no script bytes: a visit's state lives on the
+   live overworld and is never saved, so these places share only their
+   flags, and the flags that follow one player's walk are each player's.
 10. **carry** Other Gen 1 script bytes: Vermilion Gym's trash-can lock bytes are the
     campaign's (both search the same cans); the slot machine's luck, the SURF
     high score and other scratch bytes are each player's; unknown names go to
@@ -973,7 +983,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A2 Launcher co-op flow | #12 ([launcher.md](launcher.md)); rival's name and how to start #22, both versions #9, split-screen entry #11 |
 | A3 Campaign state, saves and persistence | #13 ([campaign.md](campaign.md)) |
 | A4 New players and the opening | #22 |
-| A5 Shared world | #14 |
+| A5 Shared world | #14 ([world.md](world.md)); story items and the gift race #16, party at rest points #17 |
 | A6 Items, bag, money and story gifts | #16 |
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
 | A8 Co-op battles: rules | #18 |
@@ -1136,3 +1146,21 @@ sibling's D-numbers.
   has no rename, so the swap renames in the real save folder and falls back
   to writing in place with the checked `.tmp` as the witness. Details:
   [campaign.md](campaign.md).
+- **G21. The shared world is a story of save entries** (#14, 2026-10-15).
+  The engine has no RAM bytes to share: a Gen 1 world here is a save table.
+  The campaign owns six families of its entries (`Ownership.lua`): event
+  flags (less a list of each player's: Safari, purified zone, Mansion
+  switch, fossil lab, Elite Four walk-ins and Lance's lock, gift Pokémon,
+  the starter choice), object toggles (less the gift Pokémon's balls),
+  beaten trainers, item balls taken, the eight badges (inventory items
+  here) and Vermilion's trash-can locks. Anything else is the player's.
+  They travel as a flat map of paths, so patches merge entry by entry. The
+  engine saves no per-map script steps, so A5.6 and A5.9 adapt: a
+  partner's entry lands at the next rest point even on the map a window
+  stands on, with the map rebuilt for objects and reloaded for the flags it
+  is stamped from. A step the player walks of their own does not hold a
+  rest point (A5.4). A window opened late takes the campaign, and only a
+  campaign with no story yet takes a window's entries. The host keeps each
+  player's world without the story and lays the story over it when it
+  sends it. Campaign files move to version 2, the story built from a
+  version 1 file's worlds by the team rule. Details: [world.md](world.md).

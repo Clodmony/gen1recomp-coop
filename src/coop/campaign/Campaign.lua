@@ -5,15 +5,19 @@
 --   local p = c:addPlayer({ id = "p…", name = "RED", game = "red" })
 --   c:setWorld(p.id, save)          -- the player's world (World.lua), uids stamped
 --   c:commit("gift:BICYCLE", function(c) … end)  -- once; a repeat returns false
+--   c:patch(p.id, set, unset)       -- a window's change to the shared story
+--   c:worldFor(p.id)                -- their world with the story over it
 --
--- Campaign: id, title, cartridge (game, SHA-1), the shared story (flags,
--- badges: filled by the world patches of #14), the unique-encounter
+-- Campaign: id, title, cartridge (game, SHA-1), the shared story (#14: a
+-- flat map of Ownership paths to values, the campaign's entries of every
+-- world, merged entry by entry from the windows' patches), the unique-encounter
 -- registry (encounter id -> { state = "active", battle = id } or "done";
 -- #21), the set of applied commit ids and a revision that moves with every
 -- change.  Player: id, name, game, in-game trainer id, the serial of the
 -- last uid given out, and their world: team, PC and current box, bag,
--- money, map, cell and facing as their game saved them; the battle they are
--- in and their return point come with #18.  Connection is the session's.
+-- money, map, cell and facing as their game saved them, without the
+-- story's entries (Ownership.strip); the battle they are in and their
+-- return point come with #18.  Connection is the session's.
 --
 -- Every Pokémon has a uid `<player id>:<serial>`, never reused, kept through
 -- deposits, trades and evolutions (design A3.2): a world's Pokémon keep the
@@ -23,6 +27,7 @@
 -- window's hint).
 
 local World = require("src.coop.campaign.World")
+local Ownership = require("src.coop.campaign.Ownership")
 
 local Campaign = {}
 Campaign.__index = Campaign
@@ -46,7 +51,7 @@ function Campaign.new(opts)
     id = opts.id, title = opts.title or "", game = opts.game,
     sha1 = opts.sha1 or "", created = opts.created or 0,
     revision = opts.revision or 0,
-    story = opts.story or { flags = {}, badges = {} },
+    story = opts.story or {},
     encounters = opts.encounters or {},
     commits = opts.commits or {},
     players = {}, byId = {},
@@ -151,17 +156,59 @@ function Campaign:_stampUids(p, save)
 end
 
 -- the player's world, as their game saved it (World.check'ed); the uids are
--- stamped, the in-game trainer id taken from it
+-- stamped, the in-game trainer id taken from it, the story's entries left
+-- out (the windows' patches carry those, design A5.2)
 function Campaign:setWorld(playerId, save)
   local p = assert(self.byId[playerId], "no such player")
   local why = World.check(save)
   if why then return false, why end
   save.options = nil
+  Ownership.strip(save)
   self:_stampUids(p, save)
   p.world = save
   p.trainer = type(save.player.id) == "number" and save.player.id or p.trainer
   self:touch()
   return true
+end
+
+-- A window's change to the shared story (design A5.2): `set` (path ->
+-- value) and `unset` (paths), applied entry by entry, so two windows' flags
+-- set at once both stand.  An entry the campaign does not own, or with a
+-- value it may not hold, is skipped.  Returns how many entries changed.
+function Campaign:patch(playerId, set, unset)
+  assert(self.byId[playerId], "no such player")
+  local n = 0
+  for path, value in pairs(set or {}) do
+    if Ownership.valid(path, value) and self.story[path] ~= value then
+      self.story[path] = value
+      n = n + 1
+    end
+  end
+  for _, path in ipairs(unset or {}) do
+    if Ownership.owns(path) and self.story[path] ~= nil then
+      self.story[path] = nil
+      n = n + 1
+    end
+  end
+  if n > 0 then self:touch() end
+  return n
+end
+
+-- a copy of the player's world with the story over it, as a window opens
+-- it (design A5.19), or nil for a player without a world
+function Campaign:worldFor(playerId)
+  local p = self.byId[playerId]
+  if not (p and p.world) then return nil end
+  local save = World.decode(World.encode(p.world))
+  if not save then return nil end
+  return Ownership.overlay(save, self.story)
+end
+
+-- the walk flags nobody keeps once a host opens the campaign (design A5.13)
+function Campaign:dropWalkFlags()
+  for _, p in ipairs(self.players) do
+    if p.world then Ownership.dropWalk(p.world) end
+  end
 end
 
 -- file form ----------------------------------------------------------------
@@ -233,9 +280,10 @@ function Campaign.fromSnapshot(data, boxesOf)
   for _, id in ipairs(type(cs.commits) == "table" and cs.commits or {}) do
     if Campaign.commitId(id) then commits[id] = true end
   end
-  local story = type(cs.story) == "table" and cs.story or {}
-  story.flags = type(story.flags) == "table" and story.flags or {}
-  story.badges = type(story.badges) == "table" and story.badges or {}
+  local story = {}
+  for path, value in pairs(type(cs.story) == "table" and cs.story or {}) do
+    if Ownership.valid(path, value) then story[path] = value end
+  end
   local c = Campaign.new({
     id = cs.id, title = type(cs.title) == "string" and cs.title or "",
     game = cs.game, sha1 = type(cs.sha1) == "string" and cs.sha1 or "",

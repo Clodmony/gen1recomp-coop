@@ -18,8 +18,9 @@ local Protocol = {}
 -- logs (#31) and the flood refusal (#32).  3: how a player travels
 -- (`travel` on moves and players, #15).  4: campaign files (#13): a
 -- window's `world` and save requests, the host's `world` and `saved`, and
--- the last save and the save gate in `state`.
-Protocol.VERSION = 4
+-- the last save and the save gate in `state`.  5: the shared world (#14):
+-- a window's `patch` and the host's `story`.
+Protocol.VERSION = 5
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -57,6 +58,12 @@ Protocol.MAX_WORLD = 1536 * 1024
 -- what asked for a save (design A3.11): START > SAVE, a box change, the
 -- Hall of Fame, a link room, the quick save key
 Protocol.SAVE_KINDS = { menu = true, box = true, hall = true, link = true, quick = true }
+
+-- the shared story (#14, design A5.2): at most this many entries in one
+-- patch or story message; a path names one entry (Ownership.lua), a value is
+-- a boolean or a small whole number
+Protocol.MAX_STORY = 8192
+Protocol.MAX_PATH = 96
 
 local FACINGS = { up = true, down = true, left = true, right = true }
 -- how a player moves: the sprite they wear and how fast their steps are
@@ -150,6 +157,20 @@ Protocol.name = name
 
 local seq = int(1, Protocol.MAX_SEQ)
 local cell = int(0, Protocol.MAX_CELL)
+
+local function storyPath(v)
+  if type(v) ~= "string" or #v > Protocol.MAX_PATH
+     or not v:find("^[%w_]+/[%w_%-%./]+$") or v:find("//") or v:find("/$") then
+    return nil, "bad path"
+  end
+  return v
+end
+local function storyValue(v)
+  if type(v) == "boolean" then return v end
+  if finite(v) and v == math.floor(v) and v >= 0 and v <= 255 then return v end
+  return nil, "bad value"
+end
+Protocol.storyPath = storyPath
 
 -- a table whose every value passes fn; maps arrive as objects, an empty one
 -- as an empty array
@@ -301,6 +322,9 @@ local identity = {
   game = Protocol.gameId, sha1 = Protocol.sha1,
 }
 
+local storySet = mapOf(storyPath, storyValue, Protocol.MAX_STORY)
+local storyUnset = listOf(storyPath, Protocol.MAX_STORY)
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -324,6 +348,9 @@ Protocol.TO_HOST = {
   world = record(withType("world", {
     seq = seq, save = blob(Protocol.MAX_WORLD), checkpoint = bool,
   }), { kind = enum(Protocol.SAVE_KINDS) }),
+  -- a window's change to the shared story since its last patch (#14,
+  -- design A5.2): entries set (path -> value) and cleared
+  patch = record(withType("patch", { seq = seq, set = storySet, unset = storyUnset })),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -358,6 +385,14 @@ Protocol.TO_CLIENT = {
   ended = record(withType("ended", { reason = text(Protocol.MAX_REASON) })),
   -- other devices' session log lines, passed on once by the host (#31)
   log = logBatch,
+  -- the shared story (#14, design A5.2, A5.3): what changed since the last
+  -- story this player was sent (`base`: the whole story, replacing what the
+  -- window held), at revision `rev`; `applied` is the last of this player's
+  -- patches the host has applied
+  story = record(withType("story", {
+    rev = int(0, Protocol.MAX_SEQ), base = bool, set = storySet, unset = storyUnset,
+    applied = int(0, Protocol.MAX_SEQ),
+  })),
 }
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))
