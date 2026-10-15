@@ -1256,7 +1256,7 @@ sibling's D-numbers.
   player's Pokémon to get their results (a player away from the battle is
   #20). Details: [battles.md](battles.md).
 - **G25. A window's holdings travel at its rest points; the window is their
-  only writer** (#17, 2026-10-15, proposed). A7.2 has the host refuse a
+  only writer** (#17, 2026-10-15, accepted by the owner the same day). A7.2 has the host refuse a
   copy older than its own latest change (a catch, battle results). Under
   G24 neither happens on the host: every copy plays the catch and the
   battle's results, and the copy of the player the catch is for stores it
