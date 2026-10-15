@@ -6,7 +6,8 @@
 -- joins it, so there is one instance; a win or a catch makes it done for
 -- the campaign, kept in the campaign file, and a window walking into a
 -- done one hears `beaten` (it counts as won); a loss, a flight, an
--- abandoned battle or a shutdown release it; a walk-in into a full battle
+-- abandoned battle or a shutdown release it; the League's rooms are never
+-- kept done; a walk-in into a full battle
 -- or while in another one is refused; a malformed encounter is dropped;
 -- the Hall of Fame's Cerulean Cave guard stays the campaign's.
 --   luajit tests/coop/encounters_test.lua
@@ -198,6 +199,25 @@ pump()
 eq(lastRejection(blue), "roster_full", "a walk-in into a full fight is refused")
 eq(battleCount(), 1, "and does not open a second instance")
 red:battleAt(id, 2, nil, nil, nil, "run")
+pump()
+
+-- the League fights everyone again on every run: never kept done --------------
+clear()
+local LORELEI = "trainer:LORELEIS_ROOM_obj_1"
+local L = { kind = "trainer", enemy = { mon("DEWGONG") }, map = "LORELEIS_ROOM", foe = "LORELEI",
+            trainer = { class = "OPP_LORELEI", index = 1 }, encounter = LORELEI }
+green:battleOpen(L, team("g", 1), 2, false)
+pump()
+id = opened(green)
+check(id ~= nil, "LORELEI is one fight while it runs")
+green:battleAt(id, 1, nil, nil, nil, "win")
+pump()
+eq(host.state.encounters[LORELEI], nil, "won, but not kept done: the next run fights her again")
+clear()
+blue:battleOpen(L, team("b", 1), 3, false)
+pump()
+check(opened(blue) ~= nil, "BLUE fights her")
+blue:battleAt(opened(blue), 1, nil, nil, nil, "run")
 pump()
 
 -- the protocol --------------------------------------------------------------------

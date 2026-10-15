@@ -40,11 +40,13 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 7 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 9 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
-added co-op battles, #18: [battles.md](battles.md)). Every message is a JSON object with a `type`. Every field from the
+added co-op battles, #18: [battles.md](battles.md); 8 added holdings and
+uids, #17: [campaign.md](campaign.md); 9 added unique encounters, #21:
+[battles.md](battles.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
