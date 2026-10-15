@@ -155,7 +155,8 @@ function H.openWild(client, game, species, level, prep)
   if prep then prep(battle.enemy.mon) end
   local opening = { kind = "wild", enemy = { Replica.pack(battle.enemy.mon) },
                     map = "FIX_TOWN", foe = species }
-  client:battleOpen(opening, Replica.packTeam(game.save.party), game.save.player.id, false)
+  client:battleOpen(opening, Replica.packTeam(game.save.party), game.save.player.id, false,
+                    Replica.room(game.save))
   return battle
 end
 
@@ -174,7 +175,8 @@ function H.bindOpener(host, client, game, battle, clients, games)
 end
 
 function H.joinBattle(host, client, game, id, clients, games)
-  client:battleJoin(id, Replica.packTeam(game.save.party), game.save.player.id, false)
+  client:battleJoin(id, Replica.packTeam(game.save.party), game.save.player.id, false,
+                    Replica.room(game.save))
   local rec
   local ok = H.run(host, clients, games, function()
     rec = client.battles[id]

@@ -22,7 +22,10 @@
 -- c.storyApplied the last of this player's patches the host applied;
 -- c:sendPatch(set, unset, bag) sends this window's change (Window.lua decides
 -- when).  Story items (#16): c.gifts lists what the host owes this player
--- (Window.lua applies each once and drops it).
+-- (Window.lua applies each once and drops it).  Pokémon (#17): the window
+-- sends its holdings at rest points (c:sendHoldings(world, boxes), Window
+-- decides when); c.uids lists the uids the host gave its rows, for the
+-- window to stamp.
 --
 -- Co-op battles (#18): c.battles holds each battle this player is in or
 -- joining, as the host sent it: { id, seed, open, inputs, rev, players, ask,
@@ -70,6 +73,7 @@ function Client.new(conn, opts)
     story = nil, -- the shared story as the host last sent it (#14)
     storyApplied = 0, storyRev = 0,
     gifts = {}, -- items the host owes this player, oldest first (#16)
+    uids = {}, -- uids the host gave this player's rows: { box, slot, uid, fp } (#17)
     battles = {}, -- battles this player is in or joining, by id (#18)
     dropped = 0,
     onWelcome = opts.onWelcome,
@@ -132,19 +136,28 @@ function Client:sendPatch(set, unset, bag)
   return self:send({ type = "patch", set = set or {}, unset = unset or {}, bag = bag })
 end
 
+-- The player's holdings at a rest point (#17, design A7.2): the world
+-- without the PC and the PC (World.split's texts), boxes nil when the PC
+-- did not change.  Returns the seq, or nil when not joined.
+function Client:sendHoldings(world, boxes)
+  return self:send({ type = "holdings", world = world, boxes = boxes })
+end
+
 -- co-op battles (#18, design A8) ----------------------------------------
 
 -- a battle this window's world opened: opening = { kind, enemy, map,
 -- trainer, hooked, foe }, team = the player's packed Pokémon
-function Client:battleOpen(opening, team, otId, expAll)
+-- room: a catch fits in this player's team or PC (#17)
+function Client:battleOpen(opening, team, otId, expAll, room)
   return self:send({ type = "battle_open", kind = opening.kind, enemy = opening.enemy,
                      map = opening.map, trainer = opening.trainer, hooked = opening.hooked,
-                     foe = opening.foe, team = team, otId = otId, expAll = expAll })
+                     foe = opening.foe, team = team, otId = otId, expAll = expAll,
+                     room = room })
 end
 
-function Client:battleJoin(id, team, otId, expAll)
+function Client:battleJoin(id, team, otId, expAll, room)
   return self:send({ type = "battle_join", battle = id, team = team, otId = otId,
-                     expAll = expAll })
+                     expAll = expAll, room = room })
 end
 
 function Client:battleCmd(id, rev, cmd)
@@ -253,6 +266,8 @@ function Client:_handle(msg)
     self:_battle(msg)
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
+  elseif t == "uids" then
+    for _, u in ipairs(msg.list) do self.uids[#self.uids + 1] = u end
   elseif t == "saved" then
     if msg.ok then self.savedAt = self.clock() end
     self.saves[#self.saves + 1] = msg

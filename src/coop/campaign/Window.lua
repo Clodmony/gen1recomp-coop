@@ -44,14 +44,31 @@
 --     last one taken (`coopGifts`), so a gift heard again after a rejoin
 --     is skipped unless the world it landed in was never saved.  A gift
 --     taken is not this window's own change.
+--   * Holdings (#17, design A7.2, A7.4, A7.5, G25): the party, current box,
+--     Pokédex, bag and money are looked at on the first rest frame after
+--     the player was held and every HOLDINGS_EVERY rest frames after (a
+--     poisoned team loses HP while walking), the PC only on that first
+--     frame (it changes only while the player is held: a PC, a catch).
+--     When they changed, the world goes to the host without the PC, the PC
+--     with it when it changed or with the first copy on a link.  The window is the only
+--     writer of its player's holdings (G24 writes battle results here), so
+--     the host takes each copy as it comes.  The first rest point only
+--     notes them: the window opened what the host has.  START > SAVE sends
+--     the world whole (flush), so nothing is sent again.  The uids the host
+--     gives rows (client.uids) are stamped at a rest point on the row that
+--     still stands there with the same fingerprint.
 
+local SaveSerializer = require("src.core.SaveSerializer")
 local Ownership = require("src.coop.campaign.Ownership")
 local Items = require("src.coop.campaign.Items")
+local World = require("src.coop.campaign.World")
+local Campaign = require("src.coop.campaign.Campaign")
 
 local Window = {}
 Window.__index = Window
 
 Window.REST_FRAMES = 3
+Window.HOLDINGS_EVERY = 60 -- rest frames between two looks at the holdings
 
 function Window.new(client)
   return setmetatable({
@@ -65,6 +82,10 @@ function Window.new(client)
     bag = nil,       -- the bag at the last rest point (Items.bag)
     money = nil,     -- the money then
     gifts = 0,       -- gifts landed (a counter for the log and the tests)
+    held = nil,      -- the holdings as last sent or noted (#17), as text
+    heldBoxes = nil, -- the PC then, as text
+    boxesTo = nil,   -- the client the PC last went to
+    holdings = 0,    -- holdings sent (a counter for the tests)
   }, Window)
 end
 
@@ -224,6 +245,70 @@ function Window:_gifts(f)
   self.client.gifts = {}
 end
 
+-- the holdings a rest point looks at, as text (#17)
+local function holdingsKey(save)
+  return SaveSerializer.encode({ party = save.party or {}, currentBox = save.currentBox,
+                                 pokedex = save.pokedex, inventory = save.inventory,
+                                 money = save.money })
+end
+
+local function boxesText(save)
+  return SaveSerializer.encode(save.boxes or {})
+end
+
+-- the holdings as they stand were sent (or are the host's already)
+function Window:_noteHoldings(save)
+  self.held, self.heldBoxes = holdingsKey(save), boxesText(save)
+  self.boxesTo = self.client
+end
+
+-- The holdings go out when they changed (#17, design A7.2); `pc` looks at
+-- the PC too.  Returns the seq, or nil when nothing went.
+function Window:_holdings(save, pc)
+  if not self.held then
+    -- noted, not sent: the PC still goes with the first copy on this link
+    self.held, self.heldBoxes = holdingsKey(save), boxesText(save)
+    return nil
+  end
+  local key = holdingsKey(save)
+  local boxes = pc and boxesText(save) or self.heldBoxes
+  if key == self.held and boxes == self.heldBoxes then return nil end
+  local rest, pcText = World.split(save)
+  local withBoxes = boxes ~= self.heldBoxes or self.boxesTo ~= self.client
+  local seq = self.client:sendHoldings(rest, withBoxes and pcText or nil)
+  if not seq then return nil end
+  self.held, self.heldBoxes = key, boxes
+  if withBoxes then self.boxesTo = self.client end
+  self.holdings = self.holdings + 1
+  return seq
+end
+
+-- the uids the host gave this window's rows (#17, design A7.3); the
+-- holdings stay noted as sent when only the uids moved
+function Window:_uids(save)
+  local list = self.client.uids
+  if type(list) ~= "table" or #list == 0 then return end
+  self.client.uids = {}
+  local same = self.held ~= nil and holdingsKey(save) == self.held
+  local sameBoxes = self.heldBoxes ~= nil and boxesText(save) == self.heldBoxes
+  local inBox = false
+  for _, u in ipairs(list) do
+    local row = World.at(save, u.box, u.slot)
+    if type(row) == "table" and Campaign.fingerprint(row) == u.fp then
+      row[Campaign.UID_FIELD] = u.uid
+      inBox = inBox or u.box > 0
+    end
+  end
+  if same then self.held = holdingsKey(save) end
+  if sameBoxes and inBox then self.heldBoxes = boxesText(save) end
+end
+
+-- a battle the world opens: the holdings so far go out first (#17)
+function Window:flushHoldings(save)
+  if not self:_ready() or not self.sent or type(save) ~= "table" then return nil end
+  return self:_holdings(save, true)
+end
+
 function Window:update(f)
   if not self:_ready() or type(f.save) ~= "table" then return end
   self:_confirm()
@@ -241,6 +326,9 @@ function Window:update(f)
   end
   self:_gifts(f)
   self:_note(f.save)
+  self:_uids(f.save)
+  local since = self.rest - Window.REST_FRAMES
+  if since % Window.HOLDINGS_EVERY == 0 then self:_holdings(f.save, since == 0) end
   self:_settle(f)
 end
 
@@ -255,6 +343,7 @@ function Window:flush(save)
   self:_confirm()
   local seq = self:_send(save)
   self:_note(save)
+  self:_noteHoldings(save)
   return seq
 end
 
