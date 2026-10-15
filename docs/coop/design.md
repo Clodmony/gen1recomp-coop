@@ -838,6 +838,13 @@ accepted both as built (2026-10-15).
 
 ### A13. Red + Blue mixing (and where Yellow fits)
 
+In place (#9, [versions.md](versions.md), G33): Red and Blue (and Rot and
+Blau) in one campaign, the refusals named, a Blue cartridge hosting a Red
+campaign, and "wild Pokémon from both versions" (A13.1 to A13.4). A save
+brought from the partner's game comes with bringing a save (#57). Yellow
+stays with Yellow (G4); the answer on mixing it is at the end of this
+section.
+
 1. **adapt** Red and Blue play one campaign (owner, D101): the host also lets in the
    other game of the same pair when both are verified dumps; another revision,
    a hack, Yellow or another language is refused ("Red or Blue of the same
@@ -860,12 +867,55 @@ accepted both as built (2026-10-15).
    player's own version. Rejected: lookup by species and level (two slots can
    share both).
 4. **carry** No cartridge data is shipped or cached: each window of a paired game
-   sends its own wild slots after every welcome (about 10 KB, session only),
+   sends its own wild slots after every welcome (about 10 KB in the source,
+   about 20 KB of JSON here; session only),
    the host passes the other version's to the other game's players; until a
    device of each version has been in, the Hosting screen says which version it
    waits for and every world keeps its own; the roll is drawn only while a
    window holds the other tables, so a campaign without the switch keeps the
-   cartridge's encounter stream (D104).
+   cartridge's encounter stream (D104). Here the extra number is drawn only
+   where the slot offers the other version's exclusive (G33).
+
+**Yellow with Red or Blue (#9, G4).** Compared by the fork's own extraction
+of the US dumps and the engine's Yellow branches (`GameVersion.isYellow()`),
+Yellow is not a third cartridge of the same game:
+
+- **Species.** 38 species differ in their data: learnsets (225 entries),
+  level-1 moves, TM and HM sets, two catch rates, front sprite sizes. Moves,
+  items and the type chart are the same. A co-op battle is one record every
+  window plays with its own cartridge's data (G24), so a Red and a Yellow
+  window would part at the first level-up move, evolution move or catch:
+  a desync on every battle that reaches one.
+- **Wild Pokémon and fishing.** Every wild table differs (59 maps), and so do
+  the Super Rod's.
+- **Trainers.** Twenty trainer classes have other teams: the rival's three
+  (EEVEE, its evolution chosen by his first battles, `Commands.rival_battle`
+  and `save.rivalStarter`), the gym leaders, Giovanni and the Rockets, with
+  Jessie and James as `OPP_ROCKET` with their own picture; eight maps have
+  other trainer headers.
+- **The story.** Pallet's opening (Oak catches PIKACHU, the rival takes
+  EEVEE), the gift starters (BULBASAUR in Cerulean, CHARMANDER on Route 24,
+  SQUIRTLE in Vermilion), Jessie and James' scenes: map objects differ on 42
+  maps and 516 texts differ. The campaign's story is a set of the
+  cartridge's flags and toggles (G21); the same flag stands for another
+  scene in the other cartridge, or for none.
+- **The Pikachu.** The follower, its mood and happiness on every step
+  (`PikachuFollower.onStep`), its scenes (Bill's house), its send-out
+  without a ball and its refusal of the THUNDERSTONE are Yellow's alone;
+  the surfing PIKACHU, the cries, the GBC colours and Yellow's intro,
+  title, Pokédex, box and option screens are too.
+- **Trades.** Yellow's in-game trades differ (27 entries).
+
+Proposal: keep mixing Yellow with Red or Blue unsupported, as now. A Yellow
+host lets in Yellow only and a Red or Blue host refuses Yellow, naming it
+("YELLOW plays with YELLOW only."). Yellow with Yellow plays co-op with every
+rule here. Mixing would need, before any story rule: battles between a
+Yellow and a Red or Blue window refused (or run on one cartridge's species
+data, which the no-shipping rule forbids), and a translation of the story
+between the two cartridges' flags, map by map. Only then would the owner's
+analogies (2026-10-13) apply: each player their own Pikachu follower, one
+gift starter each, Jessie and James under the rival-scene lock (D84), and
+the first player to finish the opening setting the rival's EEVEE line (D50).
 
 ### A14. Presence, finding the partner, the CO-OP menu and the run button
 
@@ -1041,7 +1091,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes, the League run and the Hall of Fame #55 |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
 | A12 Friend battles and trades | #23 |
-| A13 Red + Blue mixing, Yellow | #9 |
+| A13 Red + Blue mixing, Yellow | #9 ([versions.md](versions.md)) |
 | A14 Presence, finding the partner, CO-OP menu, run button | #15 ([presence.md](presence.md)); the battle, opening, friend battle and campaign file parts #34 |
 | A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
 | Local split-screen (the sibling's open #53) | #11 |
@@ -1319,3 +1369,24 @@ sibling's D-numbers.
   the starter he counters (the first finisher's); Red and Blue's later
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
+- **G33. Red and Blue are one game in two cartridges; the switch of both
+  versions is the campaign card's** (#9, 2026-10-16, proposed). A host lets
+  in its own game and dump, and the other game of its pair (Red with Blue,
+  Rot with Blau) when both are verified dumps (`GameVersion.acceptsSha1`);
+  everything else is refused `content_mismatch`, the host's log saying
+  `language`, `dump` or `game`, and the launcher naming it from the lobby.
+  The fork's extraction shows the two share species, moves, items,
+  trainers and texts, so a co-op battle's record plays the same in both
+  windows. Choose your campaign lists both games' campaigns, and a Blue
+  cartridge hosts a Red campaign whose file stays in Red's folder (A13.2).
+  "Wild Pokémon from both versions" (A13.3, A13.4) differs from the source
+  in three details: the switch lives on the hosting device's campaign card
+  (`mix`, NEW CAMPAIGN's row and the card's), not in the campaign file, so
+  it is changed between hostings and needs no file version; the window
+  draws the extra number only where the slot offers an exclusive, so a
+  slot without one keeps the cartridge's stream even with the tables held;
+  the tables are about 20 KB of JSON. A split-screen device plays one
+  cartridge for both seats (the version and the cartridge cache are one per
+  process), so a Red and a Blue player never share a device. Yellow stays
+  with Yellow (G4); the answer is in A13. Protocol 11. Details:
+  [versions.md](versions.md).
