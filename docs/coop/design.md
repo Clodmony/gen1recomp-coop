@@ -169,8 +169,8 @@ The screens are in place (#12, [launcher.md](launcher.md)), laid out after
 entry (log sharing, the logs folder) is on the HELP tab. Left for other
 issues: the line saying which games play together and the both-versions
 switch (#9); a card's badges, place and last save (campaign files, #13); the
-rival's name and how a new player starts (#22); the split-screen entry
-(#11); a phone layout run on a phone (#7).
+split-screen entry (#11); a phone layout run on a phone (#7). The rival's
+name (#22) and how a new player starts (#57, G28) are in place.
 
 1. **adapt** Start screen: cartridge tiles (Ready / needs re-import / not imported),
    the pick remembered, a line saying which games play together; HOST and JOIN;
@@ -290,8 +290,11 @@ rival's name and how a new player starts (#22); the split-screen entry
 
 In place (#22, [opening.md](opening.md), G27): the opening on a private
 story, the names, the rival's starter, a new campaign's story, "in the
-opening" and no save in it (A4.4 to A4.9). Split into #57 (owner,
-2026-10-15): the start in Pallet Town and bringing a save (A4.1 to A4.3).
+opening" and no save in it (A4.4 to A4.9). In place (#57,
+[opening.md](opening.md) § Other starts, G28): the start in Pallet Town
+(Red and Blue; not Yellow) and bringing a solo save (A4.1 to A4.3), with
+the canned story a skipper brings to a campaign with none (A4.7), and the
+launcher's choice (A2.3, A2.5).
 
 1. **adapt** Three ways to start: **play Oak's opening** (default); **start in Pallet
    Town** with a chosen starter at level 5 and 3000 money; **bring a trainer**
@@ -1319,3 +1322,35 @@ sibling's D-numbers.
   the starter he counters (the first finisher's); Red and Blue's later
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
+- **G28. A new player's start is written by the launcher and kept by the
+  host** (#57, 2026-10-16, proposed). A4.1 to A4.3 leave open where a
+  skipper's world is made and how it reaches the campaign. Here the
+  launcher asks HOW YOU START (THE OPENING, START IN PALLET with a
+  STARTER, BRING A SAVE with a pick of the device's solo saves past Oak's
+  lab) on NEW CAMPAIGN and, for a player the host does not know, on the
+  connection check. On entering, and only when the host has no world for
+  the player (`world` `fresh`; a returning player gets the campaign's,
+  A4.3), it writes the start world into the campaign's slot with a
+  `coopStart` mark: for Pallet, a new game's skeleton with the starter at
+  level 5 (species, level, experience, DVs, its two first moves), 3000
+  money, the starter's flags and Pokédex, standing at Pallet Town's
+  blackout cell, and the story #22's played run seeded (Oak's walk flags,
+  the rival fought, Oak in the lab, the player's and the rival's
+  counter-pick balls gone as `oaks_lab.lua`'s ball rows hide them,
+  Pallet's Oak hidden); for a brought save, the save as it stands. The
+  game opens it with CONTINUE, so the game's own load checks it
+  (migrations, `SaveData.validate`, which also derives the starter's
+  stats and PP, the trainer stamped on every Pokémon). At its first rest
+  point the window sends it whole (`start`, protocol 11) and waits; the
+  host refuses it as `returning` when it has the player's world, else
+  keeps it (its trainer id with it, A4.2), seeds a campaign with no story
+  from its entries (A4.3, A4.7) with the late joiner's list for its key
+  items (A6.5), sets the rival's starter from it if unset (A4.6), clears
+  "in the opening", sends the story and answers `started`; the window then
+  opens as a late window, so a skipper into a campaign with a story takes
+  the campaign's over its own. The host decides the seed, so two skippers
+  never mix two stories. Yellow offers no START IN PALLET: its opening
+  (Oak catches PIKACHU, who follows; one ball; the rival's EEVEE, whose
+  later form #9 decides) is not captured and no Yellow run checked it, so
+  a Yellow player plays the opening or brings a save. A second seat on a
+  split-screen device plays the opening. Details: [opening.md](opening.md).

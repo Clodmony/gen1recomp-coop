@@ -140,7 +140,10 @@ there keeps running while the launcher shows it and on into the game.
   save folder; RESTORE BACKUP brings the card back. NEW CAMPAIGN asks for the
   campaign's name, the trainer's (16 and 7 characters) and the rival's
   (RIVAL NAME: empty, ASK IN THE GAME, leaves him to Oak's speech; #22,
-  [opening.md](opening.md)) and hosts it.
+  [opening.md](opening.md)) and how the host's player starts (HOW YOU
+  START: THE OPENING, START IN PALLET with a STARTER, or BRING A SAVE, which
+  lists this device's solo saves past Oak's lab; Red and Blue only for
+  Pallet; #57, [opening.md](opening.md) § Other starts) and hosts it.
 - **Hosting**: the players in (this device's player marked, a partner on
   another cartridge named with it) out of the host's player limit, the
   addresses partners join at (up to two, a VPN address first, then the home
@@ -165,7 +168,8 @@ there keeps running while the launcher shows it and on into the game.
   after the minute "could not reach" and a checklist for the kind of address
   (a VPN address: the VPN on both devices; a home address: the same network
   and the firewall; a public address: port forwarding). A device the host
-  knows sees one JOIN AS <name>; a new player can type a NEW NAME first. A
+  knows sees one JOIN AS <name>; a new player can type a NEW NAME first and
+  chooses HOW YOU START as on NEW CAMPAIGN (#57). A
   refusal is named exactly ("The host plays RED. This game is BLUE.", another
   language, another dump, another protocol, a full or closing session), with
   USE <GAME> when another imported cartridge fits. Once joined, the game
@@ -188,7 +192,9 @@ own, created and named after the campaign the first time (decision G10 in
 active one. Since #13 the player's progress lives in the host's campaign
 file ([campaign.md](campaign.md)). Entering writes the player's world from it
 into the slot, so the title screen offers CONTINUE with it. A player the
-campaign has no world for keeps the slot as it is: NEW GAME the first time.
+campaign has no world for keeps the slot as it is: NEW GAME the first time;
+one who chose START IN PALLET or BRING A SAVE gets that world in the slot,
+and CONTINUE opens it (#57).
 A split-screen second player plays in a second slot of the campaign
 (`slot2`, "<campaign> P2").
 The launcher puts the solo slot back when it opens again (a fresh empty slot

@@ -40,13 +40,13 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 10 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 11 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
 added co-op battles, #18: [battles.md](battles.md); 8 added holdings and
 uids, #17: [campaign.md](campaign.md); 9 added unique encounters, #21:
-[battles.md](battles.md); 10 added the opening, #22: [opening.md](opening.md)). Every message is a JSON object with a `type`. Every field from the
+[battles.md](battles.md); 10 added the opening, #22: [opening.md](opening.md); 11 added how a new player starts, #57: [opening.md](opening.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -63,6 +63,7 @@ checks what the host sends.
 | `patch` | `seq`, `set` (story path to value: a boolean or a whole number 0 to 255), `unset` (paths): this window's change to the shared story since its last patch, at most 8192 entries each, `bag` (optional, #16: `gained` and `lost`, item id to a count 1 to 999, and `spent`, the money went down; the window's bag change in the same rest-to-rest change) |
 | `battle_open`, `battle_join`, `battle_cmd`, `battle_suggest`, `battle_at` | co-op battles (#18): [battles.md](battles.md) |
 | `opening` | `seq`, `done` (the window plays the opening, or finished it), `rival` (optional: the rival's name given in Oak's speech), `chose` (optional, with `done`: the starter it took) (#22): [opening.md](opening.md) |
+| `start` | `seq`, `how` (`pallet` or `save`), `save` (the world the launcher started, the game's save text with the PC, at most 1.5 MiB): a new player's start, sent once per link at the window's first rest point (#57): [opening.md](opening.md) |
 
 | Host to client | Fields |
 |---|---|
@@ -74,7 +75,8 @@ checks what the host sends.
 | `story` | `rev`, `base` (the whole story, replacing the window's), `set`, `unset` (what changed since the last `story` to this player), `applied` (the last of this player's patches the host applied) |
 | `gifts` | `list` (#16): items the campaign owes this player, oldest first, each `seq`, `item`, `qty` (below 0 takes), `once` (not given to a player who holds one), `from` (the partner's name), `race` (a take-back); at most 256 a message |
 | `battle` | a battle this player is in or joining (#18): [battles.md](battles.md); `state` then also names each player's `battle` and lists the running `battles` |
-| `rejected` | `seq` (-1 for a refused hello), `reason` |
+| `started` | `seq` (the window's `start`), `seeded` (it began the campaign's story): the host kept the start; the story went first (#57) |
+| `rejected` | `seq` (-1 for a refused hello), `reason` (a `start` is refused `returning` when the campaign has the player's world, #57) |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
 
