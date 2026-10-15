@@ -6,59 +6,25 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-15 (after Group 5a, #16, PR #49).
+Last updated 2026-10-15 (after merging #42-#49).
 
 ## Repository state
 
-- Default branch `gen1recomp-coop`; `main` = upstream main. Nothing of
-  Groups 2a to 5a is merged yet; no owner comments on #42-#46, #48, #49.
-- The owner accepted G14, G20, G21 and G22 as built (2026-10-15); the
-  acceptance is recorded in `docs/coop/design.md` on #49's branch.
-- Milestones: Group 5a (#16) is done by #49; Group 7a holds #17.
-
-## Open pull requests (all draft, stacked; the owner reviews and says which to merge)
-
-- **#42** `coop/group2a-german` into `gen1recomp-coop`: launcher redesign (#38)
-  and German launcher (#41). G13, G14 (accepted 2026-10-15, recorded on #49's branch). Its body
-  says "Closes #38": the owner wants #38 closed with it. The German
-  wording was accepted as written (the "Better German" column stays empty).
-- **#43** `coop/group2a-german-games` on #42's branch: the rest of #25, G15.
-- **#44** `coop/group2a-yellow-de` on #43's branch: German Yellow (#40), G16.
-- **#45** `coop/group3-launcher-screens` on #44's branch: Group 3, closes #4,
-  #5, #6 (G17-G19).
-- **#46** `coop/group4-campaign-state` on #45's branch: closes #13 (campaign
-  files, G20 accepted 2026-10-15).
-- **#48** `coop/group5-shared-world` on #46's branch: closes #14 (the
-  shared world, G21 accepted 2026-10-15, protocol 5, campaign file version 2).
-- **#49** `coop/group5a-story-items` on #48's branch (head: the live-run
-  docs commit plus this note): closes #16. `src/coop/campaign/Items.lua`.
-  - A patch carries its window's bag change, and the host shares, takes
-    and takes back.
-  - Owed items (`gifts`) wait in the campaign file. They land once at a
-    rest point (`save.coopGifts`), and the host drops them once a saved
-    world shows them.
-  - `gift:<item>` commits build the late joiner's list.
-  - The bag holds 40 rows during a session, and a campaign's slot has no
-    EXPORT.
-  - Protocol 6, campaign file version 3. Decision **G22** (accepted by
-    the owner 2026-10-15, as built).
-    Docs: `docs/coop/items.md`.
-  - Verify: 36/37 (only the javac tier fails locally).
-  - Live run (US Red, three processes) passed: an item ball, Daisy's TOWN
-    MAP, the bike shop's BICYCLE for the voucher, the gift race and a late
-    joiner. Not run live: a gift TM, a full bag's spill, a rejoin landing
-    an unsaved gift.
-- **The owner approved merging all of them (2026-10-15).** Next session,
-  first: merge #42, #43, #44, #45, #46, #48, #49 in that order into
-  `gen1recomp-coop`, each locally as Claude (`git merge --no-ff`, never
-  `gh pr merge`), push, run `tools/verify.sh`, then start Group 6.
+- Default branch `gen1recomp-coop`; `main` = upstream main. Groups 1 to 5a
+  are merged: #42, #43, #44, #45, #46, #48, #49 went in on 2026-10-15
+  (locally as Claude, `--no-ff`), closing #38, #41, #25, #40, #4, #5, #6,
+  #13, #14, #16. `tools/verify.sh` on the merge: 36/37 (only the javac
+  tier fails locally); `coop-ci` passed on it.
+- The owner accepted G14, G20, G21 and G22 as built, and the German
+  wording as written (the "Better German" column stays empty).
+- No open pull requests.
 
 ## Next candidates
 
 - **Group 6 (#11)**, split-screen: `CoopSettings.slots` is keyed by campaign
   only; a second seat needs its own slot (design A3.14), and its own
-  `Window` (one per client already). Note: `Items.openBag` raises the one
-  shared `Data.constants.bagSize`, which suits two seats in one process.
+  `Window` (one per client already). `Items.openBag` raises the one shared
+  `Data.constants.bagSize`, which suits two seats in one process.
 - **Group 7 (#18 and the rest)**, battles, then **Group 7a (#17)** party
   and PC at rest points (design A7; a window's party sync would ride on the
   same rest points as the story and gifts).
@@ -98,10 +64,9 @@ Last updated 2026-10-15 (after Group 5a, #16, PR #49).
 
 ## Worktrees and background processes
 
-- Main checkout on `gen1recomp-coop` (leave it). Superset worktrees on
-  `coop/group5-shared-world` (from the last session) and
-  `coop/group5a-story-items`, both pushed and clean. No scratch worktrees
-  or background processes. Group 5a's scratch is deleted.
+- Main checkout on `gen1recomp-coop` (leave it; it is behind origin until
+  pulled). One Superset worktree on `coop/group5a-story-items` (merged).
+  No background processes.
 
 ## Still open
 
@@ -111,10 +76,10 @@ Last updated 2026-10-15 (after Group 5a, #16, PR #49).
 
 ## Cleanup the owner may approve
 
-- Done 2026-10-15 (owner approved): old scratch (`ref/`, `probe/`,
-  `shot/`, `launcher-run*.log`, `verify/`) and the merged local branches
+- Done 2026-10-15: old scratch, the merged local branches
   `coop/10-session-core`, `coop/25-german`, `coop/group1-cleanup`,
-  `coop/group2-first-playable` are deleted; #48's worktree was already gone.
-- Left: scratch `g2a/` (delete after #42/#43 merge), the merged local
-  branch `coop/workflow-groups`, and each group's worktree and branches once
-  its PR is merged.
+  `coop/group2-first-playable`.
+- Asked at the end of the session (see the answers in the next note, or
+  ask again): close the finished milestones (Groups 1, 2a, 3, 4, 5, 5a),
+  delete the merged branches (local and on GitHub), remove the merged
+  worktree, delete scratch `g2a/` and `coop/workflow-groups`.
