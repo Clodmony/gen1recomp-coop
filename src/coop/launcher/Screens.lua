@@ -321,8 +321,9 @@ function S.play(p, menu, c)
   local soloI, soloRow = rowOf(rows, "solo")
   local label = Games.label(version)
   local soloW = fitWidth(L("PLAY SOLO →"))
+  -- which games play together (#9): Red with Blue, Yellow with Yellow
   p:para(c.x, y + 5, c.w - soloW - 8,
-    L("%s → %s · Matching cartridge required today", label, label), "muted", 1, 2)
+    L("%s plays with %s", label, CoopMenu.togetherText(version)), "muted", 1, 2)
   rowButton(p, c.x + c.w - soloW, y, soloW, 22, soloI, soloRow,
     { style = "quiet", label = L("PLAY SOLO →") })
   y = y + 30
@@ -618,6 +619,7 @@ local function savesList(p, saves, c)
     local bw = (idx.play and bws[1] + 6 or 0) + bws[2] + bws[3] + 6
     local inline = c.w - bw - 20 >= 180
     local ch = inline and 3 * LINE + 14 or 3 * LINE + 44
+    if mixI then ch = ch + 28 end
     p:rect(c.x, y, c.w, ch, slot.active and "lcd" or "paper")
     p:frame(c.x, y, c.w, ch, slot.active and "accent" or "line", slot.active and 2 or 1)
     local tw = inline and c.w - bw - 30 or c.w - 20
@@ -631,7 +633,7 @@ local function savesList(p, saves, c)
       or (slot.label and slot.label ~= "" and slot.label ~= slot.name and L("%s · %s", slot.id, slot.label) or slot.id)
     p:text(c.x + 10, y + 7 + 2 * LINE, Ui.fit(line3, tw), "muted")
     local bx = inline and c.x + c.w - bw - 10 or c.x + 10
-    local by = inline and y + math.floor((ch - 22) / 2) or y + 3 * LINE + 14
+    local by = inline and y + math.floor((ch - (mixI and 28 or 0) - 22) / 2) or y + 3 * LINE + 14
     if idx.play then
       rowButton(p, bx, by, bws[1], 22, idx.play, rows[idx.play], { style = "primary" })
       bx = bx + bws[1] + 6
@@ -788,8 +790,11 @@ function C.list(p, coop, c, top)
     local hostI, renI, delI = idx.campaign, idx.rename, idx.delete
     local bws = { fitWidth(L("HOST →")), fitWidth(L("RENAME")), fitWidth(L("DELETE")) }
     local bw = bws[1] + bws[2] + bws[3] + 12
+    -- the switch of wild Pokémon from both versions (#9), its own line
+    local mixI = idx.mix
     local inline = c.w - bw - 20 >= 180
     local ch = inline and 3 * LINE + 14 or 3 * LINE + 44
+    if mixI then ch = ch + 28 end
     p:rect(c.x, y, c.w, ch, "paper")
     p:frame(c.x, y, c.w, ch, "line")
     local tw = inline and c.w - bw - 30 or c.w - 20
@@ -798,13 +803,17 @@ function C.list(p, coop, c, top)
     p:text(c.x + 10, y + 7 + LINE, Ui.fit(who, tw), "muted")
     p:text(c.x + 10, y + 7 + 2 * LINE, Ui.fit(when, tw), "muted")
     local bx = inline and c.x + c.w - bw - 10 or c.x + 10
-    local by = inline and y + math.floor((ch - 22) / 2) or y + 3 * LINE + 14
+    local by = inline and y + math.floor((ch - (mixI and 28 or 0) - 22) / 2) or y + 3 * LINE + 14
     for k, i in ipairs({ hostI, renI, delI }) do
       if i then
         rowButton(p, bx, by, bws[k], 22, i, rows[i], {
           label = k == 1 and L("HOST →") or nil, style = k == 1 and "primary" or nil })
       end
       bx = bx + bws[k] + 6
+    end
+    if mixI then
+      local mw = fitWidth(rows[mixI].label)
+      rowButton(p, c.x + c.w - mw - 10, y + ch - 28, mw, 22, mixI, rows[mixI])
     end
     y = y + ch + 6
   end
@@ -843,6 +852,19 @@ function C.new(p, coop, c)
     py = py + LINE + 2
     rowButton(p, c.x + 10, py, c.w - 20, 24, i, row, { label = row.value, detail = L("EDIT") })
     py = py + 32
+  end
+  -- wild Pokémon from both versions (#9, design A13.3), a game with a pair
+  do
+    local i, row = rowOf(rows, "mix")
+    if row then
+      p:text(c.x + 10, py, row.label, "ink")
+      py = py + LINE + 2
+      rowButton(p, c.x + 10, py, c.w - 20, 24, i, row, { label = row.value, detail = L("CHANGE") })
+      py = py + 28
+      py = py + p:para(c.x + 10, py, c.w - 20,
+        L("The other version's wild Pokémon appear in half of their places. Changeable later on the campaign's card."),
+        "muted") + 8
+    end
   end
   p:text(c.x + 10, py, L("CARTRIDGE"), "ink")
   p:text(c.x + 10 + 90, py, L("%s · %s", Games.label(coop.version),
@@ -916,6 +938,13 @@ function C.hosting(p, coop, c)
     p:text(a.x + 18, ly + 4 + LINE, Ui.fit(what, a.w - 36), "muted")
     ly = ly + 2 * LINE + 12
   end
+  -- wild Pokémon from both versions (#9): on, or the version it waits for
+  if d.mix then
+    local text = d.mix.waiting
+      and L("Wild Pokémon from both versions: waiting for a %s player.", Games.label(d.mix.waiting))
+      or L("Wild Pokémon from both versions: on.")
+    ly = ly + p:para(a.x + 10, ly, a.w - 20, text, "ink") + 4
+  end
   ly = ly + p:para(a.x + 10, ly, a.w - 20, L("You can enter now. Friends can join later."), "muted")
   close(ly + 10)
   local by = wide and y or ly + 22
@@ -974,7 +1003,7 @@ function C.join(p, coop, c)
         or L("%d players", n.players)), tw), "muted")
     local fit = n.fit == coop.version and L("Your cartridge fits")
       or (n.fit and L("Joins with %s", Games.label(n.fit)))
-      or L("Needs %s", Games.label(n.game))
+      or L("Needs %s", CoopMenu.togetherText(n.game)) -- #9: or the other of its pair
     p:text(a.x + 10, ly + 6 + 2 * LINE, Ui.fit(fit, tw), n.fit and "muted" or "error")
     rowButton(p, a.x + a.w - bw - 10, ly + math.floor((ch - 22) / 2), bw, 22, it.index, it.row,
       { label = it.row.label .. " →" })

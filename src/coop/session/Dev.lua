@@ -9,7 +9,8 @@
 -- from its file (#13) instead of a new one.  --coop-split[=NAME]
 -- (POKEPORT_COOP_SPLIT=NAME, or 1) adds a second player on this device in
 -- split-screen (#11, src/coop/split/Split.lua), named NAME when the host
--- does not know them yet.
+-- does not know them yet.  --coop-mix (POKEPORT_COOP_MIX=1) hosts with
+-- "wild Pokémon from both versions" on (#9).
 -- The launcher's co-op screens (#12) are the way in for players; this entry
 -- skips them for scripted runs.  Once a game runs, the host side hosts a
 -- new campaign on UDP PORT (default 24680) with the LAN beacon, and the
@@ -46,6 +47,8 @@ function Dev.parse(args, getenv)
       cfg.campaign = value
     elseif key == "split" then
       cfg.split = value ~= "" and value or "1"
+    elseif key == "mix" then
+      cfg.mix = value ~= "off" and value ~= "0"
     end
   end
   if not cfg.mode then
@@ -60,6 +63,11 @@ function Dev.parse(args, getenv)
   cfg.name = cfg.name or getenv("POKEPORT_COOP_NAME")
   if not Protocol.name(cfg.name) then cfg.name = cfg.mode == "host" and "HOST" or "GUEST" end
   cfg.port = cfg.port or Transport.DEFAULT_PORT
+  -- wild Pokémon from both versions (#9): a new campaign's switch
+  if cfg.mix == nil then
+    local mix = (getenv("POKEPORT_COOP_MIX") or ""):lower()
+    cfg.mix = mix == "1" or mix == "on" or mix == "yes" or mix == "true"
+  end
   cfg.campaign = cfg.campaign or getenv("POKEPORT_COOP_CAMPAIGN")
   if not Protocol.campaignId(cfg.campaign) then cfg.campaign = nil end
   cfg.split = cfg.split or getenv("POKEPORT_COOP_SPLIT")
@@ -92,7 +100,7 @@ function Dev.start()
     local refused
     Dev.session, refused = Session.startHost({
       campaign = { id = cfg.campaign or ("c" .. Random.hex(16)),
-                   title = cart.game:upper() .. " CO-OP" },
+                   title = cart.game:upper() .. " CO-OP", mix = cfg.mix },
       cartridge = cart, name = cfg.name, port = cfg.port, shareLogs = cfg.shareLogs,
     })
     if not Dev.session then
