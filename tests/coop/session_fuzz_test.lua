@@ -80,6 +80,10 @@ local VALID = {
     battle_takeover = { type = "battle_takeover", seq = 10, battle = "b00000001",
                         owner = "p00000002" },
     opening = { type = "opening", seq = 11, done = true, rival = "GARY", chose = "SQUIRTLE" },
+    -- the Cable Club (#60)
+    cable = { type = "cable", seq = 12, room = "trade", with = "p00000002" },
+    cable_link = { type = "cable_link", seq = 13, round = 1,
+                   link = { type = "party", mons = { BATTLE_MON } }, uids = { "p0001:12" } },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -91,7 +95,7 @@ local VALID = {
     state = { type = "state", you = "p00000001", last_seq = 3, nearby = { "p00000002" },
               players = { { id = "p00000001", name = "RED", game = "red", connected = true,
                             map = "ROUTE_1", x = 1, y = 2, facing = "down", travel = "bike",
-                            battle = "b00000001", opening = false } },
+                            battle = "b00000001", opening = false, cable = "trade" } },
               saved_ago = 12, busy = "", rival = "GARY", chose = "BULBASAUR",
               battles = { { id = "b00000001", by = "p00000001", kind = "wild",
                             players = { "p00000001" }, foe = "PIDGEY", joinable = true,
@@ -125,6 +129,11 @@ local VALID = {
                ask = "replace", by = "p00000001",
                suggestions = { { by = "p00000002", cmd = { kind = "replace", index = 3 } } },
                ended = "lose" },
+    -- the Cable Club (#60)
+    cable = { type = "cable", room = "trade", round = 2, mate = "p00000002", name = "BLUE",
+              lead = true },
+    cable_link = { type = "cable_link", round = 2, link = { type = "confirm", ok = true },
+                   uid = "p00000002:3" },
   },
 }
 

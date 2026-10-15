@@ -64,6 +64,7 @@ local Campaign = require("src.coop.campaign.Campaign")
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
 local HostBattles = require("src.coop.battle.HostBattles")
+local HostCable = require("src.coop.session.HostCable")
 
 local Host = {}
 Host.__index = Host
@@ -282,6 +283,7 @@ function Host:_disconnect(link, why)
     self.dirty = true
     self:_log("left", { why = why }, p)
     HostBattles.left(self, p)
+    HostCable.left(self, p) -- #60: their cable is gone, for their mate too
     -- a player leaving saves the campaign (design A3.9); nobody has to save
     -- before leaving (A3.12)
     if self.status == "running" then self:_autosave("leave") end
@@ -655,7 +657,10 @@ local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    battle_at = battleHandler(HostBattles.at),
                    battle_leave = battleHandler(HostBattles.leave),
                    battle_rejoin = battleHandler(HostBattles.rejoin),
-                   battle_takeover = battleHandler(HostBattles.takeover) }
+                   battle_takeover = battleHandler(HostBattles.takeover),
+                   -- the Cable Club (#60): same shape, a refusal changes nothing
+                   cable = battleHandler(HostCable.enter),
+                   cable_link = battleHandler(HostCable.link) }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -678,7 +683,8 @@ function Host:_receive(link, raw)
   -- their handlers, as a summary; a window's battle reports are many
   local t = msg.type
   if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "holdings" and t ~= "battle_open"
-     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" then
+     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening"
+     and t ~= "cable_link" then -- #60: HostCable logs what a cable does
     self:_log("message", msg, link.player)
   end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
@@ -687,10 +693,11 @@ end
 
 -- state -----------------------------------------------------------------
 
-local function publicView(p, battle)
+local function publicView(p, battle, cable)
   return { id = p.id, name = p.name, game = p.game, connected = p.connected,
            map = p.map, x = p.x, y = p.y, facing = p.facing,
-           travel = p.map and p.travel or nil, battle = battle, opening = p.opening }
+           travel = p.map and p.travel or nil, battle = battle, opening = p.opening,
+           cable = cable } -- #60: in a Cable Club room
 end
 
 function Host:_broadcast()
@@ -699,7 +706,7 @@ function Host:_broadcast()
   local busy = self:busy() or ""
   local players = {}
   for i, p in ipairs(self.players) do
-    players[i] = publicView(p, HostBattles.fighting(self, p.id))
+    players[i] = publicView(p, HostBattles.fighting(self, p.id), HostCable.room(self, p.id))
   end
   local battles = HostBattles.summaries(self)
   for _, link in ipairs(self.links) do
@@ -782,6 +789,7 @@ function Host:update()
   if self.status == "running" then
     self:_shareOwnLog()
     HostBattles.tick(self, now)
+    HostCable.tick(self, now) -- #60: a stalled trade goes back to its lists
   end
   if self.status == "ending" and (#self.links == 0 or now >= self.endAt) then
     self:_finish()

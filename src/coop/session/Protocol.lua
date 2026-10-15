@@ -29,8 +29,11 @@ local Protocol = {}
 -- opening is, and in `state`; a walk-in joins the running one.  10: the
 -- opening (#22): a window's `opening` (in it or done, the rival's name,
 -- the starter chosen), and who is in it, the rival's name and the
--- starter he counters in `state`.
-Protocol.VERSION = 10
+-- starter he counters in `state`.  11: the Cable Club (#60): a window's
+-- `cable` (enter a room, leave it) and `cable_link` (a link-cable message
+-- for its mate), the host's `cable` (the room, the mate, the round) and
+-- `cable_link`, and who is in a Cable Club room in `state`.
+Protocol.VERSION = 11
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -66,6 +69,8 @@ Protocol.REASONS = {
   no_pokemon = true, run_initiator = true,
   -- leaving and taking over (#20)
   opener_stays = true, not_away = true,
+  -- the Cable Club (#60)
+  no_cable = true,
 }
 
 -- a player's world travels as the game's save text (World.lua checks it):
@@ -317,6 +322,7 @@ local publicPlayer = record({
   map = Protocol.mapId, x = cell, y = cell, facing = enum(FACINGS),
   travel = enum(TRAVELS), battle = pattern("^b[0-9a-f]+$", 17),
   opening = bool, -- #22: playing the opening (design A4.8)
+  cable = enum({ trade = true, colosseum = true }), -- #60: in a Cable Club room
 })
 
 -- the lobby view of a player (probe answers and the LAN beacon)
@@ -450,6 +456,31 @@ local battleSummary = record({
 -- the starters a rival counters (#22, design A4.6); Yellow's is #9
 Protocol.STARTERS = { BULBASAUR = true, CHARMANDER = true, SQUIRTLE = true }
 
+-- the Cable Club (#60, design A12.7 to A12.9) ------------------------------
+
+-- the rooms behind the receptionist; "none" leaves them
+Protocol.CABLE_ROOMS = { trade = true, colosseum = true }
+local cableRoom = enum({ trade = true, colosseum = true, none = true })
+-- the messages of upstream's link cable a Cable Club room carries
+-- (src/link/LinkState.lua, Protocol.TradeSession, LinkBattle): each is
+-- checked by the cable's own sanitizer (src/link/Wire.lua) and keeps only
+-- its fields there
+Protocol.CABLE_LINK_TYPES = {
+  hello = true, records = true, party = true, pick = true, confirm = true,
+  action = true, hash = true, replace = true, bye = true, forfeit = true,
+}
+local function cableLink(v)
+  if type(v) ~= "table" or type(v.type) ~= "string" or not Protocol.CABLE_LINK_TYPES[v.type] then
+    return nil, "not a cable message"
+  end
+  local ok, clean = pcall(require("src.link.Wire").sanitize, v)
+  if not ok or type(clean) ~= "table" then return nil, "bad cable message" end
+  return clean
+end
+Protocol.cableLink = cableLink
+local cableUid = pattern("^[%w_:%-]*$", 40) -- a row's uid, "" for none
+Protocol.MAX_CABLE_PARTY = 6
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -517,6 +548,14 @@ Protocol.TO_HOST = {
   -- TAKE OVER for `owner`, who dropped (design A11.6)
   battle_takeover = record(withType("battle_takeover", { seq = seq, battle = Protocol.battleId,
                                                          owner = Protocol.playerId })),
+  -- the Cable Club (#60): enter a room behind the receptionist (with: a
+  -- partner this player offered the cable to) or leave it ("none")
+  cable = record(withType("cable", { seq = seq, room = cableRoom }), { with = Protocol.playerId }),
+  -- a link-cable message for this player's mate, in round `round`; uids:
+  -- with a `party`, the uid of each Pokémon in it ("" for none)
+  cable_link = record(withType("cable_link", { seq = seq, round = int(1, Protocol.MAX_SEQ),
+                                               link = cableLink }),
+                      { uids = listOf(cableUid, Protocol.MAX_CABLE_PARTY) }),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -592,6 +631,17 @@ Protocol.TO_CLIENT = {
     suggestions = listOf(record({ by = Protocol.playerId, cmd = cmd }), Protocol.MAX_PLAYERS),
     ended = enum(Protocol.RESULTS),
   }),
+  -- the Cable Club (#60): this player's room ("none": out of it), and once
+  -- a mate is found, who (mate, name) and whether this window leads the
+  -- link (lead: it deals the battle's seed); round: the trade's round,
+  -- moved on when the host turned a stalled one back to the lists
+  cable = record(withType("cable", { room = cableRoom, round = int(0, Protocol.MAX_SEQ) }),
+                 { mate = Protocol.playerId, name = name, lead = bool }),
+  -- the mate's link-cable message, in round `round`; uid: with the
+  -- trade's last confirm, the uid of the Pokémon this player receives
+  cable_link = record(withType("cable_link", { round = int(1, Protocol.MAX_SEQ),
+                                               link = cableLink }),
+                      { uid = cableUid }),
 }
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))
