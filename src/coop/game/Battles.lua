@@ -182,7 +182,13 @@ function JoinWait:update()
   local s = session()
   self.frames = self.frames + 1
   local function close(text)
-    if game.stack:top() == self then game.stack:pop() end
+    if game.stack:top() == self then
+      game.stack:pop()
+    else
+      for i, st in ipairs(game.stack.states or {}) do
+        if st == self then table.remove(game.stack.states, i) break end
+      end
+    end
     if text then
       local Notices = require("src.coop.game.Notices")
       Notices.push(text)
@@ -210,6 +216,7 @@ function JoinWait:update()
     if input.kind == "join" and input.player == client.player then mine = true end
   end
   if not mine then return end
+  if rec.bound then return close() end
   local b = Replica.build(game, rec, { client = client, id = self.id, me = client.player,
                                        real = game, live = self.live, onEnd = onEnd(game, true) })
   rec.bound = true
