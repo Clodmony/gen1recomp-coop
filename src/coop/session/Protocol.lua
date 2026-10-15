@@ -25,8 +25,9 @@ local Protocol = {}
 -- `battle_at` to the host, `battle` to the client, and who is in which
 -- battle in `state`.  8: Pokémon, party and PC (#17): a window's
 -- `holdings` at its rest points, the host's `uids`, and each team's `room`
--- for a catch.
-Protocol.VERSION = 8
+-- for a catch.  9: unique encounters (#21): the `encounter` a battle's
+-- opening is, and in `state`; a walk-in joins the running one.
+Protocol.VERSION = 9
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -416,9 +417,20 @@ local opening = {
   kind = enum({ wild = true, trainer = true }),
   enemy = listOf(mon, Protocol.MAX_TEAM), map = Protocol.mapId,
 }
+-- a unique encounter (#21, design A10.1 to A10.3): a trainer or a one-off
+-- wild Pokémon, by its map object (`trainer:ROUTE_3_obj_5`)
+local encounterPattern = pattern("^%l+:[%w_]+$", 48)
+local function encounter(v)
+  local s, why = encounterPattern(v)
+  if not s then return nil, why end
+  local kind = s:match("^(%l+):")
+  if kind ~= "trainer" and kind ~= "static" then return nil, "encounter kind" end
+  return s
+end
+Protocol.encounter = encounter
 local openingOpt = {
   trainer = record({ class = dataId, index = int(1, 64) }, { rival = name }),
-  hooked = bool, foe = text(20),
+  hooked = bool, foe = text(20), encounter = encounter,
 }
 -- one input of a battle, in the order every window applies them: a team
 -- that joined, or an accepted command
@@ -429,7 +441,7 @@ local input = record({ kind = enum({ join = true, cmd = true }), player = Protoc
 local battleSummary = record({
   id = Protocol.battleId, by = Protocol.playerId, kind = enum({ wild = true, trainer = true }),
   players = listOf(Protocol.playerId, Protocol.MAX_ROSTER),
-}, { foe = text(20), joinable = bool })
+}, { foe = text(20), joinable = bool, encounter = encounter })
 
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the

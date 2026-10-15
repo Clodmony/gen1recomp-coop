@@ -734,6 +734,7 @@ characters, a menu row fewer.
 | JOIN %s | %s HELFEN | |
 | Joining %s... | Zu %s... | |
 | The battle is full. | Der Kampf ist voll. | |
+| %s was already beaten. | %s ist schon besiegt. | |
 | The battle is over. | Der Kampf ist vorbei. | |
 | Could not join the battle. | Beitritt zum Kampf ging nicht. | |
 | %s caught / %s! | %s hat / %s gefangen! | |

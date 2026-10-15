@@ -43,6 +43,16 @@
 -- whose link was down when their battle ended hears the end once back
 -- (A11.8).
 --
+-- Unique encounters (#21, design A10.1 to A10.3): a battle a trainer or a
+-- one-off wild Pokémon opened names it (`encounter`, by its map object).
+-- It has at most one running instance: a window whose world walks into a
+-- running one joins that fight instead (queued like any join).  A win, or
+-- a catch, makes it done for the campaign (the victory's commit, kept in
+-- the campaign's `encounters`), and a window walking into a done one is
+-- refused `beaten`: its world counts it as won without a fight.  A loss, a
+-- flight, an abandoned battle or a shutdown release it.  `state` names the
+-- running ones, so a partner's trainer spots nobody (the sight gate, A10.4).
+--
 -- State lives on the host: host.battles (id -> battle) and host.joins
 -- (player id -> queued join); Host:busy() reads both (design A3.7).
 
@@ -132,15 +142,41 @@ local function hasRoom(b, pid)
   return false
 end
 
+-- the running battle of a unique encounter, or nil (#21)
+function HostBattles.running(host, encounter)
+  for _, b in pairs(host.battles) do
+    if not b.ended and b.open.encounter == encounter then return b end
+  end
+  return nil
+end
+
+-- whether a unique encounter is done for the campaign (#21)
+function HostBattles.done(host, encounter)
+  local e = host.state.encounters[encounter]
+  return type(e) == "table" and e.state == "done"
+end
+
 -- A battle the player's world opened (design A8.2): the opening and the
--- player's team as its first input.
+-- player's team as its first input.  A unique encounter already running
+-- is joined instead, one already done is `beaten` (#21, A10.1, A10.2).
 function HostBattles.open(host, p, msg)
   if HostBattles.of(host, p.id) then return nil, "in_battle" end
   if not healthy(msg.team) then return nil, "no_pokemon" end
+  local enc = msg.encounter
+  if enc and HostBattles.done(host, enc) then
+    host:_log("encounter_beaten", { encounter = enc }, p)
+    return nil, "beaten"
+  end
+  local running = enc and HostBattles.running(host, enc)
+  if running then
+    host:_log("encounter_walk_in", { encounter = enc, battle = running.id }, p)
+    return HostBattles.join(host, p, { battle = running.id, team = msg.team, otId = msg.otId,
+                                       expAll = msg.expAll, room = msg.room, seq = msg.seq })
+  end
   local b = {
     id = newId(host), seed = newSeed(host),
     open = { kind = msg.kind, enemy = msg.enemy, map = msg.map, by = p.id,
-             trainer = msg.trainer, hooked = msg.hooked, foe = msg.foe },
+             trainer = msg.trainer, hooked = msg.hooked, foe = msg.foe, encounter = enc },
     inputs = {}, players = { { id = p.id, present = true } },
     ask = nil, suggestions = {}, ended = nil,
   }
@@ -280,6 +316,13 @@ local function finish(host, b, result, by, why)
   b.ended = result
   host.dirty = true
   host:_log("battle_end", { battle = b.id, result = result, rev = #b.inputs, why = why }, by)
+  -- a unique encounter won or caught is done for the campaign; anything
+  -- else releases it (#21, A10.1, A10.3)
+  local enc = b.open.encounter
+  if enc and (result == "win" or result == "caught") then
+    host.state:commit("victory:" .. enc, function(c) c.encounters[enc] = { state = "done" } end)
+    host:_log("encounter_done", { encounter = enc, battle = b.id }, by)
+  end
   -- a participant whose link is down hears the end once back (A11.8)
   for _, e in ipairs(b.players) do
     local p = host.byId[e.id]
@@ -526,7 +569,8 @@ function HostBattles.summaries(host)
       local players = {}
       for i, e in ipairs(b.players) do players[i] = e.id end
       out[#out + 1] = { id = id, by = b.open.by, kind = b.open.kind, foe = b.open.foe,
-                        players = players, joinable = rosterSize(b) < Protocol.MAX_ROSTER }
+                        players = players, joinable = rosterSize(b) < Protocol.MAX_ROSTER,
+                        encounter = b.open.encounter }
     end
   end
   table.sort(out, function(x, y) return x.id < y.id end)
