@@ -44,6 +44,13 @@
 -- the mate's link-cable messages not yet taken ({ round, link, uid }, in
 -- order); cableEnter and cableLink send the intentions.
 --
+-- Friend battles and trades (#23): c.invites holds the invitations this
+-- player sent or got, by id, as the host last told them (`answer` once
+-- settled); c.pairs the pairings this player is in, by id; c.relay the
+-- partner's link battle messages per pairing, in order ({ n, list }).
+-- invite/answerInvite/pairMsg/pairEnd/tradeTeam/tradePick/tradeConfirm
+-- send the intentions.
+--
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
 --
@@ -87,6 +94,7 @@ function Client.new(conn, opts)
     battles = {}, -- battles this player is in or joining, by id (#18)
     wild = nil, -- the other version's wild slots: { game, maps } (#9)
     cable = nil, cableLinks = {}, -- the Cable Club (#60)
+    invites = {}, pairs = {}, relay = {}, -- friend battles and trades (#23)
     dropped = 0,
     onWelcome = opts.onWelcome,
     log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
@@ -255,6 +263,48 @@ function Client:dropBattle(id)
   self.battles[id] = nil
 end
 
+-- friend battles and trades (#23, design A12) ------------------------------
+
+function Client:invite(to, kind)
+  return self:send({ type = "invite", to = to, kind = kind })
+end
+
+function Client:answerInvite(id, yes)
+  return self:send({ type = "invite_answer", invite = id, yes = yes and true or false })
+end
+
+function Client:pairMsg(pair, n, msg)
+  return self:send({ type = "pair_msg", pair = pair, n = n, msg = msg })
+end
+
+function Client:pairEnd(pair, result)
+  return self:send({ type = "pair_end", pair = pair, result = result })
+end
+
+function Client:tradeTeam(pair, text)
+  return self:send({ type = "trade_team", pair = pair, team = text })
+end
+
+function Client:tradePick(pair, slot)
+  return self:send({ type = "trade_pick", pair = pair, slot = slot })
+end
+
+function Client:tradeConfirm(pair, yes)
+  return self:send({ type = "trade_confirm", pair = pair, yes = yes and true or false })
+end
+
+-- the partner's link battle messages, kept in order once each
+function Client:_pairMsg(msg)
+  local r = self.relay[msg.pair]
+  if not r then
+    r = { n = 0, list = {} }
+    self.relay[msg.pair] = r
+  end
+  if msg.n ~= r.n + 1 then return end
+  r.n = msg.n
+  r.list[#r.list + 1] = msg.msg
+end
+
 function Client:_battle(msg)
   local b = self.battles[msg.id]
   if msg.from == 1 or not b then
@@ -331,6 +381,12 @@ function Client:_handle(msg)
     self.cable = msg
   elseif t == "cable_link" then
     self.cableLinks[#self.cableLinks + 1] = msg
+  elseif t == "invite" then
+    self.invites[msg.id] = msg
+  elseif t == "pair" then
+    self.pairs[msg.id] = msg
+  elseif t == "pair_msg" then
+    self:_pairMsg(msg)
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
   elseif t == "wild" then

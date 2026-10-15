@@ -40,7 +40,7 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 14 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 15 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
@@ -50,7 +50,8 @@ uids, #17: [campaign.md](campaign.md); 9 added unique encounters, #21:
 11 added rival scenes, #59: [battles.md](battles.md); 12 added the wild
 tables of both versions, #9: [versions.md](versions.md); 13 added how a new
 player starts, #57: [opening.md](opening.md); 14 added the Cable Club,
-#60: [cable.md](cable.md)). Every message is a JSON object with a `type`. Every field from the
+#60: [cable.md](cable.md); 15 added friend battles and trades, #23:
+[friends.md](friends.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -72,6 +73,7 @@ checks what the host sends.
 | `start` | `seq`, `how` (`pallet` or `save`), `save` (the world the launcher started, the game's save text with the PC, at most 1.5 MiB): a new player's start, sent once per link at the window's first rest point (#57): [opening.md](opening.md) |
 | `cable` | `seq`, `room` (`trade`, `colosseum`, or `none` to leave), `with` (optional: the partner this player offered the cable to) (#60): [cable.md](cable.md) |
 | `cable_link` | `seq`, `round`, `link` (a message of upstream's link cable, checked by its own `Wire.sanitize`), `uids` (optional, with a `party`: each Pokémon's uid, "" for none) (#60) |
+| `invite`, `invite_answer`, `pair_msg`, `pair_end`, `trade_team`, `trade_pick`, `trade_confirm` | friend battles and trades (#23): [friends.md](friends.md) |
 
 | Host to client | Fields |
 |---|---|
@@ -86,6 +88,7 @@ checks what the host sends.
 | `wild` | `game`, `maps` (as the client's): the other version's wild slots, once a link while the campaign's switch is on (#9): [versions.md](versions.md) |
 | `cable` | this player's Cable Club room (`none`: out of it), `round`, and once paired `mate`, `name`, `lead` (#60); `state` names each player's `cable` room |
 | `cable_link` | `round`, `link` (the mate's link message), `uid` (with the trade's last yes: the uid of the Pokémon this player receives) (#60) |
+| `invite`, `pair`, `pair_msg` | friend battles and trades (#23): [friends.md](friends.md); `state` then also names each player's `meeting` (`battle`, `trade`) |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
 | `started` | `seq` (the window's `start`), `seeded` (it began the campaign's story): the host kept the start; the story went first (#57) |
 | `rejected` | `seq` (-1 for a refused hello), `reason` (a `start` is refused `returning` when the campaign has the player's world, #57) |

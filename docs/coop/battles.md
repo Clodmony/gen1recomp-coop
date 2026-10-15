@@ -362,8 +362,9 @@ nobody is left.
   under the cartridge's "!" bubble (A14.3); a partner who joined a battle
   elsewhere is not drawn until it ends (A14.4);
 - the CO-OP menu offers JOIN <NAME> for each partner's battle with room, or
-  REJOIN for one this player left, and the box names a partner in a battle
-  IN A BATTLE (A14.8);
+  REJOIN for one this player left, each with VS <FOE> on its second line
+  (#23), and the box names a partner in a battle IN A BATTLE (A14.8);
+  friend battles are not co-op battles ([friends.md](friends.md));
 - a partner's new battle this player is free to join is told over the
   world: "BLUE is in a battle against wild PIDGEY. START > CO-OP to join."
   (A14.10);

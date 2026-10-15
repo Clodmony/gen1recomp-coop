@@ -14,8 +14,11 @@
 -- The box also shows when the campaign was last saved and that it saves
 -- itself (#13).  JOIN <NAME> joins a partner's battle (#18), and a partner
 -- in a battle shows IN A BATTLE (#34), one in the opening IN THE OPENING
--- (#22, design A4.8).  REJOIN comes with #20; BATTLE and TRADE rows with
--- #23.
+-- (#22, design A4.8).  REJOIN comes with #20.  BATTLE <NAME> and TRADE
+-- <NAME> invite a free partner to a friend battle or a trade, and a
+-- partner meeting someone shows IN A BATTLE or TRADING (#23); a JOIN or
+-- REJOIN row says against whom on its second line, VS <FOE> (#34, A14.8).
+-- The rows show three at a time and scroll.
 
 local Font = require("src.render.Font")
 local Menu = require("src.ui.Menu")
@@ -26,8 +29,9 @@ local CampaignSave = require("src.coop.game.CampaignSave")
 
 local CoopMenu = { isMenu = true }
 
-CoopMenu.BOX = { tx = 0, ty = 0, tw = 20, th = 11 }    -- the session box
-CoopMenu.ROWS = { tx = 0, ty = 11, tw = 20, th = 7 }   -- the rows
+CoopMenu.BOX = { tx = 0, ty = 0, tw = 20, th = 10 }    -- the session box
+CoopMenu.ROWS = { tx = 0, ty = 10, tw = 20, th = 8 }   -- the rows: three, each
+CoopMenu.VISIBLE = 3                                    -- with a second line
 
 local function hasTownMap(game)
   local inv = game.save and game.save.inventory
@@ -61,7 +65,7 @@ function CoopMenu.lines(game, s, address)
   lines[#lines + 1] = ""
   local partners = Presence.partners()
   if #partners == 0 then lines[#lines + 1] = Strings("NO PARTNERS YET") end
-  local room = 9 - #lines
+  local room = CoopMenu.BOX.th - 2 - #lines
   for i, p in ipairs(partners) do
     if room < 2 then
       lines[#lines + 1] = ("+%d MORE"):format(#partners - i + 1)
@@ -70,7 +74,8 @@ function CoopMenu.lines(game, s, address)
     lines[#lines + 1] = p.name
     lines[#lines + 1] = " " .. (not p.connected and Strings("AWAY")
                                 or p.opening and Strings("IN THE OPENING") -- #22, A4.8
-                                or p.battle and Strings("IN A BATTLE") -- #34, A14.8
+                                or (p.battle or p.meeting == "battle") and Strings("IN A BATTLE") -- #34, #23
+                                or p.meeting == "trade" and Strings("TRADING") -- #23
                                 or p.map and CoopMenu.areaName(game.data, p.map)
                                 or Strings("AWAY"))
     room = room - 2
@@ -92,6 +97,8 @@ function CoopMenu.new(game, opts)
 
   -- JOIN <NAME>: a partner's battle (#18, design A8.3)
   require("src.coop.game.Battles").joinRows(game, items)
+  -- BATTLE <NAME> and TRADE <NAME>: a friend battle or trade (#23)
+  require("src.coop.game.Friends").rows(game, items)
   if not hasTownMap(game) then
     items[#items + 1] = { label = Strings("TOWN MAP"), onSelect = function()
       again()
@@ -116,6 +123,7 @@ function CoopMenu.new(game, opts)
 
   local r = CoopMenu.ROWS
   local menu = Menu.new(game, items, { tx = r.tx, ty = r.ty, tw = r.tw, th = r.th,
+                                       itemY = 1, maxVisible = CoopMenu.VISIBLE,
                                        onCancel = opts.onCancel })
   menu.isMenu = true
   menu.coopMenu = true
@@ -133,6 +141,16 @@ function CoopMenu.new(game, opts)
       love.graphics.setColor(1, 1, 1, 1)
     end
     baseDraw(self)
+    -- a row's second line: VS <FOE> under JOIN and REJOIN (#34)
+    love.graphics.setColor(0, 0, 0, 1)
+    for row = 1, CoopMenu.VISIBLE do
+      local item = self.items[self.scroll + row]
+      if item and item.detail then
+        Font.draw(item.detail, (self.tx + 3) * 8,
+                  (self.ty + self.itemY + (row - 1) * self.rowStep + 1) * 8)
+      end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
   end
   -- the session ended under the menu: close it
   local baseUpdate = menu.update

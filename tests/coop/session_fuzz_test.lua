@@ -93,6 +93,16 @@ local VALID = {
     cable = { type = "cable", seq = 12, room = "trade", with = "p00000002" },
     cable_link = { type = "cable_link", seq = 13, round = 1,
                    link = { type = "party", mons = { BATTLE_MON } }, uids = { "p0001:12" } },
+    -- friend battles and trades (#23)
+    invite = { type = "invite", seq = 12, to = "p00000002", kind = "battle" },
+    invite_answer = { type = "invite_answer", seq = 13, invite = "i00000001", yes = true },
+    pair_msg = { type = "pair_msg", seq = 14, pair = "t00000001", n = 3,
+                 msg = { type = "action", kind = "move", slot = 2, parts = { actives = "ab" } } },
+    pair_end = { type = "pair_end", seq = 15, pair = "t00000001", result = "forfeit" },
+    trade_team = { type = "trade_team", seq = 16, pair = "t00000001",
+                   team = 'return { { species = "PIDGEY", level = 12 } }\n' },
+    trade_pick = { type = "trade_pick", seq = 17, pair = "t00000001", slot = 2 },
+    trade_confirm = { type = "trade_confirm", seq = 18, pair = "t00000001", yes = false },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -104,7 +114,8 @@ local VALID = {
     state = { type = "state", you = "p00000001", last_seq = 3, nearby = { "p00000002" },
               players = { { id = "p00000001", name = "RED", game = "red", connected = true,
                             map = "ROUTE_1", x = 1, y = 2, facing = "down", travel = "bike",
-                            battle = "b00000001", opening = false, cable = "trade" } },
+                            battle = "b00000001", opening = false, cable = "trade",
+                            meeting = "trade" } },
               saved_ago = 12, busy = "", rival = "GARY", chose = "BULBASAUR",
               battles = { { id = "b00000001", by = "p00000001", kind = "wild",
                             players = { "p00000001" }, foe = "PIDGEY", joinable = true,
@@ -149,6 +160,16 @@ local VALID = {
               lead = true },
     cable_link = { type = "cable_link", round = 2, link = { type = "confirm", ok = true },
                    uid = "p00000002:3" },
+    -- friend battles and trades (#23)
+    invite = { type = "invite", id = "i00000001", from = "p00000001", to = "p00000002",
+               kind = "trade", answer = "timeout" },
+    pair = { type = "pair", id = "t00000001", kind = "trade", partner = "p00000002",
+             role = "guest", seed = 77, name = "BLUE", away = true, ended = "cancel",
+             mine = 'return { { species = "PIDGEY", level = 12 } }\n',
+             theirs = 'return { { species = "RATTATA", level = 9 } }\n',
+             myPick = 1, theirPick = 1, confirmed = true, theirConfirmed = false, done = true },
+    pair_msg = { type = "pair_msg", pair = "t00000001", n = 1,
+                 msg = { type = "hello", name = "RED", mods = { { id = "x" } } } },
   },
 }
 

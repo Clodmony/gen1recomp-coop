@@ -454,6 +454,23 @@ P["%s is facing the rival here. Wait, or join the battle..."] = "%s stellt sich 
 -- the Cable Club (#60): the cartridge's link menu, which upstream never drew
 P["TRADE CENTER"] = "HANDELSCENTER"
 P["COLOSSEUM"] = "KOLOSSEUM"
+-- friend battles and trades (#23)
+P["BATTLE %s"] = "KAMPF %s"
+P["TRADE %s"] = "TAUSCH %s"
+P["for %s?"] = "gegen %s?"
+P["VS %s"] = "GEGEN %s"
+P["TRADING"] = "TAUSCHT"
+P["Invitation sent."] = "Anfrage gesendet."
+P["%s wants\nto battle!"] = "%s\nmöchte kämpfen!"
+P["%s wants\nto trade!"] = "%s\nmöchte tauschen!"
+P["%s declined."] = "%s sagt NEIN."
+P["%s did not answer."] = "%s hat nicht geantwortet."
+P["%s is busy."] = "%s hat zu tun."
+P["%s is away."] = "%s ist weg."
+P["%s left."] = "%s ist fort."
+P["Waiting for %s..."] = "Warte auf %s..."
+P["%s forfeited\nthe match!"] = "%s gibt\nden Kampf auf!"
+P["%s left the battle."] = "%s hat den Kampf verlassen."
 
 -- battle
 P["FOE"] = "GEGNER"

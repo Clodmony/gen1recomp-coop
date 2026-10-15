@@ -795,6 +795,11 @@ accepted both as built (2026-10-15).
 
 ### A12. Friend battles and trades
 
+In place for rules 1 to 6 (#23, [friends.md](friends.md), decision G31,
+proposed): invitations, a friend battle on upstream's lockstep link
+battle, a direct trade with the host's swap once; the Cable Club and the
+Colosseum (7 to 9) are #60.
+
 In place for the Cable Club (#60, [cable.md](cable.md), G32): its trades,
 the continue position and the Colosseum (A12.7 to A12.9), with these
 adaptations: the room is chosen at the receptionist's link menu and a
@@ -937,10 +942,11 @@ the first player to finish the opening setting the rival's EEVEE line (D50).
 In place (#15, [presence.md](presence.md)), with what a session without
 battles supports; the battle parts since #34 ([battles.md](battles.md)):
 the "!" where a battle started, a joiner from elsewhere not drawn, JOIN and
-REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle. Partners
-in a Cable Club room are not drawn since #60 ([cable.md](cable.md)). Left:
-who is not drawn in the opening, the BATTLE and TRADE rows and "in the
-opening" (#22, #23); the last save is in since #13.
+REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle; the
+opening's parts since #22; the BATTLE and TRADE rows, VS <foe> and
+TRADING since #23 ([friends.md](friends.md)); partners in a Cable Club
+room are not drawn since #60 ([cable.md](cable.md)). The last save is in
+since #13.
 
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
@@ -1439,6 +1445,34 @@ sibling's D-numbers.
   Costs: the claims live in host memory; a partner anywhere on a scene's
   map waits, however far from the rival. Protocol 11. Details:
   [battles.md](battles.md).
+- **G31. Friend battles are upstream's link battle; the host trades once**
+  (#23, 2026-10-16, proposed). A12.3 left the engine to the issue: the
+  co-op battle record (G24) or upstream's lockstep link battle. A friend
+  battle is upstream's link battle (`src/link/LinkBattle.lua`): each
+  window runs the whole battle from its own side (its own team as allies,
+  its own moves, switches and replacements), the host deals the seed and
+  passes the two windows' messages on over the co-op session, numbered,
+  kept and sent again from the first after a drop. G24's record has every
+  player on one side against an enemy's AI; a second human side, a
+  mirrored view and a RUN per side would have meant a second battle kind
+  inside it, where the link battle has them already, with the
+  cartridge's battle screen and the real teams untouched. On top of it:
+  RUN forfeits, no money, a released battle is a draw after the two
+  minutes of A12.4, the team is healed after, and each Pokémon gets the
+  full trainer EXP and stat EXP of every foe it stood against (both out
+  with HP left at once), paid over the map after the battle with the
+  engine's levels, moves to learn and evolutions. A direct trade is shown
+  by upstream's link trade screen (its drawing; the LAN screens and the
+  launcher's ONLINE screens are not used), with the host in the middle:
+  both offers and both TRADEs go to the host, which commits the swap once
+  (`trade:<pair>`) on both worlds it keeps and lays it over every world or
+  holdings a window sends until that window shows it; each window swaps
+  its own team (whole rows: uids and original trainers kept), saves,
+  plays the movie and the trade evolution. One trade per pairing. Costs:
+  the link battle forces 1X game speed while it runs, as upstream's
+  does; a released battle pays EXP for what was fought; the battle's
+  learning and evolution come after it, not during it. Protocol 15.
+  Details: [friends.md](friends.md).
 - **G32. The Cable Club's rooms are its link screens; the session is the
   cable** (#60, 2026-10-16, proposed). Upstream's Gen 1 Cable Club has no
   rooms to walk into: the receptionist saves and opens a LAN link menu

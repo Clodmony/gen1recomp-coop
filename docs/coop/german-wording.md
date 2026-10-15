@@ -808,6 +808,22 @@ characters, a menu row fewer.
 | %s is facing the rival here. Wait, or join the battle... | %s stellt sich hier dem Rivalen. Warte oder hilf im Kampf... | |
 | TRADE CENTER | HANDELSCENTER | |
 | COLOSSEUM | KOLOSSEUM | |
+| BATTLE %s | KAMPF %s | |
+| TRADE %s | TAUSCH %s | |
+| for %s? | gegen %s? | |
+| VS %s | GEGEN %s | |
+| TRADING | TAUSCHT | |
+| Invitation sent. | Anfrage gesendet. | |
+| %s wants / to battle! | %s / möchte kämpfen! | |
+| %s wants / to trade! | %s / möchte tauschen! | |
+| %s declined. | %s sagt NEIN. | |
+| %s did not answer. | %s hat nicht geantwortet. | |
+| %s is busy. | %s hat zu tun. | |
+| %s is away. | %s ist weg. | |
+| %s left. | %s ist fort. | |
+| Waiting for %s... | Warte auf %s... | |
+| %s forfeited / the match! | %s gibt / den Kampf auf! | |
+| %s left the battle. | %s hat den Kampf verlassen. | |
 
 #### battle
 
