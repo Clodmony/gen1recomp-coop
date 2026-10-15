@@ -19,9 +19,9 @@ Last updated 2026-10-15 (after Group 5a, #16, PR #49).
 ## Open pull requests (all draft, stacked; the owner reviews and says which to merge)
 
 - **#42** `coop/group2a-german` into `gen1recomp-coop`: launcher redesign (#38)
-  and German launcher (#41). G13, G14 (accepted 2026-10-15, recorded on #49's branch). Owner: the
-  "Better German" column in `docs/coop/german-wording.md`, whether #38 may
-  close.
+  and German launcher (#41). G13, G14 (accepted 2026-10-15, recorded on #49's branch). Its body
+  says "Closes #38": the owner wants #38 closed with it. The German
+  wording was accepted as written (the "Better German" column stays empty).
 - **#43** `coop/group2a-german-games` on #42's branch: the rest of #25, G15.
 - **#44** `coop/group2a-yellow-de` on #43's branch: German Yellow (#40), G16.
 - **#45** `coop/group3-launcher-screens` on #44's branch: Group 3, closes #4,
@@ -48,8 +48,10 @@ Last updated 2026-10-15 (after Group 5a, #16, PR #49).
     MAP, the bike shop's BICYCLE for the voucher, the gift race and a late
     joiner. Not run live: a gift TM, a full bag's spill, a rejoin landing
     an unsaved gift.
-- Merge order: #42, #43, #44, #45, #46, #48, #49, each locally as Claude
-  (`git merge --no-ff`), never `gh pr merge`.
+- **The owner approved merging all of them (2026-10-15).** Next session,
+  first: merge #42, #43, #44, #45, #46, #48, #49 in that order into
+  `gen1recomp-coop`, each locally as Claude (`git merge --no-ff`, never
+  `gh pr merge`), push, run `tools/verify.sh`, then start Group 6.
 
 ## Next candidates
 
@@ -109,8 +111,10 @@ Last updated 2026-10-15 (after Group 5a, #16, PR #49).
 
 ## Cleanup the owner may approve
 
-- Scratch under `~/dev-scratch/gen1recomp-coop/`: `ref/`, `probe/` (Group
-  2a), `g2a/` (after #42/#43 merge), `shot/`, `launcher-run*.log`, `verify/`
-  runs.
-- Merged local branches `coop/group1-cleanup`, `coop/group2-first-playable`,
-  `coop/25-german`.
+- Done 2026-10-15 (owner approved): old scratch (`ref/`, `probe/`,
+  `shot/`, `launcher-run*.log`, `verify/`) and the merged local branches
+  `coop/10-session-core`, `coop/25-german`, `coop/group1-cleanup`,
+  `coop/group2-first-playable` are deleted; #48's worktree was already gone.
+- Left: scratch `g2a/` (delete after #42/#43 merge), the merged local
+  branch `coop/workflow-groups`, and each group's worktree and branches once
+  its PR is merged.
