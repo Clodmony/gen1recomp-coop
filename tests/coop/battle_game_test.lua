@@ -128,6 +128,20 @@ do
   eq(battle.coopPending, nil, "solo: nothing is sent, the battle stays the world's")
 end
 
+-- battles that stay in the window (A8.19) ----------------------------------------------
+do
+  local w = BattleState.newWild(Game, "FIXMON_B", 2)
+  eq(Battles.joinable(w), true, "a wild battle is a co-op battle")
+  w.safari = { balls = 30 }
+  eq(Battles.joinable(w), false, "the Safari Zone stays in the window")
+  w.safari, w.ghost = nil, true
+  eq(Battles.joinable(w), false, "a GHOST without the SILPH SCOPE too")
+  w.ghost, w.demo = nil, true
+  eq(Battles.joinable(w), false, "and the old man's demo")
+  local t = BattleState.newTrainer(Game, "OPP_FIX_YOUNGSTER", 1)
+  eq(Battles.joinable(t), true, "a trainer battle is a co-op battle")
+end
+
 -- the session ---------------------------------------------------------------------
 local s = Session.startHost({
   campaign = { id = "c0001", title = "Fix co-op" },
