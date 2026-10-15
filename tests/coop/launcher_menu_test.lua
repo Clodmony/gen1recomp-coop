@@ -231,4 +231,47 @@ do
   love.data, GameVersion.forSha1 = savedData, savedFor
 end
 
+-- CONTROLS (#4): the rows come from the controls model, a capture takes raw
+-- presses and B or a tab change ends it
+do
+  local Controls = require("src.coop.launcher.Controls")
+  local store = {}
+  local settings = fakeSettings()
+  settings.seats = {}
+  local controls = Controls.new({
+    bindings = function() return store end,
+    saveBindings = function(o) store = o end,
+    settings = settings,
+    pads = function() return {} end,
+  })
+  local m = newMenu({ settings = settings })
+  m.controls = controls
+  m:openTab("controls")
+  eq(m.screen, "controls", "the CONTROLS tab")
+  eq(ids(m), "bind,bind,bind,bind,bind,bind,bind,bind,reset,seat,seat,clear",
+    "eight buttons, reset, two players, clear")
+  eq(row(m, "reset").enabled, false, "nothing to reset yet")
+  eq(m:capturing(), nil, "nothing is captured")
+  eq(m:captured({ kind = "key", key = "k" }), false, "a stray press is not taken")
+  m.cursor = 5
+  eq(m:press("a"), nil, "A on the A row starts a capture")
+  check(m:capturing() and m:capturing():find("for A", 1, true), "and the prompt names the button")
+  check(m:captured({ kind = "key", key = "k" }), "the next key is taken")
+  eq(store.a.key, "k", "and saved as options.bindings.a.key")
+  eq(row(m, "reset").enabled, true, "now there is something to reset")
+  m.cursor = 11
+  m:press("a")
+  check(m:capturing() and m:capturing():find("Player 2", 1, true), "a seat row asks player 2")
+  m:openTab("play")
+  eq(m:capturing(), nil, "leaving the tab ends the capture")
+  m:openTab("controls")
+  m.cursor = 11
+  m:press("a")
+  check(m:captured({ kind = "pad", button = "a", device = { kind = "pad", guid = "g", twin = 1, name = "Pad" } }),
+    "A on a pad claims it")
+  eq(row(m, "seat").detail, "ANY DEVICE", "player 1 still takes any device")
+  eq(m:items()[11].detail, "PAD", "player 2 shows the pad")
+  eq(settings.saved > 0, true, "and the settings were saved")
+end
+
 T.finish()

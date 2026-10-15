@@ -879,7 +879,8 @@ the battle notice, and SELECT in a co-op battle.
 4. **adapt** Controller pick: one chosen pad plays (kept by GUID, name, serial and
    order among twins, found again after a replug, the others ignored);
    keyboard and mouse always work (prog "Controller pick", tc P08).
-   Split-screen needs per-seat pad assignment instead (G3; #4).
+   Split-screen needs per-seat pad assignment instead (G3; #4, G17: a seat
+   per local player with the device claimed on CONTROLS).
 5. **adapt** iOS discovery may need the multicast entitlement; the address path works
    without it (D103).
 6. **adapt** Languages are separate games: German plays only with German, English
@@ -1085,3 +1086,33 @@ sibling's D-numbers.
   for the one box it draws otherwise, and the manifest's title layout for
   its ©1995-2000 line and its one-piece surfing title screen. Nothing
   changes for US Yellow.
+- **G17. One Input per seat, the device claimed on CONTROLS** (#4,
+  2026-10-14). Upstream's `Input` merges every pad and the keyboard into one
+  player; the fork keeps that for solo and online play (player 1 is that
+  very table) and adds a seat per local player (`src/coop/game/Seats.lua`):
+  an instance of `Input` that, in couch mode, takes only the device claimed
+  for it on the launcher's CONTROLS page, the keyboard or one pad by GUID
+  and order among twins, remembered in `coop/launcher.json`. The hook in
+  `Input.lua` is one filter at each device entry, marked. Rebinds are not
+  per seat: the launcher writes `options.bindings` where the game reads it,
+  so every seat and the game's own CONTROLS menu agree. Couch co-op (#11)
+  starts couch mode; until then the seats are only remembered.
+- **G18. The game's options live in the game's file** (#5, 2026-10-14).
+  The launcher's SETTINGS page edits video, audio and game options in
+  `options.lua` through GPL `SaveData`, the keys the game's own OPTIONS menu
+  writes, one key per change; the launcher's own settings (language,
+  colours, devices, sessions) stay in `coop/launcher.json`. A second copy of
+  the game's options in the launcher's file would drift from the game's
+  menu, and `options.lua` is the engine's file, not the proprietary
+  launcher's: upstream's launcher only called the same GPL reader and
+  writer, which the fork keeps calling and never routes through
+  `LauncherSettings.lua`. Per-cart overlays (`CART_OPTION_KEYS`) keep
+  working, since the writes go through the same path as the game's.
+- **G19. Save slots are upstream's; a campaign's slot is entered from its
+  campaign** (#6, 2026-10-14). The SAVES page lists, plays, adds, deletes,
+  imports and exports the game's own slots through GPL `SaveData`,
+  `SaveFileIO` and `SaveConvert`, so a .sav comes and goes exactly as in
+  the game's own importer. A slot that a campaign plays in (G10) shows its
+  campaign and has no PLAY here: entering it goes through CAMPAIGNS, which
+  keeps the session and the slot together; it can still be exported and
+  deleted. Campaign files (#13) replace this slot per campaign later.

@@ -6,6 +6,16 @@ local PadHints = require("src.core.PadHints")
 
 local Input = {}
 
+-- co-op (#4): per-player input.  Each player's seat is an instance of this
+-- table (src/coop/game/Seats.lua); `Input.seatFilter(self, kind, joystick)`
+-- says whether a device's events belong to `self`.  Unset (upstream, solo
+-- play) every device drives the one Input, as before.
+Input.seatFilter = nil
+local function accepts(self, kind, joystick)
+  local filter = Input.seatFilter
+  return filter == nil or filter(self, kind, joystick) == true
+end
+
 local DEFAULT_BINDINGS = {
   up = "up", w = "up",
   down = "down", s = "down",
@@ -301,6 +311,7 @@ local function release(self, btn, source)
 end
 
 function Input:keypressed(key)
+  if not accepts(self, "key") then return end -- co-op (#4)
   noteCapture(self, "key", "pressed", key)
   local btn = self.keyBindings[key]
   if btn then
@@ -309,6 +320,7 @@ function Input:keypressed(key)
 end
 
 function Input:keyreleased(key)
+  if not accepts(self, "key") then return end -- co-op (#4)
   noteCapture(self, "key", "released", key)
   local btn = self.keyBindings[key]
   if btn then
@@ -406,7 +418,8 @@ function Input:pollPads()
     if ok and type(list) == "table" then
       for _, j in ipairs(list) do
         if j.isGamepadDown and GamepadMap.ignoreRawForJoystick(j)
-            and not GamepadMap.isAccelerometer(j) then
+            and not GamepadMap.isAccelerometer(j)
+            and accepts(self, "pad", j) then -- co-op (#4)
           pads[#pads + 1] = j
         end
       end
@@ -528,6 +541,7 @@ function Input:sourceRelease(btn, source)
 end
 
 function Input:gamepadpressed(joystick, button)
+  if not accepts(self, "pad", joystick) then return end -- co-op (#4)
   button = GamepadMap.normalizePad and GamepadMap.normalizePad(button) or GamepadMap.TRIGGER_AXES[button] or button
   if self.padSuppress then self.padSuppress[button] = nil end
   noteCapture(self, "pad", "pressed", button)
@@ -538,6 +552,7 @@ function Input:gamepadpressed(joystick, button)
 end
 
 function Input:gamepadreleased(joystick, button)
+  if not accepts(self, "pad", joystick) then return end -- co-op (#4)
   button = GamepadMap.normalizePad and GamepadMap.normalizePad(button) or GamepadMap.TRIGGER_AXES[button] or button
   noteCapture(self, "pad", "released", button)
   local source = "pad:" .. button
@@ -560,6 +575,7 @@ end
 -- Gate: GamepadMap.ignoreRawForJoystick (pcall-safe isGamepad check).
 
 function Input:joystickpressed(joystick, button)
+  if not accepts(self, "pad", joystick) then return end -- co-op (#4)
   if GamepadMap.ignoreRawForJoystick(joystick) then return end
   if GamepadMap.isAccelerometer(joystick) then return end
   noteCapture(self, "joy", "pressed", button)
@@ -568,6 +584,7 @@ function Input:joystickpressed(joystick, button)
 end
 
 function Input:joystickreleased(joystick, button)
+  if not accepts(self, "pad", joystick) then return end -- co-op (#4)
   if GamepadMap.ignoreRawForJoystick(joystick) then return end
   if GamepadMap.isAccelerometer(joystick) then return end
   noteCapture(self, "joy", "released", button)
@@ -659,6 +676,7 @@ function Input:gamepadaxis(joystick, axis, value)
 end
 
 function Input:joystickaxis(joystick, axis, value)
+  if not accepts(self, "pad", joystick) then return end -- co-op (#4)
   if GamepadMap.ignoreRawForJoystick(joystick) then return end
   if GamepadMap.isAccelerometer(joystick) then return end
   if axis == 1 then
@@ -673,6 +691,7 @@ end
 -- gamepad map, so letting the hat answer too would re-assert the factory
 -- directions on top of a direction rebind.
 function Input:joystickhat(joystick, hat, direction)
+  if not accepts(self, "pad", joystick) then return end -- co-op (#4)
   if GamepadMap.ignoreRawForJoystick(joystick) then return end
   if GamepadMap.isAccelerometer(joystick) then return end
   local source = "hat:" .. hat
@@ -703,7 +722,7 @@ function Input:reconcile()
   local okD, Diag = pcall(require, "src.debug.SwitchDiagnostics")
   if okD and Diag.onPadReconcile then pcall(Diag.onPadReconcile) end
   local kb = love and love.keyboard
-  if kb and kb.isDown then
+  if kb and kb.isDown and accepts(self, "key") then -- co-op (#4)
     for key, btn in pairs(self.keyBindings) do
       local ok, down = pcall(kb.isDown, key)
       if ok and down then press(self, btn, "key:" .. key) end
@@ -714,7 +733,7 @@ function Input:reconcile()
   local ok, joysticks = pcall(js.getJoysticks)
   if not ok or type(joysticks) ~= "table" then return end
   for _, j in ipairs(joysticks) do
-    if GamepadMap.isAccelerometer(j) then
+    if GamepadMap.isAccelerometer(j) or not accepts(self, "pad", j) then -- co-op (#4)
     elseif GamepadMap.ignoreRawForJoystick(j) then
       -- SDL-recognized pad: buttons + left stick, the gamepad surfaces
       if j.isGamepadDown then

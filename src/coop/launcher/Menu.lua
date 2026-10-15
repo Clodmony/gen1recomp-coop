@@ -15,7 +15,9 @@
 --   { kind = "quit" }
 --   { kind = "open_logs" }
 --   { kind = "settings" }                  (language or theme changed)
--- and the co-op screens' commands (CoopMenu.lua).
+-- and the co-op screens' commands (CoopMenu.lua).  The CONTROLS rows come
+-- from Controls.lua (#4); while it captures a key or pad press the host
+-- hands raw presses to Menu:captured instead of actions.
 
 local CoopMenu = require("src.coop.launcher.CoopMenu")
 local Games = require("src.coop.launcher.Games")
@@ -64,6 +66,9 @@ end
 --   campaigns         -> the campaign cards (Campaigns.lua), for the last
 --                        session
 --   canOpenLogs       -> the logs folder can be opened (desktop)
+--   controls          -> the CONTROLS page's model (Controls.lua), or nil
+--   gameOptions       -> the game's options on SETTINGS (GameOptions.lua), or nil
+--   saves(version)    -> the SAVES page's model of a game (Saves.lua), or nil
 function Menu.new(opts)
   opts = opts or {}
   local self = setmetatable({
@@ -75,6 +80,9 @@ function Menu.new(opts)
     coopEnv = opts.coop,
     settings = opts.settings,
     campaigns = opts.campaigns,
+    controls = opts.controls,
+    gameOptions = opts.gameOptions,
+    savesOf = opts.saves,
     screen = "play", tab = "play", cursor = 1, path = "",
     version = Menu.GAMES[1].id,
   }, Menu)
@@ -118,13 +126,26 @@ function Menu:items()
   elseif s == "solo" then
     if self.saveInfo(self.version) then add({ id = "continue", label = L("CONTINUE") }) end
     add({ id = "new", label = L("NEW GAME") })
+    if self.savesOf then add({ id = "saves", label = L("SAVES") }) end
     add({ id = "reimport", label = L("IMPORT AGAIN") })
     add({ id = "back", label = L("BACK") })
+  elseif s == "saves" then
+    if self.saves then
+      for _, row in ipairs(self.saves:items()) do add(row) end
+    end
+  elseif s == "controls" then
+    if self.controls then
+      for _, row in ipairs(self.controls:rows()) do add(row) end
+    end
   elseif s == "settings" then
     local settings = self.settings or {}
     add({ id = "language", label = L("LANGUAGE"), detail = Text.NAMES[Text.language] })
     add({ id = "theme", label = L("THEME"),
           detail = settings.theme == "dark" and L("DARK") or L("LIGHT") })
+    -- the game's options (#5), stored where the game reads them
+    if self.gameOptions then
+      for _, row in ipairs(self.gameOptions:rows()) do add(row) end
+    end
   elseif s == "help" then
     local settings = self.settings or {}
     add({ id = "share", label = L("SHARE LOGS"), detail = settings.shareLogs == false
@@ -178,6 +199,8 @@ end
 -- open a tab (the nav bar)
 function Menu:openTab(tab)
   if self.coop then self:_leaveCoop() end
+  if self.controls then self.controls:cancel() end
+  self.saves = nil
   if tab == "campaigns" then
     self.tab = "campaigns"
     if self:openCoop(self.version, nil, "campaigns") then return end
@@ -191,12 +214,44 @@ end
 -- A message box over the current screen; any button closes it.
 function Menu:notify(text)
   if self.coop then return self.coop:notify(text) end
+  if self.screen == "saves" and self.saves then return self.saves:notify(text) end
   self.notice = text
 end
 
 function Menu:currentNotice()
   if self.screen == "coop" and self.coop then return self.coop.notice end
+  if self.screen == "saves" and self.saves then return self.saves.notice end
   return self.notice
+end
+
+-- the SAVES page of `version` (#6)
+function Menu:openSaves(version)
+  if not self.savesOf then return false end
+  self.version = version or self.version
+  self.saves = self.savesOf(self.version)
+  if not self.saves then return false end
+  self.screen, self.cursor = "saves", 1
+  return true
+end
+
+local function closeSaves(self)
+  self.saves = nil
+  self:go("solo")
+  self:_cursorTo("saves")
+end
+
+-- The CONTROLS page is waiting for a key or pad press (#4): the prompt, or
+-- nil.  While it is, the host sends raw presses to captured().
+function Menu:capturing()
+  if self.screen ~= "controls" or not self.controls then return nil end
+  return self.controls:prompt()
+end
+
+-- a raw press while capturing: { kind = "key", key } | { kind = "pad",
+-- button, device } | { kind = "cancel" }; true when it was used
+function Menu:captured(ev)
+  if not self:capturing() then return false end
+  return self.controls:captured(ev)
 end
 
 -- the co-op screens of `version` (#12) from `start` ("host", "join",
@@ -301,6 +356,11 @@ function Menu:press(action)
     if command and command.kind == "coop_exit" then return closeCoop(self, command) end
     return command
   end
+  if screen == "saves" and self.saves then
+    local command = self.saves:press(action)
+    if command and command.kind == "saves_exit" then closeSaves(self) return nil end
+    return command
+  end
   if screen == "importing" then return nil end
   if screen == "import" and action == "b" then
     self:go("play")
@@ -310,6 +370,14 @@ function Menu:press(action)
   if screen == "import" and (action == "a" or action == "start") then
     if self.path ~= "" then return { kind = "import", path = self.path } end
     return nil
+  end
+  -- left and right step a game option (#5); elsewhere they move
+  if (action == "left" or action == "right") and screen == "settings" then
+    local row = self:items()[self.cursor]
+    if row and row.option and self.gameOptions then
+      self.gameOptions:step(row, action == "right" and 1 or -1)
+      return nil
+    end
   end
   if action == "up" or action == "left" then move(self, -1) return nil end
   if action == "down" or action == "right" then move(self, 1) return nil end
@@ -355,14 +423,22 @@ function Menu:press(action)
     elseif id == "new" then
       return { kind = "boot", version = self.version,
         newGame = self.saveInfo(self.version) ~= nil }
+    elseif id == "saves" then
+      self:openSaves(self.version)
     elseif id == "reimport" then
       self.path = ""
       self:go("import")
     elseif id == "back" then
       return self:press("b")
     end
+  elseif screen == "controls" then
+    if self.controls then self.controls:press(row) end
   elseif screen == "settings" then
     local settings = self.settings
+    if row.option and self.gameOptions then
+      self.gameOptions:step(row, 1)
+      return nil
+    end
     if id == "language" then
       local nextLanguage = Text.language == "de" and "en" or "de"
       Text.set(nextLanguage)
@@ -387,12 +463,14 @@ end
 -- Typing on the import screen or a co-op text field.
 function Menu:text(t)
   if self.screen == "coop" and self.coop then return self.coop:text(t) end
+  if self.screen == "saves" and self.saves then return self.saves:text(t) end
   if self.screen ~= "import" or self.notice or not self.canType then return end
   self.path = self.path .. t
 end
 
 function Menu:erase()
   if self.screen == "coop" and self.coop then return self.coop:erase() end
+  if self.screen == "saves" and self.saves then return self.saves:erase() end
   if self.screen ~= "import" or self.notice then return end
   self.path = self.path:sub(1, -2)
   -- drop a whole UTF-8 sequence, not half of one

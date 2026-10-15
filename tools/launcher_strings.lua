@@ -12,6 +12,8 @@ M.FILES = {
   "src/coop/launcher/Menu.lua", "src/coop/launcher/CoopMenu.lua",
   "src/coop/launcher/Screens.lua", "src/coop/launcher/Launcher.lua",
   "src/coop/launcher/RomImport.lua", "src/coop/session/Addresses.lua",
+  "src/coop/launcher/Controls.lua", "src/coop/launcher/GameOptions.lua",
+  "src/coop/launcher/Saves.lua",
 }
 
 -- strings handed to Text.get from a table rather than a literal call
@@ -23,6 +25,11 @@ M.TABLES = {
   "SPACE", "DEL", "END",
   "You left the session.", "You closed the session.", "The host closed the session.",
   "The connection to the host was lost.", "Preparing", "Ready",
+  -- the Game Boy buttons (Controls.BUTTONS)
+  "UP", "DOWN", "LEFT", "RIGHT", "A", "B", "START", "SELECT",
+  -- the game's options (GameOptions.ROWS, SPEEDS)
+  "WINDOW", "INTEGER SCALE", "MUSIC", "SOUND", "TEXT SPEED", "BATTLE ANIMATION", "BATTLE STYLE",
+  "FAST", "MEDIUM", "SLOW",
 }
 
 local function unescape(s)

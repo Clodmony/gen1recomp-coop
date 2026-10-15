@@ -100,7 +100,31 @@ The credit line of upstream's licence is not translated.
 | English | German now | Better German |
 | --- | --- | --- |
 | Controls | Steuerung | |
-| The launcher answers keyboard, pad, mouse and touch the same way. | Der Launcher reagiert gleich auf Tastatur, Controller, Maus und Touch. | |
+| The game's buttons, and each player's device for couch co-op. | Die Knöpfe des Spiels und das Gerät jedes Spielers für den Sofa-Koop. | |
+| IN THE GAME | IM SPIEL | |
+| UP | OBEN | |
+| DOWN | UNTEN | |
+| LEFT | LINKS | |
+| RIGHT | RECHTS | |
+| A | A | |
+| B | B | |
+| START | START | |
+| SELECT | SELECT | |
+| RESET BINDINGS | BELEGUNG ZURÜCKSETZEN | |
+| A key and a pad button for each. The game's own CONTROLS menu shows the same. | Je eine Taste und ein Controller-Knopf. Das STEUERUNG-Menü des Spiels zeigt dasselbe. | |
+| Press a key or a pad button for %s. Esc cancels. | Drücke eine Taste oder einen Controller-Knopf für %s. Esc bricht ab. | |
+| PLAYER DEVICES | GERÄTE DER SPIELER | |
+| PLAYER %d | SPIELER %d | |
+| KEYBOARD | TASTATUR | |
+| PAD | CONTROLLER | |
+| ANY DEVICE | JEDES GERÄT | |
+| NO DEVICE | KEIN GERÄT | |
+| CLEAR DEVICES | GERÄTE VERGESSEN | |
+| Player %d: press A on your pad, or Enter for the keyboard. Esc cancels. | Spieler %d: drücke A auf deinem Controller oder Enter für die Tastatur. Esc bricht ab. | |
+| CONNECTED PADS | VERBUNDENE CONTROLLER | |
+| No pad connected. | Kein Controller verbunden. | |
+| P%d | S%d | |
+| Couch co-op seats each player at the device claimed here, remembered by pad. Without a claim, player 1 uses any device, as in solo play. | Beim Sofa-Koop spielt jeder an dem hier gewählten Gerät; der Launcher merkt sich den Controller. Ohne Wahl nutzt Spieler 1 jedes Gerät, wie beim Alleinspielen. | |
 | IN THE LAUNCHER | IM LAUNCHER | |
 | MOVE | WÄHLEN | |
 | Arrows or WASD · D-pad or stick | Pfeile oder WASD · Steuerkreuz oder Stick | |
@@ -111,23 +135,87 @@ The credit line of upstream's licence is not translated.
 | A click chooses, a right click goes back. | Ein Klick wählt, ein Rechtsklick geht zurück. | |
 | TOUCH | TOUCH | |
 | A tap chooses. | Tippen wählt. | |
-| PLAYER DEVICES | GERÄTE DER SPIELER | |
-| Couch co-op gives each player a controller of their own. It comes with a later version. | Beim Sofa-Koop hat jeder Spieler einen eigenen Controller. Das kommt mit einer späteren Version. | |
-| In a game, the game's own controls apply, as in solo play. | Im Spiel gilt die Steuerung des Spiels, wie beim Alleinspielen. | |
 
 ### Settings
 
 | English | German now | Better German |
 | --- | --- | --- |
 | Settings | Optionen | |
-| The launcher's own settings. A game's text follows its cartridge. | Die Optionen des Launchers. Der Text eines Spiels folgt seinem Modul. | |
+| The launcher's own settings, then the game's. A pressed value moves on; left and right step it. | Erst die Optionen des Launchers, dann die des Spiels. Drücken schaltet einen Wert weiter; links und rechts gehen Schritt für Schritt. | |
+| LAUNCHER | LAUNCHER | |
+| VIDEO | BILD | |
+| AUDIO | TON | |
+| GAME | SPIEL | |
 | LANGUAGE | SPRACHE | |
-| The language of the launcher. | Die Sprache des Launchers. | |
+| The language of the launcher. A game's text follows its cartridge. | Die Sprache des Launchers. Der Text eines Spiels folgt seinem Modul. | |
 | THEME | FARBEN | |
 | Light or dark colours for the launcher. | Helle oder dunkle Farben für den Launcher. | |
 | LIGHT | HELL | |
 | DARK | DUNKEL | |
+| WINDOW | FENSTER | |
+| A window, or the whole screen. | Ein Fenster oder der ganze Bildschirm. | |
+| WINDOWED | FENSTER | |
+| BORDERLESS | VOLLBILD | |
+| INTEGER SCALE | GANZZAHLIGE SKALIERUNG | |
+| Draw the game at an exact multiple of its pixels; OFF fits the window. | Zeichnet das Spiel in einem genauen Vielfachen seiner Pixel; AUS passt es ins Fenster. | |
+| MUSIC | MUSIK | |
+| SOUND | GERÄUSCHE | |
+| 0 to 7. | 0 bis 7. | |
+| TEXT SPEED | TEXT-TEMPO | |
+| How fast text appears. | Wie schnell Text erscheint. | |
+| FAST | SCHNELL | |
+| MEDIUM | MITTEL | |
+| SLOW | LANGSAM | |
+| BATTLE ANIMATION | KAMPFANIMATION | |
+| Attack animations in battle. | Angriffsanimationen im Kampf. | |
+| BATTLE STYLE | KAMPFSTIL | |
+| SHIFT asks before the next Pokemon; SET does not. | WECHSEL fragt vor dem nächsten POKéMON; FOLGEND nicht. | |
+| SHIFT | WECHSEL | |
+| SET | FOLGEND | |
 | Video, sound and game options are in each game's own OPTIONS menu. | Bild, Ton und Spieloptionen findest du im Menü OPTIONEN jedes Spiels. | |
+| The game's options are the ones its own OPTIONS menu shows; a change here is a change there. | Die Spieloptionen sind dieselben wie im Menü OPTIONEN des Spiels; eine Änderung hier gilt auch dort. | |
+
+### Saves (#6)
+
+| English | German now | Better German |
+| --- | --- | --- |
+| SAVES | SPIELSTÄNDE | |
+| %s saves | Spielstände %s | |
+| Each slot is one adventure. The game continues the active one. | Jeder Platz ist ein Abenteuer. Das Spiel setzt den aktiven fort. | |
+| PLAY → | SPIELEN → | |
+| EXPORT | EXPORTIEREN | |
+| IMPORT | IMPORTIEREN | |
+| + NEW SAVE | + NEUER SPIELSTAND | |
+| IMPORT .SAV | .SAV IMPORTIEREN | |
+| Empty slot | Leerer Platz | |
+| ACTIVE | AKTIV | |
+| BADGES %d · POKéDEX %d · TIME %s | ORDEN %d · POKéDEX %d · ZEIT %s | |
+| No save yet: the game starts from its title screen. | Noch kein Spielstand: das Spiel beginnt bei seinem Titelbild. | |
+| Campaign: %s (entered from CAMPAIGNS) | Kampagne: %s (Start über KAMPAGNEN) | |
+| No saves for %s on this device yet. | Noch keine Spielstände für %s auf diesem Gerät. | |
+| 1 save slot | 1 Speicherplatz | |
+| %d save slots | %d Speicherplätze | |
+| A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. Exports go to the exports folder of this device. | Eine .sav ist das Format des Moduls, wie ein Emulator oder ein Modul-Lesegerät es schreibt. Exporte landen im Ordner exports dieses Geräts. | |
+| Delete this save? | Diesen Spielstand löschen? | |
+| Delete %s? The save is removed from this device for good. | %s löschen? Der Spielstand wird endgültig von diesem Gerät entfernt. | |
+| this empty slot | diesen leeren Platz | |
+| A bigger file than expected | Eine größere Datei als erwartet | |
+| %s is %d bytes; a cartridge save is %d. Import the first %d bytes? | %s hat %d Bytes; ein Modul-Spielstand hat %d. Die ersten %d Bytes importieren? | |
+| Import a save | Spielstand importieren | |
+| A .sav for %s becomes a new save slot. Nothing is uploaded. | Eine .sav für %s wird ein neuer Speicherplatz. Nichts wird hochgeladen. | |
+| Drop the .sav file on this window, or type its path and press ENTER. | Zieh die .sav-Datei auf dieses Fenster oder tipp ihren Pfad ein und drück ENTER. | |
+| Drop the .sav file on this window. | Zieh die .sav-Datei auf dieses Fenster. | |
+| 32 KB in the cartridge's format (.sav, .srm). The save's trainer, team, items and progress come along; the slot it lands in is made the active one. | 32 KB im Format des Moduls (.sav, .srm). Trainer, Team, Items und Fortschritt kommen mit; der Platz, in dem sie landen, wird der aktive. | |
+| This slot cannot be exported. | Dieser Platz kann nicht exportiert werden. | |
+| This game has no room for another save. | Dieses Spiel hat keinen Platz für einen weiteren Spielstand. | |
+| Exported %s to %s | %s exportiert nach %s | |
+| Could not export: %s | Export fehlgeschlagen: %s | |
+| Deleted %s. | %s gelöscht. | |
+| Could not delete: %s | Löschen fehlgeschlagen: %s | |
+| Imported %s into a new save slot. | %s in einen neuen Speicherplatz importiert. | |
+| Could not import %s: %s | %s konnte nicht importiert werden: %s | |
+| Import the %s ROM before its saves. | Importiere erst das ROM von %s, dann seine Spielstände. | |
+| a campaign | eine Kampagne | |
 
 ### Help
 
