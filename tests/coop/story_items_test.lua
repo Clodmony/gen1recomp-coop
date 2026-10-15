@@ -227,6 +227,7 @@ local function fakeClient(story)
     self.sent[#self.sent + 1] = { set = set, unset = unset, bag = bag }
     return #self.sent
   end
+  function c:sendHoldings() return nil end -- holdings are holdings_test.lua's
   return c
 end
 

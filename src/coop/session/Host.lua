@@ -36,6 +36,9 @@
 -- Story items (#16, design A6): a patch carries its window's bag change;
 -- the items the campaign owes a player go out in `gifts`, each once per
 -- link (a new link hears them all again; the window applies each once).
+-- Pokémon (#17, design A7): a window's `holdings` at its rest points (its
+-- world, the PC when it changed) go into the player's section like a world
+-- that asks for no save; the uids the host gives rows go back in `uids`.
 --
 -- Per-link limits (#32): each frame the host decodes at most FRAME_BUDGET of
 -- one link's messages (the rest waits for the next frame), so one link cannot
@@ -385,6 +388,7 @@ function Host:_world(link, msg)
     self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
     local ok, bad = self.state:setWorld(p.id, save)
     if not ok then save, why = nil, bad end
+    if ok then self:_sendUids(link, bad) end
   end
   if not save then
     self:_log("world_refused", { why = why }, p)
@@ -406,6 +410,37 @@ function Host:_world(link, msg)
                       reason = not ok and "save_failed" or nil, kind = msg.kind })
     end
   end
+end
+
+-- The uids the host gave rows of a world or holdings this link sent (#17,
+-- design A7.3), so the window's rows carry them from then on
+function Host:_sendUids(link, assigned)
+  if type(assigned) ~= "table" or #assigned == 0 then return end
+  local list = {}
+  for i = 1, math.min(#assigned, Protocol.MAX_ROWS) do list[i] = assigned[i] end
+  self:_send(link, { type = "uids", list = list })
+end
+
+-- A window's holdings at a rest point (#17, design A7.2, A7.4): its world
+-- without the PC, and the PC when it changed; kept as a world is, without
+-- a save of the campaign (the host's cadence saves it, A3.9).
+function Host:_holdings(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  local world, why = World.join(msg.world, msg.boxes)
+  if world then
+    self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+    local ok, assigned = self.state:setHoldings(p.id, world)
+    if ok then
+      self:_log("holdings", { revision = self.state.revision, bytes = #msg.world,
+                              boxes = msg.boxes and #msg.boxes or nil,
+                              uids = #assigned }, p)
+      return self:_sendUids(link, assigned)
+    end
+    why = assigned
+  end
+  self:_log("holdings_refused", { why = why }, p)
+  return self:_refuse(link, msg.seq, "bad_world")
 end
 
 -- messages --------------------------------------------------------------
@@ -594,6 +629,7 @@ end
 
 local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    log = Host._logBatch, world = Host._world, patch = Host._patch,
+                   holdings = Host._holdings,
                    battle_open = battleHandler(HostBattles.open),
                    battle_join = battleHandler(HostBattles.join),
                    battle_cmd = battleHandler(HostBattles.cmd),
@@ -623,7 +659,7 @@ function Host:_receive(link, raw)
   -- a log batch, a world, a patch and a battle's opening are logged by
   -- their handlers, as a summary; a window's battle reports are many
   local t = msg.type
-  if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "battle_open"
+  if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "holdings" and t ~= "battle_open"
      and t ~= "battle_join" and t ~= "battle_at" then
     self:_log("message", msg, link.player)
   end
