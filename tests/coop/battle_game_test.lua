@@ -40,6 +40,7 @@ local Presence = require("src.coop.game.Presence")
 local CoopMenu = require("src.coop.game.CoopMenu")
 local Replica  = require("src.coop.battle.Replica")
 local Battles  = require("src.coop.game.Battles")
+local Notices  = require("src.coop.game.Notices")
 
 Game.data = Data
 Game.input = Input; Input:init()
@@ -63,6 +64,7 @@ end
 -- BLUE answers what the battle asks of BLUE: the opener runs, a
 -- replacement takes the first standing Pokémon, a choice says YES
 local blue
+local others = {} -- more partners, updated every frame
 local blueAnswers = {}
 local function blueDecides()
   for id, rec in pairs(blue.battles) do
@@ -103,6 +105,7 @@ local function step(n)
     local s = Session.current
     if s then s:update(1 / 60, Game) end
     if blue then blue:update(); blueDecides() end
+    for _, c in ipairs(others) do c:update() end
     stack:update(1 / 60)
     Presence.step(Game)
   end
@@ -213,6 +216,46 @@ do
   until_(function() return finished ~= nil end, 30000)
   check(finished ~= nil, "fought to its end alone")
   eq(stack:top(), ow, "and back on the map")
+end
+
+-- partners in a battle, as the world shows them (#34, A14.3, A14.4, A14.8, A14.10)
+do
+  blue:move("FIX_TOWN", 3, 6, "down", true, "walk")
+  local yellow = Client.new(s.hub:dial(), { name = "YELLOW", game = "red", sha1 = SHA,
+                                            device = "c1", seat = 1 })
+  yellow:join()
+  others[#others + 1] = yellow
+  step(3)
+  yellow:move("FIX_TOWN", 8, 8, "down", true, "walk")
+  step(3)
+  check(Presence.actors[yellow.player] ~= nil, "YELLOW is drawn on RED's map")
+  local enemy = Replica.packTeam({ Pokemon.new(Data, "FIXMON_B", 3) })
+  blue:battleOpen({ kind = "wild", enemy = enemy, map = "FIX_TOWN", foe = "FIXMON B" },
+                  blueTeam(20), 2222, false)
+  step(3)
+  local id = next(blue.battles)
+  local texts = table.concat(Notices.texts(), "|")
+  check(texts:find("BLUE is in a battle against wild FIXMON B. START > CO-OP to join.", 1, true),
+    "a notice says BLUE's battle can be joined (A14.10)")
+  check(Presence.actors[blue.player] and Presence.actors[blue.player].inBattle,
+    "BLUE wears the \"!\" where the battle started (A14.3)")
+  local lines = table.concat(CoopMenu.lines(Game, s), "|")
+  check(lines:find("IN A BATTLE", 1, true), "the CO-OP box says BLUE is in a battle (A14.8)")
+  blue:battleAt(id, 1, "menu", blue.player, "x")
+  step(2)
+  yellow:battleJoin(id, blueTeam(9), 3333, false)
+  step(4)
+  eq(Presence.actors[yellow.player], nil, "YELLOW joined it from elsewhere: not drawn (A14.4)")
+  check(Presence.actors[blue.player] ~= nil, "BLUE, whose world opened it, still is")
+  blue:battleAt(id, 2, nil, nil, nil, "run")
+  step(4)
+  check(Presence.actors[yellow.player] ~= nil, "after the battle YELLOW is back")
+  check(not Presence.actors[blue.player].inBattle, "and BLUE's \"!\" is gone")
+  yellow:leave()
+  step(3)
+  blue.battles = {}
+  blue:move("FIX_ROUTE", 3, 3, "down", true, "walk")
+  step(2)
 end
 
 -- JOIN BLUE from the CO-OP menu --------------------------------------------------------

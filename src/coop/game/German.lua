@@ -424,6 +424,9 @@ P["%s caught\n%s!"] = "%s hat\n%s gefangen!"
 P["%s joined\nthe battle!"] = "%s hilft\nim Kampf!"
 P["decides"] = "wählt"
 P["%s suggests"] = "%s rät zu"
+P["IN A BATTLE"] = "IM KAMPF"
+P["%s is in a battle against wild %s. START > CO-OP to join."] = "%s kämpft gegen ein wildes %s. START > KOOP zum Helfen."
+P["%s is in a battle against %s. START > CO-OP to join."] = "%s kämpft gegen %s. START > KOOP zum Helfen."
 
 -- battle
 P["FOE"] = "GEGNER"
