@@ -49,7 +49,8 @@ local VALID = {
               save = 'return { player = { name = "FUZZ" }, money = 5, party = {} }\n' },
     patch = { type = "patch", seq = 2, set = { ["flags/EVENT_GOT_POKEDEX"] = true,
               ["objectToggles/ROUTE_1/BALL"] = false, ["inventory/BOULDERBADGE"] = 1 },
-              unset = { "flags/EVENT_X" } },
+              unset = { "flags/EVENT_X" },
+              bag = { gained = { POTION = 1 }, lost = { OAKS_PARCEL = 1 }, spent = false } },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -71,6 +72,9 @@ local VALID = {
     story = { type = "story", rev = 7, base = true, applied = 2,
               set = { ["flags/EVENT_GOT_POKEDEX"] = true, ["trashPuzzle/first"] = 4 },
               unset = { "itemsTaken/ROUTE_1_obj_2" } },
+    gifts = { type = "gifts", list = { { seq = 1, item = "BICYCLE", qty = 1, once = true,
+                                         from = "RED" },
+                                       { seq = 2, item = "POTION", qty = -1, race = true } } },
   },
 }
 

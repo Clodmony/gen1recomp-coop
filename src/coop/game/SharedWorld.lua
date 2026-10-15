@@ -16,6 +16,13 @@
 -- (fly, teleport, holes, CUT, a boulder's dust, a heal).  A step the player
 -- walks of their own is not held (Window.lua).  A battle the host runs for
 -- this player comes with #18.
+--
+-- Story items (#16): a gift the window lands is told in a notice
+-- (`giftText`): a partner's shared item, one that went to the PC, a key
+-- item handed over, one with no room anywhere.  A late joiner's list says
+-- "Got …"; a race's take-back and a key item already held say nothing.
+
+local Strings = require("src.core.Strings")
 
 local SharedWorld = {}
 
@@ -72,7 +79,29 @@ function SharedWorld.frame(game)
                   { seamless = true, via = "reload", keepMusic = true })
       end
     end,
+    -- a gift landed (#16): a notice over the world
+    gifted = function(gift, where)
+      local text = SharedWorld.giftText(gift, where, game and game.data)
+      if text then require("src.coop.game.Notices").push(text) end
+    end,
   }
+end
+
+-- the notice for a gift the window landed (`where`: Items.give's or
+-- "taken"), or nil for one that says nothing
+function SharedWorld.giftText(gift, where, data)
+  local def = data and data.items and data.items[gift.item]
+  local name = def and def.name or gift.item
+  if gift.qty > 1 then name = name .. " x" .. gift.qty end
+  if gift.race or where == "held" then return nil end
+  if gift.qty < 0 then
+    if where ~= "taken" or not gift.from then return nil end
+    return Strings("%s handed over %s.", gift.from, name)
+  end
+  if not where then return Strings("No room for %s!", name) end
+  if where == "pc" then return Strings("%s went to the PC.", name) end
+  if gift.from then return Strings("%s shared %s.", gift.from, name) end
+  return Strings("Got %s.", name)
 end
 
 function SharedWorld.step(window, game)
