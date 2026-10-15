@@ -537,7 +537,7 @@ function S.import(p, menu, c)
     py = py + 30
   end
   py = py + p:para(c.x + 10, py, c.w - 20,
-    L("Clean dumps of Pokemon Red, Blue and Yellow (US) and of the German Rote and Blaue Edition; .zip and .7z where the system opens them."),
+    L("Clean dumps of Pokemon Red, Blue and Yellow (US) and of the German Rote, Blaue and Gelbe Edition; .zip and .7z where the system opens them."),
     "muted")
   close(py + 10)
   return py + 10

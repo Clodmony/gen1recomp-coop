@@ -149,7 +149,8 @@ function Cry.play(entry)
       end
       if source then
         local gain = volume
-        if version == "yellow" and species == "PIKACHU" then
+        if require("src.core.GameVersion").base(version) == "yellow" -- co-op (#40): Gelbe Edition too
+           and species == "PIKACHU" then
           gain = gain * math.max(0, math.min(7, tonumber(options.pikaVol) or 7)) / 7
         end
         local ok = pcall(function() source:setVolume(gain); source:play() end)

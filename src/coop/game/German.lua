@@ -47,6 +47,10 @@ local German = {}
 -- that row, split on spaces), or a `join` list of such parts concatenated;
 -- `prefix`/`suffix` wrap the result (a numbered directive there carries the
 -- source's argument).  A function receives the data and returns the string.
+-- `yellow` holds the entry Gelbe Edition uses instead (#40): its cartridge
+-- names a few labels otherwise and puts a PRINT row into two menus
+-- (`false`: no such word in Yellow; an entry with only `yellow` is Yellow's
+-- alone).  The same key works in the texts below.
 
 local W = {}
 German.WORDS = W
@@ -96,7 +100,7 @@ W["OPTION"] = { "StartMenuOptionText", line = 1 }
 W["PLAYER"] = { "SaveScreenInfoText", line = 1 }
 W["BADGES"] = { "SaveScreenInfoText", line = 2 }
 W["TIME"] = { "SaveScreenInfoText", line = 4 }
-W["Now saving..."] = { "NowSavingString", line = 1 }
+W["Now saving..."] = { "NowSavingString", line = 1, yellow = false } -- Yellow: a text, below
 W["CONTINUE"] = { "ContinueText", line = 1 }
 W["NEW GAME"] = { "NewGameText", line = 1 }
 
@@ -127,7 +131,8 @@ W["WITHDRAW <PK><MN>"] = { "BillsPCMenuText", line = 1 }
 W["DEPOSIT <PK><MN>"] = { "BillsPCMenuText", line = 2 }
 W["RELEASE <PK><MN>"] = { "BillsPCMenuText", line = 3 }
 W["CHANGE BOX"] = { "BillsPCMenuText", line = 4 }
-W["SEE YA!"] = { "BillsPCMenuText", line = 5 }
+W["SEE YA!"] = { "BillsPCMenuText", line = 5, yellow = { "BillsPCMenuText", line = 6 } }
+W["PRINT BOX"] = { yellow = { "BillsPCMenuText", line = 5 } }
 W["WITHDRAW"] = { "WithdrawPCText", line = 1 }
 W["DEPOSIT"] = { "DepositPCText", line = 1 }
 W["WITHDRAW ITEM"] = { "PlayersPCMenuEntries", line = 1 }
@@ -162,7 +167,8 @@ W["SEEN %3d  OWN %3d"] = { join = { { "PokedexSeenText", line = 1, suffix = " %1
 W["DATA"] = { "PokedexMenuItemsText", line = 1 }
 W["CRY"] = { "PokedexMenuItemsText", line = 2 }
 W["AREA"] = { "PokedexMenuItemsText", line = 3 }
-W["pokedex|QUIT"] = { "PokedexMenuItemsText", line = 4 }
+W["pokedex|QUIT"] = { "PokedexMenuItemsText", line = 4, yellow = { "PokedexMenuItemsText", line = 5 } }
+W["PRNT"] = { yellow = { "PokedexMenuItemsText", line = 4 } }
 W["%s's NEST"] = { "MonsNestText", line = 1, prefix = "%1$s", keepSpace = true }
 W["AREA UNKNOWN"] = { "AreaUnknownText", line = 1 }
 
@@ -196,16 +202,18 @@ W["POKéDEX."] = function(data)
 end
 
 -- the options the cartridge has (engine/menus/main_menu.asm)
-W["TEXT SPEED"] = { "TextSpeedOptionText", line = 1 }
-W["FAST"] = { "TextSpeedOptionText", line = 2, word = 1 }
-W["MEDIUM"] = { "TextSpeedOptionText", line = 2, word = 2 }
-W["SLOW"] = { "TextSpeedOptionText", line = 2, word = 3 }
-W["BATTLE ANIMATION"] = { "BattleAnimationOptionText", line = 1 }
-W["ON"] = { "BattleAnimationOptionText", line = 2, word = 1 }
-W["OFF"] = { "BattleAnimationOptionText", line = 2, word = 2 }
-W["BATTLE STYLE"] = { "BattleStyleOptionText", line = 1 }
-W["SHIFT"] = { "BattleStyleOptionText", line = 2, word = 1 }
-W["SET"] = { "BattleStyleOptionText", line = 2, word = 2 }
+-- (Yellow's option screen, engine/menus/options.asm, names the options in
+-- AllOptionsText and keeps each value bracketed, "[ SCHNELL ]": word 2)
+W["TEXT SPEED"] = { "TextSpeedOptionText", line = 1, yellow = { "AllOptionsText", line = 1 } }
+W["FAST"] = { "TextSpeedOptionText", line = 2, word = 1, yellow = { "OptionsMenu_TextSpeed.Fast", word = 2 } }
+W["MEDIUM"] = { "TextSpeedOptionText", line = 2, word = 2, yellow = { "OptionsMenu_TextSpeed.Mid", word = 2 } }
+W["SLOW"] = { "TextSpeedOptionText", line = 2, word = 3, yellow = { "OptionsMenu_TextSpeed.Slow", word = 2 } }
+W["BATTLE ANIMATION"] = { "BattleAnimationOptionText", line = 1, yellow = { "AllOptionsText", line = 2 } }
+W["ON"] = { "BattleAnimationOptionText", line = 2, word = 1, yellow = { "OptionsMenu_BattleAnimations.On", word = 2 } }
+W["OFF"] = { "BattleAnimationOptionText", line = 2, word = 2, yellow = { "OptionsMenu_BattleAnimations.Off", word = 2 } }
+W["BATTLE STYLE"] = { "BattleStyleOptionText", line = 1, yellow = { "AllOptionsText", line = 3 } }
+W["SHIFT"] = { "BattleStyleOptionText", line = 2, word = 1, yellow = { "OptionsMenu_BattleStyle.Shift", word = 2 } }
+W["SET"] = { "BattleStyleOptionText", line = 2, word = 2, yellow = { "OptionsMenu_BattleStyle.Set", word = 2 } }
 W["BACK"] = { "OptionMenuCancelText", line = 1 }
 
 -- the Cable Club (engine/link/cable_club.asm, print_waiting_text.asm)
@@ -229,6 +237,9 @@ W["The trade was\ncancelled."] = { "TradeCanceled" }
 
 local X = {}
 German.TEXTS = X
+
+-- the saving line Yellow keeps as a text (engine/menus/save.asm SavingText)
+X["Now saving..."] = { yellow = { "_SavingText" } }
 
 -- battle
 X["%s gained\n%d EXP. Points!"] = { "_GainedText", "_ExpPointsText" }
@@ -353,7 +364,7 @@ X["{RAM:wNameBuffer} can\nmove boulders."] = { "_CanMoveBouldersText" }
 X["{RAM:wNameBuffer} hacked\naway with CUT!"] = { "_UsedCutText" }
 X["{RAM:wNameBuffer} used\nSTRENGTH."] = { "_UsedStrengthText" }
 X["{PLAYER} got\n%s!"] = { "_GotMonText" }
-X["The link was\nbroken."] = { "_LinkCanceledText" }
+X["The link was\nbroken."] = { "_LinkCanceledText", yellow = { "_ColosseumCanceledText" } } -- Yellow: the same line under its Colosseum label
 
 -- Oak's speech and the naming screen (engine/movie/oak_speech.asm)
 X["Hello there!\nWelcome to the\vworld of POKéMON!\fMy name is OAK!\nPeople call me\vthe POKéMON PROF!"] = { "_OakSpeechText1" }
@@ -579,6 +590,14 @@ German.layout = {
   -- column 8 (US 9)
   pcSubmenu = { boxX = 8, boxW = 12 },
 }
+-- ..and what Gelbe Edition draws otherwise (pokeyellow-de, #40); the rest
+-- it draws as Rote and Blaue do
+German.layout.yellow = {
+  -- engine/link/cable_club.asm TradeCenter_DrawCancelBox: the 12-column box
+  -- as in Rote, the blank run beside it where US Yellow has it (hlcoord
+  -- 11, 15, 9 wide)
+  cableClubCancel = { boxW = 14, fillX = 11, fillW = 9 },
+}
 
 -- ---------------------------------------------------------------------------
 -- building the catalog
@@ -702,15 +721,29 @@ function German.text(data, source, entry)
   return out
 end
 
--- Every entry this data can fill: source -> German.
-function German.catalog(data)
+-- The entry a game of this base ("red", "blue", "yellow") reads: `yellow`
+-- replaces it in a Yellow game (false: nothing); an entry with no label of
+-- its own is Yellow's alone.
+function German.variant(entry, base)
+  if type(entry) ~= "table" then return entry end
+  if base == "yellow" and entry.yellow ~= nil then return entry.yellow or nil end
+  if entry[1] == nil and entry.join == nil then return nil end
+  return entry
+end
+
+-- Every entry this data can fill: source -> German, for a game of `base`
+-- (the current game's when nil).
+function German.catalog(data, base)
+  base = base or GameVersion.base()
   local out = {}
   for source, entry in pairs(German.WORDS) do
-    local s = German.word(data, entry)
+    entry = German.variant(entry, base)
+    local s = entry and German.word(data, entry)
     if s then out[source] = s end
   end
   for source, entry in pairs(German.TEXTS) do
-    if out[source] == nil then
+    entry = German.variant(entry, base)
+    if entry and out[source] == nil then
       local s = German.text(data, source, entry)
       if s then out[source] = s end
     end
@@ -797,7 +830,7 @@ function German.install(data, version)
     strings = {}
     data.strings = strings
   end
-  for source, s in pairs(German.catalog(data)) do
+  for source, s in pairs(German.catalog(data, GameVersion.base(version))) do
     if strings[source] == nil then strings[source] = s end
   end
   data.field = data.field or {}
@@ -820,10 +853,12 @@ function German.install(data, version)
   return true
 end
 
--- The layout for a site: German.layout.<name> in a German game, else nil.
+-- The layout for a site: German.layout.<name> in a German game (Gelbe
+-- Edition's own where it has one), else nil.
 function German.layoutFor(name)
   if not GameVersion.isGerman() then return nil end
-  return German.layout[name]
+  local own = GameVersion.base() == "yellow" and German.layout.yellow[name]
+  return own or German.layout[name]
 end
 
 return German
