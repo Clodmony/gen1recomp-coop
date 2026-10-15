@@ -724,6 +724,11 @@ characters, a menu row fewer.
 | SAVED %d MIN AGO | VOR %d MIN GESP. | |
 | SAVED %d H AGO | VOR %d H GESP. | |
 | AUTOSAVE: ON | AUTO-SPEICHERN: AN | |
+| %s shared %s. | %s teilt %s. | |
+| %s went to the PC. | %s liegt jetzt im PC. | |
+| %s handed over %s. | %s hat %s abgegeben. | |
+| No room for %s! | Kein Platz: %s! | |
+| Got %s. | %s erhalten. | |
 
 #### battle
 

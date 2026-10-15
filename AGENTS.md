@@ -31,6 +31,8 @@ Read before working:
   `--coop-host`/`--coop-join` development entry).
 - [docs/coop/world.md](docs/coop/world.md): what partners share of one
   world and when (ownership, patches, rest points, per-place rules).
+- [docs/coop/items.md](docs/coop/items.md): story items reaching every
+  player, the gift list, the gift race and the 40-row bag.
 - [docs/coop/presence.md](docs/coop/presence.md): what a session shows in
   the game (partners, arrow, CO-OP menu, notices, run) and its hooks in
   upstream files.
