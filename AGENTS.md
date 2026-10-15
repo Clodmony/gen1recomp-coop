@@ -40,6 +40,12 @@ Read before working:
   upstream files.
 - [docs/coop/battles.md](docs/coop/battles.md): co-op battles (lockstep
   copies in every window, the host's record, joining, the rules).
+- [docs/coop/friends.md](docs/coop/friends.md): invitations, friend
+  battles and direct trades between partners.
+- [docs/coop/cable.md](docs/coop/cable.md): the Cable Club over the
+  session (trades by pairing, the Colosseum, the continue position).
+- [docs/coop/versions.md](docs/coop/versions.md): Red and Blue in one
+  campaign, wild Pokémon from both versions, why Yellow stays apart.
 - [docs/coop/split.md](docs/coop/split.md): split-screen, two players on one
   device (two worlds in one process, the views, input routing, seat 2).
 
