@@ -64,13 +64,14 @@ end
 -- BLUE answers what the battle asks of BLUE: the opener runs, a
 -- replacement takes the first standing Pokémon, a choice says YES
 local blue
+local blueHold = false -- BLUE answers nothing while true
 local others = {} -- more partners, updated every frame
 local blueAnswers = {}
 local function blueDecides()
   for id, rec in pairs(blue.battles) do
     local b = stack:top()
     -- (only once RED's copy runs it: BLUE has no copy of its own here)
-    if b and b.coop and b.coop.id == id and rec.ask and rec.by == blue.player
+    if not blueHold and b and b.coop and b.coop.id == id and rec.ask and rec.by == blue.player
        and not rec.ended and blueAnswers[id] ~= rec.rev then
       local cmd
       if rec.ask == "menu" then
@@ -284,12 +285,40 @@ do
   eq(b and b.coop.roster[2].species, "FIXMON_A", "RED's behind BLUE's")
   eq(b and Replica.owner(b, b.player.mon), blue.player, "BLUE's Pokémon is out")
   eq(b and b.introSlide, nil, "no intro for a joiner (A9.8)")
+  -- RED leaves it (RUN as a joiner, then YES): back on the map, the battle
+  -- plays on out of sight (#20, A11.1)
+  blueHold = true -- BLUE waits instead of running
+  Replica.leave(b)
+  eq(stack:top(), ow, "RED left the battle: back in their world")
+  check(Battles.away[b.coop.id] == b, "the copy plays on out of sight")
+  local labels = {}
+  local m2 = CoopMenu.push(Game)
+  for _, it in ipairs(m2.items) do labels[#labels + 1] = it.label end
+  stack:pop()
+  check(table.concat(labels, ","):find("REJOIN", 1, true), "the CO-OP menu offers REJOIN (A11.4)")
+  check(not table.concat(labels, ","):find("JOIN BLUE", 1, true), "and joins nothing else (A11.3)")
+  -- a fight RED's world opens now waits for that battle (A11.3)
+  local held = BattleState.newWild(Game, "FIXMON_B", 2)
+  ow:pushBattle(held)
+  check(Battles.held and Battles.held.battle == held, "a new fight waits while RED is away")
+  check(stack:top() ~= ow, "under REJOIN?")
+  stack:pop() -- the YES/NO: no
+  check(stack:top() == Battles.held.wait, "the box waits for the old battle to end")
+  -- REJOIN from the box's own row: back in the old battle
+  Battles.rejoin(Game, b)
+  until_(function() return topBattle() == b end, 600)
+  eq(topBattle(), b, "REJOIN: the battle is back on screen (A11.4)")
+  eq(Battles.away[b.coop.id], nil, "no longer away")
+  blueHold = false
   local money0 = Game.save.money
   until_(function() return stack:top() == ow end, 30000)
   eq(stack:top(), ow, "BLUE ran: the battle ended, RED is back where they stood")
   eq(b and b.result, "run", "as a run")
   eq(Game.save.money, money0, "no prize for a run")
   eq(ow.map.id, "FIX_TOWN", "on RED's map")
+  -- the fight that waited comes now (A11.3)
+  until_(function() return Battles.held == nil end, 600)
+  eq(Battles.held, nil, "the fight that waited goes on once the old battle ended")
 end
 
 T.finish()
