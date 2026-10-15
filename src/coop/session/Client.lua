@@ -151,8 +151,8 @@ end
 function Client:battleOpen(opening, team, otId, expAll, room)
   return self:send({ type = "battle_open", kind = opening.kind, enemy = opening.enemy,
                      map = opening.map, trainer = opening.trainer, hooked = opening.hooked,
-                     foe = opening.foe, team = team, otId = otId, expAll = expAll,
-                     room = room })
+                     foe = opening.foe, encounter = opening.encounter, team = team,
+                     otId = otId, expAll = expAll, room = room })
 end
 
 function Client:battleJoin(id, team, otId, expAll, room)

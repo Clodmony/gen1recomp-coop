@@ -3616,6 +3616,8 @@ function OverworldState:talkTo(npc)
     local BattleState = require("src.battle.BattleState")
     Game.stack:push(TextBox.new(Game, text, function()
       local battle = BattleState.newWild(Game, d.pokemon, d.level)
+      -- co-op (#21): a one-off wild Pokémon is a unique encounter
+      battle.coopEncounter = "static:" .. npc.id
       battle.onFinish = function(result)
         if result ~= "lose" and result ~= "run" then
           Game.save.defeatedTrainers[npc.id] = true
@@ -4531,10 +4533,13 @@ function OverworldState:checkTrainerSight()
     local d = npc.def
     -- CheckFightingMapTrainers engages ANY aligned trainer sprite,
     -- walkers included (they sight between steps)
+    -- co-op (#21): a trainer a partner is fighting spots nobody else
+    -- (src/coop/game/Battles.lua, the sight gate); a solo game says no
     if d.trainerClass and not npc.moving
        and not (cancelled and cancelled.npcId == npc.id)
        and not self:trainerDefeated(npc)
        and not (noSight and d.text and noSight[d.text])
+       and not require("src.coop.game.Battles").engaged(npc)
        and trainerSpriteOnScreen(npc, p) then
       local header = Game.data:trainerHeader(self.map.def.label, d.index)
       local range = header and header.range or 0
