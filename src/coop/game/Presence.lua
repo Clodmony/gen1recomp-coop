@@ -20,6 +20,9 @@
 -- who joined a battle elsewhere is not drawn; a battle this player is free
 -- to join is told in a notice.
 --
+-- The Cable Club (#60, design A14.4): a partner in a Cable Club room is not
+-- drawn; the trade screen names them (src/coop/game/CableClub.lua).
+--
 -- The opening (#22, design A4.4, A4.8): a partner who plays the opening is
 -- not drawn and gets no arrow or TOWN MAP mark, and while this player plays
 -- it they see nobody and hear of no battle to join.  A partner who joins in
@@ -340,9 +343,10 @@ function Presence.step(game)
         tintOwn(ow, colors, group)
         Presence.tinted = true
       end
-    elseif p.connected and p.map and not alone and not p.opening
+    elseif p.connected and p.map and not alone and not p.opening and not p.cable
            and not (p.battle and (battleOf(state, p) or {}).by ~= p.id) then
-      -- (a partner who joined a battle elsewhere is not drawn, A14.4)
+      -- (a partner who joined a battle elsewhere is not drawn, A14.4; nor
+      -- one in a Cable Club room, #60)
       local a = Presence.actors[p.id] or Actor.new(p.id)
       keep[p.id] = a
       a.colors, a.colorGroup = Colors.palette(place)
