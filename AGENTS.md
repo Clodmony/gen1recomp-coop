@@ -33,6 +33,8 @@ Read before working:
   world and when (ownership, patches, rest points, per-place rules).
 - [docs/coop/items.md](docs/coop/items.md): story items reaching every
   player, the gift list, the gift race and the 40-row bag.
+- [docs/coop/opening.md](docs/coop/opening.md): a new player's private
+  opening, the names, the rival's starter.
 - [docs/coop/presence.md](docs/coop/presence.md): what a session shows in
   the game (partners, arrow, CO-OP menu, notices, run) and its hooks in
   upstream files.
@@ -76,7 +78,13 @@ Read before working:
 - Never push to `upstream` (its push URL is disabled on purpose) and never
   open pull requests against it. Never force-push over existing work.
 - No personal data in commits, docs, issues or pull requests (names, emails,
-  hardware, local paths). Commits are authored as `Claude <noreply@anthropic.com>`
+  hardware, local paths).
+- **No session links** (owner, 2026-10-15): commits, pull requests, issues
+  and comments carry no `Claude-Session:` line and no claude.ai session
+  URL, whatever an attribution default says; they link the public
+  repository to the owner's account. `Co-Authored-By: Claude …` and the
+  pull request's "Generated with Claude Code" line stay (the AI
+  disclosure). Commits are authored as `Claude <noreply@anthropic.com>`
   (the clone's local git config).
 - Never commit or upload ROMs, saves, extracted cartridge content
   (`data/generated/`), credentials or local caches. Screenshots of the game

@@ -137,11 +137,17 @@ back.
 - Not run: real pads, a real window (its resize), listening on speakers,
   and a pair that joined a remote host.
 
+## Player 2's name
+
+ENTER WITH 2 PLAYERS and JOIN WITH 2 PLAYERS ask PLAYER 2 NAME first,
+offering the name remembered on this device (`name2` in
+`coop/launcher.json`), so player 2 names themself as any new player does
+(#22, [opening.md](opening.md)). Oak's speech then uses that name. The
+development entry takes `--coop-split=NAME`; without a name the second
+seat is `PLAYER2` until a host knows them.
+
 ## Not yet
 
-- Player 2's trainer name is `PLAYER2` until a host knows them (the
-  development entry takes a name); player 2 names themself with #22
-  (owner, 2026-10-15).
 - Player 2's world does not get the device events of mobile platforms
   (`love.handlers.audiosuspend`/`audioreset` reach player 1's modules
   only); split-screen is not run on a phone.

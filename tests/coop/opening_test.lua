@@ -181,6 +181,18 @@ do
   pump(host, { x }, 8)
   eq(x.w.opening, false, "a world with a starter is past the opening, even in the lab")
   check(not view(x).opening, "the host agrees")
+
+  -- a new link tells the host again: a host without this player's world
+  -- marks them in the opening when they come back
+  host.state:player(x.c.player).world = nil
+  x.c.conn:close()
+  local c2 = Client.new(hub:dial(), { name = "RED", game = "red", sha1 = SHA, build = "test",
+                                      device = "d1", clock = now, known = x.c.known })
+  c2:join()
+  x.c, x.w.client = c2, c2
+  pump(host, { x }, 8)
+  eq(c2.status, "joined", "back in")
+  check(not view(x).opening, "the window says again it is past the opening")
 end
 
 -- the rival's name (A4.5) --------------------------------------------------------

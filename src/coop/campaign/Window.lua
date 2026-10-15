@@ -102,6 +102,8 @@ function Window.new(client)
     opening = nil,   -- #22: true while the player plays the opening, false
                      -- once past it (nil: not looked at yet)
     naming = nil,    -- a rival's name given in Oak's speech, not sent yet
+    told = nil,      -- the client the opening's state last went to
+    finished = nil,  -- this window finished the opening
   }, Window)
 end
 
@@ -388,15 +390,21 @@ end
 -- true while the window plays the opening.
 function Window:_opening(f)
   if self.naming and self.client:sendOpening(false, self.naming) then self.naming = nil end
-  if self.opening == nil then
-    self.opening = not hasStarter(f.save)
-    self.client:sendOpening(not self.opening)
+  if self.opening == nil then self.opening = not hasStarter(f.save) end
+  -- each link tells the host once: a host that lost this player's world
+  -- marks them in the opening when they come back
+  -- (with the starter, when this window finished the opening: a done lost
+  -- to a dropped link)
+  if self.told ~= self.client
+     and self.client:sendOpening(not self.opening, nil, self.finished and chosen(f.save) or nil) then
+    self.told = self.client
   end
   if not self.opening then return false end
   if f.busy or self.rest + 1 < Window.REST_FRAMES then return true end
   if not (hasStarter(f.save) and f.map ~= nil and f.map ~= Window.LAB) then return true end
-  self.opening = false
+  self.opening, self.finished = false, true
   self.client:sendOpening(true, nil, chosen(f.save))
+  self.told = self.client
   -- the campaign's story over the private one, as a late window opens
   self.sent = nil
   self:_open(f)
