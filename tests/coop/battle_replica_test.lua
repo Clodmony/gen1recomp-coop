@@ -50,13 +50,24 @@ local function newGame(name, otId, party)
   save.party = party
   save.money = 1000
   local press = true
+  local g
   local input = {
-    wasPressed = function(_, k) return press and k == "a" end,
+    -- A for the text pages; the menus are answered by the autopilot
+    wasPressed = function(_, k)
+      if not press or k ~= "a" then return false end
+      local b = g and g.stack:top()
+      if b and b.coop then
+        local q, by = Replica.question(b)
+        if q == "menu" and by == b.coop.me then return false end
+      end
+      return true
+    end,
     isDown = function() return false end,
     wasReleased = function() return false end,
   }
-  return { data = Data, save = save, stack = newStack(), input = input,
-           setPress = function(v) press = v end }
+  g = { data = Data, save = save, stack = newStack(), input = input,
+        setPress = function(v) press = v end }
+  return g
 end
 
 local function setup()
@@ -91,9 +102,14 @@ local function autopilot(g)
   if not (b and b.coop) then return end
   Replica.step(b) -- the question goes to the host before its answer
   local kind, by = Replica.question(b)
-  if kind == "menu" and by == b.coop.me and not b.coop.sent and g.decide then
-    local cmd = g.decide(b)
-    if cmd then Replica.send(b, cmd) end
+  if kind == "menu" and by == b.coop.me and not b.coop.sent then
+    -- wait for the partner to be in, then fight with the first move
+    -- unless the scenario decides otherwise
+    if #b.coop.roster >= (g.expect or 1) then
+      local cmd = g.decide and g.decide(b)
+      if cmd == nil then cmd = { kind = "move", slot = 1 } end
+      if cmd then Replica.send(b, cmd) end
+    end
   end
   if kind == "choice" and by == b.coop.me and not b.coop.sent then
     b.coop.picking = b.coop.applied
@@ -132,8 +148,9 @@ local function run(host, clients, games, untilFn, limit)
 end
 
 -- the opener's world opens a wild battle; it becomes a co-op battle
-local function openWild(client, game, species, level)
+local function openWild(client, game, species, level, prep)
   local battle = BattleState.newWild(game, species, level)
+  if prep then prep(battle.enemy.mon) end
   local opening = { kind = "wild", enemy = { Replica.pack(battle.enemy.mon) },
                     map = "FIX_TOWN", foe = species }
   client:battleOpen(opening, Replica.packTeam(game.save.party), game.save.player.id, false)
@@ -182,6 +199,7 @@ do
   local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 12) })
   local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 12) })
   local games = { redGame, greenGame }
+  redGame.expect = 2
   local greenExp0 = greenGame.save.party[1].exp
   run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
 
@@ -194,12 +212,6 @@ do
   local hp0 = battle.enemy.mon.hp
 
   -- red's copy plays the intro and asks red for a move; green joins then
-  redGame.setPress(false)
-  run(host, clients, games, function()
-    local b = host.battles[id]
-    return b and b.ask and b.ask.kind == "menu"
-  end, 3000)
-  redGame.setPress(true)
   local gb = joinBattle(host, green, greenGame, id, clients, games)
   check(gb.coop.entered, "the joiner's copy caught up without a screen")
   eq(#gb.coop.roster, 2, "the joiner's copy holds both teams")
@@ -239,6 +251,7 @@ do
   local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 14), Pokemon.new(Data, "FIXMON_B", 9) })
   local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 12), Pokemon.new(Data, "FIXMON_A", 8) })
   local games = { redGame, greenGame }
+  redGame.expect = 2
   run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
   local before = {}
   for _, g in ipairs(games) do for _, m in ipairs(g.save.party) do before[m] = m.exp end end
@@ -250,12 +263,6 @@ do
                    trainer = { class = "OPP_FIX_YOUNGSTER", index = 1, rival = "BLUE" } },
                  Replica.packTeam(redGame.save.party), 1111, false)
   local id = bindOpener(host, red, redGame, battle, clients, games)
-  redGame.setPress(false)
-  run(host, clients, games, function()
-    local b = host.battles[id]
-    return b and b.ask and b.ask.kind == "menu"
-  end, 3000)
-  redGame.setPress(true)
   green:battleJoin(id, Replica.packTeam(greenGame.save.party), 2222, true)
   local rec
   run(host, clients, games, function()
@@ -295,17 +302,12 @@ do
   local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 5) })
   local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 5) })
   local games = { redGame, greenGame }
+  redGame.expect = 2
   run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
   local battle = openWild(red, redGame, "FIXMON_B", 40)
   local ended = {}
   battle.onFinish = function(result) ended.red = result end
   local id = bindOpener(host, red, redGame, battle, clients, games)
-  redGame.setPress(false)
-  run(host, clients, games, function()
-    local b = host.battles[id]
-    return b and b.ask and b.ask.kind == "menu"
-  end, 3000)
-  redGame.setPress(true)
   local gb = joinBattle(host, green, greenGame, id, clients, games)
   gb.coop.onEnd = function(_, result) ended.green = result end
   run(host, clients, games, function() return ended.red and ended.green end, 40000)
@@ -325,15 +327,10 @@ do
   local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 10) })
   greenGame.save.inventory.FIX_BALL = 50
   local games = { redGame, greenGame }
+  redGame.expect = 2
   run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
   local battle = openWild(red, redGame, "FIXMON_B", 3)
   local id = bindOpener(host, red, redGame, battle, clients, games)
-  redGame.setPress(false)
-  run(host, clients, games, function()
-    local b = host.battles[id]
-    return b and b.ask and b.ask.kind == "menu"
-  end, 3000)
-  redGame.setPress(true)
   local gb = joinBattle(host, green, greenGame, id, clients, games)
   local switched = false
   redGame.decide = function(b)
@@ -356,6 +353,100 @@ do
   eq(greenGame.save.party[2].otId, 2222, "with the thrower as its trainer")
   eq(#redGame.save.party, 1, "and not in the partner's (never duplicated)")
   eq(logged("battle_desync"), 0, "no desync")
+end
+
+-- 5. a locked-in turn takes no command (A8.10): after a recharge move the
+-- next turn runs by itself in every copy; an item comes from the acting
+-- player's bag and works the same in every copy (A8.13) ---------------------------
+do
+  Data.moves.FIX_BEAM = { id = "FIX_BEAM", index = 5, name = "FIX BEAM", type = "NORMAL",
+                          power = 20, accuracy = 100, pp = 5, effect = "HYPER_BEAM_EFFECT" }
+  Data.items.POTION = { id = "POTION", index = 6, name = "POTION", price = 300 }
+  Data.moves.FIX_GROWL = { id = "FIX_GROWL", index = 7, name = "FIX GROWL", type = "NORMAL",
+                           power = 0, accuracy = 100, pp = 40, effect = "ATTACK_DOWN1_EFFECT" }
+  local host, red, green = setup()
+  local clients = { red, green }
+  local beamer = Pokemon.new(Data, "FIXMON_A", 20)
+  beamer.moves = { { id = "FIX_BEAM", pp = 5 } }
+  local redGame = newGame("RED", 1111, { beamer })
+  local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 12) })
+  greenGame.save.inventory.POTION = 3
+  local games = { redGame, greenGame }
+  redGame.expect = 2
+  run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
+  local battle = openWild(red, redGame, "FIXMON_B", 12, function(mon)
+    mon.moves = { { id = "FIX_GROWL", pp = 40 } } -- the foe never hurts anyone
+  end)
+  local id = bindOpener(host, red, redGame, battle, clients, games)
+  -- red fires the beam once; green stays out of it
+  local sent = 0
+  redGame.decide = function(b)
+    if sent > 0 then return false end
+    sent = sent + 1
+    return { kind = "move", slot = 1 }
+  end
+  greenGame.decide = function() return false end
+  local gb = joinBattle(host, green, greenGame, id, clients, games)
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and #b.inputs >= 3 and b.ask and b.ask.rev == #b.inputs and b.ask.kind == "menu"
+  end, 6000)
+  local hb = host.battles[id]
+  eq(#hb.inputs, 3, "the beam was one command, the recharge turn none (A8.10)")
+  check(battle.turnCount >= 2, "and two turns went by (" .. tostring(battle.turnCount) .. ")")
+  eq(battle.turnCount, gb.turnCount, "in both copies")
+  eq(logged("battle_desync"), 0, "no desync")
+  -- red hands over to green's Pokemon? no: red uses green's... green has
+  -- the POTION: green cannot act while red decides, so red switches to
+  -- green's Pokemon first
+  local maxHp = battle.coop.roster[1].stats.hp
+  battle.coop.roster[1].hp, gb.coop.roster[1].hp = 3, 3 -- (hurt alike in both copies)
+  Replica.send(battle, { kind = "switch", index = 2 })
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and b.ask and b.ask.rev == #b.inputs and b.ask.kind == "menu" and b.ask.by == green.player
+  end, 6000)
+  eq(host.battles[id].ask.by, green.player, "green decides now")
+  -- green's bag: the facade works on scratch copies; the choice goes out
+  local hp1 = gb.coop.roster[1].hp
+  greenGame.save.inventory.POTION = greenGame.save.inventory.POTION - 1 -- the bag spends it
+  Replica.send(gb, { kind = "item", item = "POTION", index = 1 })
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and #b.inputs >= 5 and b.ask and b.ask.rev == #b.inputs
+  end, 6000)
+  eq(gb.coop.roster[1].hp, math.min(maxHp, hp1 + 20), "the POTION healed red's Pokémon in green's copy")
+  eq(battle.coop.roster[1].hp, gb.coop.roster[1].hp, "and in red's")
+  eq(greenGame.save.inventory.POTION, 2, "one POTION left green's bag")
+  eq(redGame.save.inventory.POTION, nil, "red's bag is untouched")
+  eq(logged("battle_desync"), 0, "no desync")
+end
+
+-- 6. the bag in battle works on scratch copies: what the player picks goes
+-- to the host, nothing changes before the input comes back -----------------------
+do
+  local host, red, green = setup()
+  local clients = { red, green }
+  local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 10) })
+  local games = { redGame }
+  redGame.expect = 99 -- nobody decides here
+  run(host, clients, {}, function() return red.status == "joined" end, 10)
+  local battle = openWild(red, redGame, "FIXMON_B", 3)
+  bindOpener(host, red, redGame, battle, clients, games)
+  run(host, clients, games, function()
+    local k, by = Replica.question(battle)
+    return k == "menu" and by == red.player
+  end, 3000)
+  battle.coop.roster[1].hp = 5
+  local facade = Replica.facade(battle)
+  check(facade ~= nil and facade ~= battle, "the bag works on a facade of the battle")
+  local target = facade.playerParty[1]
+  check(target ~= battle.coop.roster[1], "over scratch copies of the roster")
+  target.hp = 25 -- what ItemEffects would do to the copy
+  facade:itemUsed({ "healed" }, { item = "POTION", target = target })
+  eq(battle.coop.sent and battle.coop.sent.cmd.kind, "item", "the choice went to the host")
+  eq(battle.coop.sent.cmd.index, 1, "naming the roster row")
+  eq(battle.coop.roster[1].hp, 5, "the battle is untouched until the input comes back")
 end
 
 T.finish()

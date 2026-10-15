@@ -415,7 +415,7 @@ end
 
 -- the bag and the party menu work on scratch copies: the choice goes to
 -- the host, the effect comes back as an input
-local function scratchFacade(b)
+function Replica.facade(b)
   local copies, index = {}, {}
   for i, mon in ipairs(b.coop.roster) do
     local copy = {}
@@ -482,7 +482,7 @@ function Replica.openReplacement(b)
 end
 
 function Replica.openItems(b)
-  local facade = scratchFacade(b)
+  local facade = Replica.facade(b)
   b.game.stack:push(b:buildScreen("BagMenu", { battle = facade }))
 end
 
