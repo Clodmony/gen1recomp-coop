@@ -1073,8 +1073,8 @@ sibling's D-numbers.
   renderer keeps 160 x 144. Couch co-op and per-player controls show as
   PLANNED and are not offered until #4 and #11 work. Details:
   [launcher.md](launcher.md).
-- **G14. The launcher speaks English or German** (#41, default proposed
-  2026-10-14, the owner may change it). Every launcher string goes through
+- **G14. The launcher speaks English or German** (#41, 2026-10-14,
+  accepted by the owner 2026-10-15: the system's locale first). Every launcher string goes through
   one catalog keyed by its English source; LANGUAGE in SETTINGS picks
   ENGLISH or DEUTSCH, and before a choice the system's locale does (German:
   Deutsch, else English). The setting is the launcher's alone: a game's text
@@ -1138,7 +1138,7 @@ sibling's D-numbers.
   deleted. Since #13 the slot's content comes from the host's campaign file
   on entering (G20).
 - **G20. A campaign file holds each player's world whole until the shared
-  world** (#13, 2026-10-14). The host's file (`coop/campaigns/<game>/<id>.campaign`,
+  world** (#13, 2026-10-14, accepted by the owner 2026-10-15). The host's file (`coop/campaigns/<game>/<id>.campaign`,
   JSON) has the campaign's section (id, title, cartridge, revision, the
   shared story, the unique-encounter registry, the applied commits) and a
   section per player whose world is the game's own save text
@@ -1152,7 +1152,8 @@ sibling's D-numbers.
   has no rename, so the swap renames in the real save folder and falls back
   to writing in place with the checked `.tmp` as the witness. Details:
   [campaign.md](campaign.md).
-- **G21. The shared world is a story of save entries** (#14, 2026-10-15).
+- **G21. The shared world is a story of save entries** (#14, 2026-10-15,
+  accepted by the owner the same day).
   The engine has no RAM bytes to share: a Gen 1 world here is a save table.
   The campaign owns six families of its entries (`Ownership.lua`): event
   flags (less a list of each player's: Safari, purified zone, Mansion

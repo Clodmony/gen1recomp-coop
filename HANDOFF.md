@@ -11,22 +11,25 @@ Last updated 2026-10-15 (after Group 5a, #16, PR #49).
 ## Repository state
 
 - Default branch `gen1recomp-coop`; `main` = upstream main. Nothing of
-  Groups 2a to 5a is merged yet; no owner comments on #42-#46, #48.
+  Groups 2a to 5a is merged yet; no owner comments on #42-#46, #48, #49.
+- The owner accepted G14, G20, G21 and G22 as built (2026-10-15); the
+  acceptance is recorded in `docs/coop/design.md` on #49's branch.
 - Milestones: Group 5a (#16) is done by #49; Group 7a holds #17.
 
 ## Open pull requests (all draft, stacked; the owner reviews and says which to merge)
 
 - **#42** `coop/group2a-german` into `gen1recomp-coop`: launcher redesign (#38)
-  and German launcher (#41). G13, G14 (proposed). Owner: the "Better German"
-  column in `docs/coop/german-wording.md`, G14, whether #38 may close.
+  and German launcher (#41). G13, G14 (accepted 2026-10-15, recorded on #49's branch). Owner: the
+  "Better German" column in `docs/coop/german-wording.md`, whether #38 may
+  close.
 - **#43** `coop/group2a-german-games` on #42's branch: the rest of #25, G15.
 - **#44** `coop/group2a-yellow-de` on #43's branch: German Yellow (#40), G16.
 - **#45** `coop/group3-launcher-screens` on #44's branch: Group 3, closes #4,
   #5, #6 (G17-G19).
 - **#46** `coop/group4-campaign-state` on #45's branch: closes #13 (campaign
-  files, G20 proposed).
+  files, G20 accepted 2026-10-15).
 - **#48** `coop/group5-shared-world` on #46's branch: closes #14 (the
-  shared world, G21 proposed, protocol 5, campaign file version 2).
+  shared world, G21 accepted 2026-10-15, protocol 5, campaign file version 2).
 - **#49** `coop/group5a-story-items` on #48's branch (head: the live-run
   docs commit plus this note): closes #16. `src/coop/campaign/Items.lua`.
   - A patch carries its window's bag change, and the host shares, takes
