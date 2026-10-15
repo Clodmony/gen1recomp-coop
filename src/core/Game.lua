@@ -1366,7 +1366,7 @@ end
 
 -- Capture the live world state into the save table and persist it.
 -- Options are flushed to options.lua as part of SaveData.save.
-function Game:writeSave()
+function Game:writeSave(kind)
   -- Tool sessions can be deliberately ephemeral. Give them one narrow veto
   -- before captureSave mutates the snapshot or any progress bytes reach disk.
   if ModRuntime.call("save.write", function() return true end, self) == false then
@@ -1387,6 +1387,9 @@ function Game:writeSave()
   if written then
     local eng = self:syncEngine()
     if eng then pcall(eng.noteSaveWritten, eng) end
+    -- co-op (#13): in a co-op world the world goes to the host, which saves
+    -- the campaign (src/coop/game/CampaignSave.lua)
+    require("src.coop.game.CampaignSave").written(self, kind)
   end
   return written
 end

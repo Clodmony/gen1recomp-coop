@@ -132,6 +132,22 @@ function Launcher:_coopReturn()
   end
 end
 
+-- The player's world from the campaign into the campaign's slot (#13).  A
+-- player the campaign has no world for keeps what the slot holds: a new
+-- game, or this device's progress from before campaign files, which goes to
+-- the host with the first save.
+function Launcher:_coopWorld(SaveData, version, slot)
+  local s = Session.current
+  if not (s and slot and s.takeWorld) then return end
+  local save = s:takeWorld()
+  if save == false then
+    self.menu:notify(L("Your world from the campaign could not be read."))
+  elseif save then
+    local ok, err = SaveData.writeSlot(version, slot, save)
+    if not ok then self.menu:notify(L("Your world could not be written: %s", tostring(err))) end
+  end
+end
+
 -- what the co-op screens reach: this device's settings and campaigns, the
 -- session, the LAN beacon and this device's addresses
 function Launcher:_coopEnv(version)
@@ -296,10 +312,13 @@ function Launcher:_run(command)
     end
     self:_boot(command.version)
   elseif command.kind == "coop_enter" then
-    -- the campaign's own save slot on this device (until campaign files, #13)
+    -- the campaign's own save slot on this device, the scratch area the game
+    -- plays and saves in; it holds the player's world from the host's
+    -- campaign file (#13, design A3.14), and solo saves stay untouched
     local SaveData = require("src.core.SaveData")
-    self:_coopSettings():enterSlot(SaveData, command.version, command.campaign.id,
+    local slot = self:_coopSettings():enterSlot(SaveData, command.version, command.campaign.id,
       command.campaign.title)
+    self:_coopWorld(SaveData, command.version, slot)
     if self.nearby then self.nearby:close() end
     self.nearby = nil
     self:_boot(command.version)

@@ -177,13 +177,17 @@ The launcher remembers on this device (`coop/launcher.json`): the player's
 name, the last address and up to four recent ones, the cartridge picked, the
 last session, the log-sharing switch, the language and the colours.
 
-**Progress until campaign files (#13).** Each device plays a campaign in a
-save slot of its own, created and named after the campaign the first time
-(decision G10 in [design.md](design.md)). ENTER THE WORLD and a join make that
-slot the game's active one, so the cartridge's title screen offers NEW GAME
-the first time and CONTINUE after. The launcher puts the solo slot back when
-it opens again (a fresh empty slot when the game had none), so a solo
-CONTINUE never opens a campaign's save.
+**A campaign's slot.** Each device plays a campaign in a save slot of its
+own, created and named after the campaign the first time (decision G10 in
+[design.md](design.md)). ENTER THE WORLD and a join make that slot the game's
+active one. Since #13 the player's progress lives in the host's campaign
+file ([campaign.md](campaign.md)). Entering writes the player's world from it
+into the slot, so the title screen offers CONTINUE with it. A player the
+campaign has no world for keeps the slot as it is: NEW GAME the first time.
+The launcher puts the solo slot back when it opens again (a fresh empty slot
+when the game had none), so a solo CONTINUE never opens a campaign's save.
+HOST on a campaign whose file does not read, or comes from a newer build,
+says so and names its backup instead of hosting it.
 
 ## Files
 

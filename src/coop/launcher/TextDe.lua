@@ -277,6 +277,12 @@ return {
   ["Restored %s."] = "%s ist wieder da.",
   ["The backup could not be restored."] = "Die Sicherung ließ sich nicht zurückholen.",
   ["The campaign could not be deleted."] = "Die Kampagne ließ sich nicht löschen.",
+  -- #13: a campaign file the host refuses
+  ["This campaign was saved by a newer build. Update to host it."] = "Diese Kampagne stammt aus einer neueren Version. Aktualisiere, um sie zu hosten.",
+  ["This campaign's file cannot be read. It was left as it is."] = "Die Datei dieser Kampagne ist nicht lesbar. Sie bleibt, wie sie ist.",
+  ["Its backup: %s"] = "Ihre Sicherung: %s",
+  ["Your world from the campaign could not be read."] = "Deine Welt aus der Kampagne ist nicht lesbar.",
+  ["Your world could not be written: %s"] = "Deine Welt ließ sich nicht schreiben: %s",
   ["1 campaign on this device"] = "1 Kampagne auf diesem Gerät",
   ["%d campaigns on this device"] = "%d Kampagnen auf diesem Gerät",
   ["NEW CAMPAIGN"] = "NEUE KAMPAGNE",

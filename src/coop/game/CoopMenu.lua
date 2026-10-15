@@ -11,15 +11,17 @@
 --     shows the partners' icons too), LEAVE SESSION (asked YES/NO) and
 --     CANCEL.
 --
--- Fight offers, JOIN/REJOIN, BATTLE and TRADE rows, "in a battle", "in the
--- opening" and the last save come with #34 (battles, friend battles, new
--- players, campaign files).
+-- The box also shows when the campaign was last saved and that it saves
+-- itself (#13).  Fight offers, JOIN/REJOIN, BATTLE and TRADE rows, "in a
+-- battle" and "in the opening" come with #34 (battles, friend battles, new
+-- players).
 
 local Font = require("src.render.Font")
 local Menu = require("src.ui.Menu")
 local Screens = require("src.ui.Screens")
 local Strings = require("src.core.Strings")
 local Presence = require("src.coop.game.Presence")
+local CampaignSave = require("src.coop.game.CampaignSave")
 
 local CoopMenu = { isMenu = true }
 
@@ -52,6 +54,9 @@ function CoopMenu.lines(game, s, address)
     or s.lobby and s.lobby.title or "CO-OP"
   local lines = { tostring(title):upper():sub(1, 18) }
   if s.kind == "host" then lines[#lines + 1] = "IP " .. (address or "?") end
+  -- the last save, and that the campaign saves itself too (#13, A3.12)
+  lines[#lines + 1] = CampaignSave.ago(s)
+  lines[#lines + 1] = Strings("AUTOSAVE: ON")
   lines[#lines + 1] = ""
   local partners = Presence.partners()
   if #partners == 0 then lines[#lines + 1] = Strings("NO PARTNERS YET") end

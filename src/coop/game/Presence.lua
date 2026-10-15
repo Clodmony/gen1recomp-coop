@@ -18,6 +18,7 @@
 local Arrow = require("src.coop.game.Arrow")
 local Colors = require("src.coop.game.Colors")
 local Notices = require("src.coop.game.Notices")
+local CampaignSave = require("src.coop.game.CampaignSave")
 local Strings = require("src.core.Strings")
 local FieldDefaults = require("src.world.FieldDefaults")
 local SpriteRenderer = require("src.render.SpriteRenderer")
@@ -237,6 +238,11 @@ function Presence.step(game)
   if state ~= Presence.read then
     Presence.read = state
     narrate(Presence, state, me)
+  end
+  -- who saved the campaign (#13)
+  for _, msg in ipairs(s:takeSaves()) do
+    local text = CampaignSave.notice(msg)
+    if text then Notices.push(text) end
   end
   local ow = Presence.overworld(game)
   local offsetOf = function(mapId) return Presence.offsetOf(ow, mapId) end
