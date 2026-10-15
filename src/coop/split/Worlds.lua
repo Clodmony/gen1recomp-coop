@@ -7,16 +7,20 @@
 -- lazily inside a function) finds that world's modules.
 --
 --   local home = Worlds.home()             -- the modules loaded now: seat 1
---   local w = Worlds.new("seat2", { silent = true })  -- a fresh graph
+--   local w = Worlds.new("seat2", { sounds = true })  -- a fresh graph
 --   Worlds.run(w, function() ... require("src.core.Game") ... end)
 --
 -- A few modules stay one per process (SHARED below): the version and
 -- cartridge cache mounts, the logger, the split-screen modules themselves.
--- A silent world runs without love.audio, love.sound and love.thread: the
--- process has one mix (seat 1's), and the background workers' channels are
--- process-global, so a second world's workers would take the first one's
--- results.  Upstream's modules all have a path without them (the headless
--- tests run there).
+-- A second world runs without love.thread: the background workers'
+-- channels are process-global, so a second world's workers would take the
+-- first one's results.  Upstream's modules all have a path without them (the
+-- headless tests run there; the chip sound effects render on the calling
+-- thread).  A world `with sounds` (#51) makes sources of its own in the
+-- process's one mix through a guarded love.audio: the calls that act on the
+-- whole device (stop or pause every source, the master volume, the listener,
+-- the routing with the system's audio) stay the home world's.  A `silent`
+-- world runs without love.audio and love.sound as well.
 
 local Worlds = { current = nil, known = {} }
 
@@ -28,8 +32,28 @@ Worlds.SHARED = {
   ["src.link.Json"] = true,
 }
 
--- the love modules a silent world runs without
+-- the love modules a silent world runs without, and a world with sounds
 Worlds.HIDDEN = { "audio", "sound", "thread" }
+Worlds.HIDDEN_WITH_SOUNDS = { "thread" }
+
+local function noop() end
+
+-- love.audio as a second world sees it: its own sources, no say over the
+-- device.  stop/pause/play act on the sources passed only; every set* (the
+-- master volume, the listener, the mix with the system's audio) is dropped.
+function Worlds.guardAudio(audio)
+  local guard = {}
+  for _, name in ipairs({ "stop", "pause", "play" }) do
+    guard[name] = function(...)
+      if select("#", ...) == 0 then return end
+      return audio[name](...)
+    end
+  end
+  return setmetatable(guard, { __index = function(_, k)
+    if type(k) == "string" and k:sub(1, 3) == "set" then return noop end
+    return audio[k]
+  end })
+end
 
 local function swappable(name)
   if type(name) ~= "string" or name:sub(1, 4) ~= "src." then return false end
@@ -55,17 +79,23 @@ local function capture(w)
 end
 
 local function hide(w)
-  if not w.silent or not love then return end
-  w.saved = {}
-  for _, k in ipairs(Worlds.HIDDEN) do
+  if not (w.silent or w.sounds) or not love then return end
+  w.saved = { audio = love.audio }
+  for _, k in ipairs(w.silent and Worlds.HIDDEN or Worlds.HIDDEN_WITH_SOUNDS) do
     w.saved[k] = love[k]
     love[k] = nil
+  end
+  if w.sounds and love.audio then
+    if w.guarded ~= love.audio then
+      w.guarded, w.guard = love.audio, Worlds.guardAudio(love.audio)
+    end
+    love.audio = w.guard
   end
 end
 
 local function unhide(w)
   if not w.saved or not love then return end
-  for _, k in ipairs(Worlds.HIDDEN) do love[k] = w.saved[k] end
+  for k, v in pairs(w.saved) do love[k] = v end
   w.saved = nil
 end
 
@@ -77,7 +107,8 @@ local function leave()
 end
 
 local function newWorld(name, opts)
-  return { name = name, mods = {}, silent = opts and opts.silent == true }
+  return { name = name, mods = {}, silent = opts and opts.silent == true,
+           sounds = opts and opts.sounds == true }
 end
 
 -- The world whose modules are loaded now (main.lua's game, seat 1).
