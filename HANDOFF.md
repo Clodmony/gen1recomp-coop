@@ -6,29 +6,45 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-15 (after merging #42-#49).
+Last updated 2026-10-15 (after Group 6, #11, PR #50).
 
 ## Repository state
 
 - Default branch `gen1recomp-coop`; `main` = upstream main. Groups 1 to 5a
-  are merged: #42, #43, #44, #45, #46, #48, #49 went in on 2026-10-15
-  (locally as Claude, `--no-ff`), closing #38, #41, #25, #40, #4, #5, #6,
-  #13, #14, #16. `tools/verify.sh` on the merge: 36/37 (only the javac
-  tier fails locally); `coop-ci` passed on it.
-- The owner accepted G14, G20, G21 and G22 as built, and the German
-  wording as written (the "Better German" column stays empty).
-- No open pull requests.
+  are merged (#42-#49, 2026-10-15).
+- Milestones: Group 6 (#11) is done by #50, open until the owner merges.
+  Group 2 still has #12 and #15 (owner-side checks); Groups 7, 7a, 8, 9,
+  10 are open.
+
+## Open pull request (draft)
+
+- **#50** `coop/group6-split-screen` into `gen1recomp-coop`: closes #11,
+  local split-screen. `src/coop/split/` (Worlds, Layout, Split), docs
+  `docs/coop/split.md`, decision **G23 (proposed)**.
+  - The second seat's game is a second set of the game's modules
+    (`package.loaded` swapped per world), silent, a loopback (or remote)
+    client as seat 2, in the campaign's `slot2`, with a `-seat2` log.
+  - Launcher: ENTER / JOIN WITH 2 PLAYERS when CONTROLS has a device for
+    each player; dev entry `--coop-split[=NAME]`.
+  - The one upstream file touched: `src/render/GameViewport.lua`
+    (`Viewport.forced`, marked).
+  - Verify: 36/37 (only the javac tier fails locally; no luacheck locally).
+  - Live (US Red, offscreen, two fake pads): launcher host + ENTER WITH 2
+    PLAYERS, pads routed per seat, seat 2 saved and continued its world in
+    a second run, a wild battle in seat 2's half. Not run: real pads, a
+    real window (resize), audio, a split pair joining a remote host.
+  - Needs from the owner: G23, a check with two real pads, the merge.
 
 ## Next candidates
 
-- **Group 6 (#11)**, split-screen: `CoopSettings.slots` is keyed by campaign
-  only; a second seat needs its own slot (design A3.14), and its own
-  `Window` (one per client already). `Items.openBag` raises the one shared
-  `Data.constants.bagSize`, which suits two seats in one process.
-- **Group 7 (#18 and the rest)**, battles, then **Group 7a (#17)** party
-  and PC at rest points (design A7; a window's party sync would ride on the
-  same rest points as the story and gifts).
+- **Group 7 (#18, #19, #20, #34)**, battles: co-op battles against the game
+  (rules), then their presentation with the cartridge's menus. Split-screen
+  already gives each seat its own battle screen (G2); #19 feeds both.
+- **Group 7a (#17)** party and PC at rest points (design A7).
 - Group 2 still has #12 and #15 (owner-side checks).
+- Split-screen follow-ups if the owner wants them: player 2's name on the
+  launcher (now `PLAYER2` until a host knows them; naming new players is
+  #22), player 2's sound effects (G23).
 
 ## Live-run recipe
 
@@ -56,6 +72,13 @@ Last updated 2026-10-15 (after merging #42-#49).
 - **Quit.** Quit with `love.event.quit()` so the bye goes out. A guest
   whose host quits first goes back to its launcher and reruns its driver;
   let guests quit first.
+- **Split-screen (#11).** `docs/coop/split.md` § Checks.
+  - Claim two fake pads in `coop/launcher.json` (`seats`).
+  - Replace `love.joystick.getJoysticks` in the driver and send real
+    `love.gamepadpressed`/`released`.
+  - `Split.current.game` is seat 2's game; run code inside its world with
+    `Worlds.run(Split.current.world, fn)` (never across a yield).
+  - To drive the launcher, write `relaunch_to_launcher.txt` first.
 - **Cells used for #16:**
   - Viridian Forest ANTIDOTE: stand at (25,12) facing up.
   - Viridian Forest POTION: (11,29) facing right.
@@ -65,9 +88,10 @@ Last updated 2026-10-15 (after merging #42-#49).
 ## Worktrees and background processes
 
 - Main checkout on `gen1recomp-coop` (leave it; it is behind origin until
-  pulled). One Superset worktree on `coop/group5a-story-items` (merged; its
-  branch is deleted on GitHub; remove it, see Cleanup).
-  No background processes.
+  pulled). The Superset worktree that held `coop/group5a-story-items` now
+  holds `coop/group6-split-screen` (pushed, clean); the merged local branch
+  `coop/group5a-story-items` is deleted. No background processes. Group 6's
+  scratch is deleted.
 
 ## Still open
 
@@ -82,9 +106,9 @@ Last updated 2026-10-15 (after merging #42-#49).
   `coop/group1-cleanup`, `coop/group2-first-playable`; the finished
   milestones (Groups 1, 2a, 3, 4, 5, 5a) closed; every merged branch
   deleted on GitHub.
-- Approved, for the next session (or Superset): remove the merged worktree
-  on `coop/group5a-story-items` (it ran this session, so it could not
-  remove itself) and its local branch.
+- Done 2026-10-15: the local branch `coop/group5a-story-items`; its
+  worktree carried on as Group 6's.
+- Once #50 is merged: this worktree and `coop/group6-split-screen`.
 - Kept by the owner's choice: the other merged local branches
   (`coop/group2a-*`, `coop/group3-*`, `coop/group4-*`, `coop/group5-*`,
   `coop/workflow-groups`); the main checkout is not pulled.
