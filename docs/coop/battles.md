@@ -393,11 +393,30 @@ BULBASAUR given by the drivers, which also sent the commands):
   and the copy showed the ROM's `_BoxFullCannotThrowBallText`.
 - With room for both, the name list held both players.
 
+Unique encounters (#21, same setup; RED's SQUIRTLE and GREEN's BULBASAUR
+given by the drivers, which also answered the move questions):
+
+- RED stepped into the sight of VIRIDIAN_FOREST's BUG CATCHER (object 2):
+  it spotted RED, and the host's record named `trainer:VIRIDIAN_FOREST_obj_2`.
+- GREEN stood in the same sight line while RED fought: the trainer did not
+  spot GREEN in 400 frames (A10.4).
+- GREEN talked to it: GREEN's own battle became the copy of RED's, the host
+  ran one battle with both teams (A10.1, A10.2), both copies ended won,
+  both worlds marked the trainer beaten, both players got the prize (¥60),
+  and GREEN was back where they stood. The campaign had it done.
+- RED's world then forgot its flag and met the trainer again: no battle
+  ran, the world's `onFinish` heard a win, no prize, and the notice read
+  "BUG CATCHER was already beaten.".
+- The host's session log showed one walk-in, one done, one `beaten` and no
+  `battle_desync`.
+
 Not run yet: real pads in a real window, the menus driven by hand (the
 drivers sent the replacement, the switch and the ball as commands), the
 name list picked by hand, a move to learn, MIMIC, items and Pay Day with
 the cartridge (the first two are covered by the ROM-free tests), three
-players, split-screen, and a trainer that uses items.
+players, split-screen, and a trainer that uses items; for #21, a static
+Pokémon with the cartridge, a scripted fight (a gym leader), a walk-in
+through a trainer's sight during a partner's walk-up, and a full fight.
 
 ## Tests
 
