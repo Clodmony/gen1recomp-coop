@@ -29,8 +29,9 @@ local Protocol = {}
 -- opening is, and in `state`; a walk-in joins the running one.  10: the
 -- opening (#22): a window's `opening` (in it or done, the rival's name,
 -- the starter chosen), and who is in it, the rival's name and the
--- starter he counters in `state`.
-Protocol.VERSION = 10
+-- starter he counters in `state`.  11: rival scenes (#59): a window's
+-- `scene` claim or release, and the claimed maps in `state`.
+Protocol.VERSION = 11
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -66,6 +67,8 @@ Protocol.REASONS = {
   no_pokemon = true, run_initiator = true,
   -- leaving and taking over (#20)
   opener_stays = true, not_away = true,
+  -- rival scenes (#59): another player drives that map's scene
+  scene_taken = true,
 }
 
 -- a player's world travels as the game's save text (World.lua checks it):
@@ -450,6 +453,11 @@ local battleSummary = record({
 -- the starters a rival counters (#22, design A4.6); Yellow's is #9
 Protocol.STARTERS = { BULBASAUR = true, CHARMANDER = true, SQUIRTLE = true }
 
+-- rival scenes (#59, design A10.5): a scene by its key
+-- (src/coop/game/Scenes.lua), and a map's claim as `state` names it
+Protocol.sceneKey = pattern("^[a-z0-9_]+$", 24)
+local sceneClaim = record({ map = Protocol.mapId, key = Protocol.sceneKey, by = Protocol.playerId })
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -517,6 +525,10 @@ Protocol.TO_HOST = {
   -- TAKE OVER for `owner`, who dropped (design A11.6)
   battle_takeover = record(withType("battle_takeover", { seq = seq, battle = Protocol.battleId,
                                                          owner = Protocol.playerId })),
+  -- a rival scene (#59, design A10.5): this window's world started the
+  -- scene `key` on `map` (on true: a claim) or is past it (on false)
+  scene = record(withType("scene", { seq = seq, map = Protocol.mapId, key = Protocol.sceneKey,
+                                     on = bool })),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -540,7 +552,9 @@ Protocol.TO_CLIENT = {
   }), { saved_ago = int(-1, Protocol.MAX_SEQ), busy = text(Protocol.MAX_REASON),
          battles = listOf(battleSummary, Protocol.MAX_PLAYERS),
          -- the campaign's rival: his name and the starter he counters (#22)
-         rival = name, chose = enum(Protocol.STARTERS) }),
+         rival = name, chose = enum(Protocol.STARTERS),
+         -- the rival scenes being played, one driver a map (#59)
+         scenes = listOf(sceneClaim, Protocol.MAX_PLAYERS) }),
   -- the player's world from the campaign, once after welcome (#13); none
   -- for a player who never saved in this campaign
   world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),

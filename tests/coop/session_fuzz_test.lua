@@ -80,6 +80,8 @@ local VALID = {
     battle_takeover = { type = "battle_takeover", seq = 10, battle = "b00000001",
                         owner = "p00000002" },
     opening = { type = "opening", seq = 11, done = true, rival = "GARY", chose = "SQUIRTLE" },
+    -- rival scenes (#59)
+    scene = { type = "scene", seq = 12, map = "ROUTE_22", key = "route22_1", on = true },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -95,7 +97,8 @@ local VALID = {
               saved_ago = 12, busy = "", rival = "GARY", chose = "BULBASAUR",
               battles = { { id = "b00000001", by = "p00000001", kind = "wild",
                             players = { "p00000001" }, foe = "PIDGEY", joinable = true,
-                            encounter = "static:ROUTE_12_obj_1" } } },
+                            encounter = "static:ROUTE_12_obj_1" } },
+              scenes = { { map = "ROUTE_22", key = "route22_1", by = "p00000001" } } }, -- #59
     world = { type = "world", fresh = false, save = "return { player = {} }\n" },
     saved = { type = "saved", ok = false, by = "RED", you = true,
               reason = "battle_in_progress", kind = "menu" },
