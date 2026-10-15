@@ -1205,8 +1205,12 @@ sibling's D-numbers.
   process (`package.loaded` swapped per world). It is a client of the
   session like any other player: it dials the in-process host's loopback
   hub, or the host the first seat joined. The window has one mix: the
-  first seat's music and sounds. The second seat's game runs without
-  `love.audio`, `love.sound` and `love.thread`, so its sound waits take
-  their silent timings. Its trainer is named `PLAYER2` until a host knows
-  it. The launcher shows the two-player rows only when CONTROLS has a
-  device for each player. Details: [split.md](split.md).
+  first seat's music and both seats' sound effects (#51). The second
+  seat's game runs without `love.thread` (the workers' channels are
+  process-global) and with a guarded `love.audio` that cannot stop, pause
+  or set anything for the whole device; its music stays off, so the first
+  seat's song plays on. Its sound waits take the real lengths of its
+  sounds; its music waits keep their silent timings. Its trainer is named
+  `PLAYER2` until a host knows it. The launcher shows the two-player rows
+  only when CONTROLS has a device for each player. Details:
+  [split.md](split.md).
