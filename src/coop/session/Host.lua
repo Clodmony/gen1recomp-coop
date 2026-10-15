@@ -46,6 +46,11 @@
 -- device's own lines in `log` batches; the host keeps them in its log (when
 -- it shares too) and passes each batch on once to every other sharing
 -- device, keeping LOG_BACKLOG bytes of batches for a device that joins later.
+--
+-- Co-op battles (#18, design A8, G24): the host sequences them and runs no
+-- battle engine; src/coop/battle/HostBattles.lua keeps each battle's
+-- opening, inputs and question, and every window in it runs the battle
+-- from those (src/coop/battle/Replica.lua).
 
 local GameVersion = require("src.core.GameVersion")
 local Json = require("src.link.Json")
@@ -55,6 +60,7 @@ local SessionLog = require("src.coop.session.SessionLog")
 local Campaign = require("src.coop.campaign.Campaign")
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
+local HostBattles = require("src.coop.battle.HostBattles")
 
 local Host = {}
 Host.__index = Host
@@ -62,6 +68,9 @@ Host.__index = Host
 -- a refused link is dropped this long after its `rejected`, so the reason
 -- reaches the client first (design A1.6); the same grace on shutdown
 Host.GRACE = 1.0
+-- on shutdown the host closes once every client has left, or after this
+-- grace (design A11.11, #20)
+Host.END_GRACE = 2.0
 Host.MAX_PLAYERS = 8
 
 -- per link: decoded per frame at most; arriving per second on average, with
@@ -107,9 +116,11 @@ function Host.new(opts)
     status = "running", -- running, ending, ended
     dropped = 0,
     floods = 0,
-    -- running battles and pending battle joins by id (#18 fills them); a
-    -- campaign saves only when both are empty (design A3.7)
+    -- running battles by id and queued battle joins by player
+    -- (HostBattles.lua, #18); a campaign saves only when both are empty
+    -- (design A3.7)
     battles = {}, joins = {},
+    missed = {}, -- player id -> battles that ended while their link was down (#20)
   }, Host)
   self.state = opts.state or Campaign.new({
     id = self.campaign.id, title = self.campaign.title,
@@ -267,6 +278,7 @@ function Host:_disconnect(link, why)
     p.connected = false
     self.dirty = true
     self:_log("left", { why = why }, p)
+    HostBattles.left(self, p)
     -- a player leaving saves the campaign (design A3.9); nobody has to save
     -- before leaving (A3.12)
     if self.status == "running" then self:_autosave("leave") end
@@ -447,6 +459,7 @@ function Host:_hello(link, msg)
   self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
   self:_sendWorld(link, p)
   self:_sendLogBacklog(link)
+  HostBattles.back(self, p)
 end
 
 -- per-player sequence numbers (design A1.5): strictly increasing; a number
@@ -569,8 +582,26 @@ function Host:_shareOwnLog(now)
   self:_passLog(self.log:take(), self.device)
 end
 
+-- co-op battles (#18): HostBattles decides; a refusal changes nothing
+local function battleHandler(fn)
+  return function(self, link, msg)
+    local p = self:_sequence(link, msg)
+    if not p then return end
+    local ok, why = fn(self, p, msg)
+    if not ok and why then return self:_refuse(link, msg.seq, why) end
+  end
+end
+
 local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
-                   log = Host._logBatch, world = Host._world, patch = Host._patch }
+                   log = Host._logBatch, world = Host._world, patch = Host._patch,
+                   battle_open = battleHandler(HostBattles.open),
+                   battle_join = battleHandler(HostBattles.join),
+                   battle_cmd = battleHandler(HostBattles.cmd),
+                   battle_suggest = battleHandler(HostBattles.suggest),
+                   battle_at = battleHandler(HostBattles.at),
+                   battle_leave = battleHandler(HostBattles.leave),
+                   battle_rejoin = battleHandler(HostBattles.rejoin),
+                   battle_takeover = battleHandler(HostBattles.takeover) }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -589,18 +620,23 @@ function Host:_receive(link, raw)
     self:_log("dropped", { why = why }, link.player)
     return
   end
-  -- a log batch, a world and a patch are logged by their handlers, as a summary
-  if msg.type ~= "log" and msg.type ~= "world" and msg.type ~= "patch" then self:_log("message", msg, link.player) end
+  -- a log batch, a world, a patch and a battle's opening are logged by
+  -- their handlers, as a summary; a window's battle reports are many
+  local t = msg.type
+  if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "battle_open"
+     and t ~= "battle_join" and t ~= "battle_at" then
+    self:_log("message", msg, link.player)
+  end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
   return HANDLERS[msg.type](self, link, msg)
 end
 
 -- state -----------------------------------------------------------------
 
-local function publicView(p)
+local function publicView(p, battle)
   return { id = p.id, name = p.name, game = p.game, connected = p.connected,
            map = p.map, x = p.x, y = p.y, facing = p.facing,
-           travel = p.map and p.travel or nil }
+           travel = p.map and p.travel or nil, battle = battle }
 end
 
 function Host:_broadcast()
@@ -608,7 +644,10 @@ function Host:_broadcast()
   local savedAgo = ago and math.floor(ago) or -1
   local busy = self:busy() or ""
   local players = {}
-  for i, p in ipairs(self.players) do players[i] = publicView(p) end
+  for i, p in ipairs(self.players) do
+    players[i] = publicView(p, HostBattles.fighting(self, p.id))
+  end
+  local battles = HostBattles.summaries(self)
   for _, link in ipairs(self.links) do
     local p = link.player
     if p and not link.conn.closed then
@@ -620,7 +659,7 @@ function Host:_broadcast()
       end
       self:_send(link, { type = "state", players = players, you = p.id,
                          last_seq = p.lastSeq, nearby = nearby,
-                         saved_ago = savedAgo, busy = busy })
+                         saved_ago = savedAgo, busy = busy, battles = battles })
     end
   end
 end
@@ -668,8 +707,10 @@ function Host:update()
       if p and p.link == link and not link.conn.closed then
         self:_sendStory(link, p)
         self:_sendGifts(link, p)
+        HostBattles.sendTo(self, link, p)
       end
     end
+    HostBattles.sweep(self)
   end
   if self.status == "running" and self.store then
     local busy = self:busy()
@@ -683,7 +724,10 @@ function Host:update()
     self.dirty = false
     self:_broadcast()
   end
-  if self.status == "running" then self:_shareOwnLog() end
+  if self.status == "running" then
+    self:_shareOwnLog()
+    HostBattles.tick(self, now)
+  end
   if self.status == "ending" and (#self.links == 0 or now >= self.endAt) then
     self:_finish()
   end
@@ -698,9 +742,16 @@ function Host:shutdown(reason)
   -- the campaign is saved on shutdown; with a battle running, the state
   -- without it goes to the journal (design A3.9)
   if self.store and not self:_autosave("shutdown") then self.store:poll(true) end
+  -- battles still running end as fled, and their players hear it (A11.7)
+  HostBattles.endAll(self)
+  for _, link in ipairs(self.links) do
+    if link.player and link.player.link == link and not link.conn.closed then
+      HostBattles.sendTo(self, link, link.player)
+    end
+  end
   self:_shareOwnLog(true) -- the host's last lines go out before `ended`
   self.status = "ending"
-  self.endAt = self.clock() + Host.GRACE
+  self.endAt = self.clock() + Host.END_GRACE
   for _, link in ipairs(self.links) do
     self:_send(link, { type = "ended", reason = reason or "host_quit" })
   end

@@ -40,10 +40,11 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 5 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 7 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
-[world.md](world.md)). Every message is a JSON object with a `type`. Every field from the
+[world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
+added co-op battles, #18: [battles.md](battles.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -58,6 +59,7 @@ checks what the host sends.
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
 | `world` | `seq`, `save` (the game's save text, at most 1.5 MiB), `checkpoint` (a real SAVE asking the host to save the campaign), `kind` (`menu`, `box`, `hall`, `link`, `quick`; optional) |
 | `patch` | `seq`, `set` (story path to value: a boolean or a whole number 0 to 255), `unset` (paths): this window's change to the shared story since its last patch, at most 8192 entries each, `bag` (optional, #16: `gained` and `lost`, item id to a count 1 to 999, and `spent`, the money went down; the window's bag change in the same rest-to-rest change) |
+| `battle_open`, `battle_join`, `battle_cmd`, `battle_suggest`, `battle_at` | co-op battles (#18): [battles.md](battles.md) |
 
 | Host to client | Fields |
 |---|---|
@@ -68,6 +70,7 @@ checks what the host sends.
 | `saved` | `ok`, `by` (who saved), `you` (this player asked), `reason` (a refusal: `battle_in_progress`, `bad_world`, `save_failed`), `kind` |
 | `story` | `rev`, `base` (the whole story, replacing the window's), `set`, `unset` (what changed since the last `story` to this player), `applied` (the last of this player's patches the host applied) |
 | `gifts` | `list` (#16): items the campaign owes this player, oldest first, each `seq`, `item`, `qty` (below 0 takes), `once` (not given to a player who holds one), `from` (the partner's name), `race` (a take-back); at most 256 a message |
+| `battle` | a battle this player is in or joining (#18): [battles.md](battles.md); `state` then also names each player's `battle` and lists the running `battles` |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
@@ -218,11 +221,23 @@ running from the launcher into the game:
 - Leaving from the game (the CO-OP menu's LEAVE SESSION) ends the session
   the same way and takes the game back to the launcher
   (`Session.takeLauncher`).
-- A session that ends under the game (the host stopped it, the link was
-  lost) makes main.lua go back to the launcher; leaving on purpose (the game
-  window closed, `love.quit`) sends a bye or ends the session for everyone.
-  Either way `coop/return.json` in the save folder carries the reason, and
-  the launcher shows it on the co-op screen if it opens within two minutes.
+- A joining game whose link drops under it reconnects (#20, design
+  A11.9): it redials as the same player every 2 s (`Session.REDIAL`) for
+  two minutes (`REDIAL_FOR`), saying "Lost the host: reconnecting..." over
+  the world and "Back in the session." when the host has it back. The world
+  keeps running and sends nothing meanwhile; the shared world's window and
+  the battle copies follow the new link; the first position after counts
+  as a warp. A game back from a pause (focus or visibility lost) longer than
+  3 s closes its link and dials at once (A11.10); a hosting game put away
+  saves its campaign (#13).
+- A session that ends under the game (the host stopped it, the link stayed
+  lost for two minutes) shows why over the world for 3 s (A11.11), then
+  main.lua goes back to the launcher; leaving on purpose (the game window
+  closed, `love.quit`) sends a bye or ends the session for everyone, and on
+  shutdown the host waits for the clients to leave for up to 2 s
+  (`Host.END_GRACE`). Either way `coop/return.json` in the save folder
+  carries the reason, and the launcher shows it on the co-op screen if it
+  opens within two minutes.
 
 ## Development entry
 
@@ -302,6 +317,8 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   through in every frame.
 - `tests/coop/session_dev_entry_test.lua`: the entry's arguments, addresses,
   and the moves a game's position becomes.
+- `tests/coop/session_reconnect_test.lua` (#20): a dropped link
+  reconnects, gives up after two minutes, and a long pause dials afresh.
 - `tests/coop/launcher_coop_test.lua` (#12): the running session as the
   launcher's co-op screens use it, over loopback; see
   [launcher.md](launcher.md).

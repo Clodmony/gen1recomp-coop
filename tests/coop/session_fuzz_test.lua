@@ -32,6 +32,14 @@ local function logBatch()
   } }
 end
 
+-- a Pokémon as a battle message carries it (#18)
+local BATTLE_MON = { species = "PIDGEY", level = 12, hp = 30, exp = 1500, status = "PSN",
+                     sleepTurns = 0, nickname = "BIRD", ot = "RED", otId = 4321, uid = "p0001:12",
+                     dvs = { hp = 1, attack = 2, defense = 3, speed = 4, special = 5 },
+                     statExp = { hp = 10, attack = 20, defense = 30, speed = 40, special = 50 },
+                     moves = { { id = "GUST", pp = 35, ppUps = 1 }, { id = "SAND_ATTACK", pp = 15 } },
+                     extra = { mod = { x = 1 } } }
+
 -- one valid message of each type, per receiving side
 local VALID = {
   host = {
@@ -51,6 +59,22 @@ local VALID = {
               ["objectToggles/ROUTE_1/BALL"] = false, ["inventory/BOULDERBADGE"] = 1 },
               unset = { "flags/EVENT_X" },
               bag = { gained = { POTION = 1 }, lost = { OAKS_PARCEL = 1 }, spent = false } },
+    battle_open = { type = "battle_open", seq = 3, kind = "trainer", map = "ROUTE_3",
+                    enemy = { BATTLE_MON }, team = { BATTLE_MON }, foe = "LASS",
+                    trainer = { class = "OPP_LASS", index = 2, rival = "BLUE" },
+                    otId = 4321, expAll = true, hooked = false },
+    battle_join = { type = "battle_join", seq = 4, battle = "b00000001", team = { BATTLE_MON },
+                    otId = 1, expAll = false },
+    battle_cmd = { type = "battle_cmd", seq = 5, battle = "b00000001", rev = 3,
+                   cmd = { kind = "item", item = "POTION", index = 2, move = 1 } },
+    battle_suggest = { type = "battle_suggest", seq = 6, battle = "b00000001", rev = 3,
+                       cmd = { kind = "switch", index = 7 } },
+    battle_at = { type = "battle_at", seq = 7, battle = "b00000001", rev = 3, ask = "menu",
+                  by = "p00000001", hash = "abc123", ended = "win" },
+    battle_leave = { type = "battle_leave", seq = 8, battle = "b00000001" },
+    battle_rejoin = { type = "battle_rejoin", seq = 9, battle = "b00000001" },
+    battle_takeover = { type = "battle_takeover", seq = 10, battle = "b00000001",
+                        owner = "p00000002" },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -61,8 +85,11 @@ local VALID = {
                 last_seq = 0, campaign = CAMPAIGN },
     state = { type = "state", you = "p00000001", last_seq = 3, nearby = { "p00000002" },
               players = { { id = "p00000001", name = "RED", game = "red", connected = true,
-                            map = "ROUTE_1", x = 1, y = 2, facing = "down", travel = "bike" } },
-              saved_ago = 12, busy = "" },
+                            map = "ROUTE_1", x = 1, y = 2, facing = "down", travel = "bike",
+                            battle = "b00000001" } },
+              saved_ago = 12, busy = "",
+              battles = { { id = "b00000001", by = "p00000001", kind = "wild",
+                            players = { "p00000001" }, foe = "PIDGEY", joinable = true } } },
     world = { type = "world", fresh = false, save = "return { player = {} }\n" },
     saved = { type = "saved", ok = false, by = "RED", you = true,
               reason = "battle_in_progress", kind = "menu" },
@@ -75,6 +102,20 @@ local VALID = {
     gifts = { type = "gifts", list = { { seq = 1, item = "BICYCLE", qty = 1, once = true,
                                          from = "RED" },
                                        { seq = 2, item = "POTION", qty = -1, race = true } } },
+    battle = { type = "battle", id = "b00000001", rev = 2, seed = 99, from = 1,
+               inputs = { { kind = "join", player = "p00000001", name = "RED",
+                            team = { BATTLE_MON }, otId = 4321, expAll = false },
+                          { kind = "cmd", player = "p00000001",
+                            cmd = { kind = "move", slot = 1 } } },
+               players = { { id = "p00000001", present = true },
+                           { id = "p00000002", present = false, left = true } },
+               owner = "p00000002", offer = "p00000002",
+               standins = { { owner = "p00000002", by = "p00000001" } },
+               open = { kind = "wild", enemy = { BATTLE_MON }, map = "ROUTE_1",
+                        by = "p00000001", hooked = true, foe = "PIDGEY" },
+               ask = "replace", by = "p00000001",
+               suggestions = { { by = "p00000002", cmd = { kind = "replace", index = 3 } } },
+               ended = "lose" },
   },
 }
 

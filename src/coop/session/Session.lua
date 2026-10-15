@@ -38,7 +38,17 @@
 -- The shared world (#14): once joined with a game running, the session's
 -- window (src/coop/campaign/Window.lua) sends this player's share of the
 -- story and takes the partners' at each rest point
--- (src/coop/game/SharedWorld.lua).  A new link gets a new window.
+-- (src/coop/game/SharedWorld.lua).  A link that came back keeps its window.
+--
+-- A dropped link in a running game (#20, design A11.9 to A11.11): the
+-- joining side redials as the same player every REDIAL seconds for
+-- REDIAL_FOR seconds ("reconnecting"); the world keeps running and sends
+-- nothing until the host has the player back, and the first position after
+-- that counts as a warp.  A game back from a pause longer than RESUME_AFTER
+-- seconds closes its link and dials at once.  A session that ends under a
+-- running game shows why over the world for END_SHOW seconds before the
+-- launcher.  `linkNote` tells the game what to say ("lost", "back",
+-- "ended"; src/coop/game/Presence.lua).
 
 local Transport = require("src.coop.session.Transport")
 local Protocol = require("src.coop.session.Protocol")
@@ -59,6 +69,10 @@ Session.__index = Session
 
 Session.RETRY = 3       -- seconds between dial attempts
 Session.DIAL_FOR = 60   -- seconds of attempts before "could not reach"
+Session.REDIAL = 2          -- seconds between redials of a dropped link (A11.9)
+Session.REDIAL_FOR = 120    -- seconds a dropped game redials before it gives up
+Session.RESUME_AFTER = 3    -- seconds of pause after which a joiner dials afresh (A11.10)
+Session.END_SHOW = 3        -- seconds the end of a session shows over the world (A11.11)
 Session.RETURN_FILE = "coop/return.json"
 Session.RETURN_FRESH = 120 -- seconds a return note is shown for
 
@@ -294,11 +308,27 @@ function Session:takeSaves()
   return self.client and self.client:takeSaves() or {}
 end
 
--- the hosting app is paused: the host saves (design A3.9)
+-- the hosting app is paused: the host saves (design A3.9); a joining app
+-- notes when (design A11.10)
 function Session.pause()
   local s = Session.current
+  if s and not s.pausedAt then s.pausedAt = s.clock() end
   if s and s.host then return s.host:pause() end
   return false
+end
+
+-- the app is back: a joining game paused longer than RESUME_AFTER seconds
+-- closes its link and dials at once, its link likely gone stale (A11.10)
+function Session.resume()
+  local s = Session.current
+  if not (s and s.pausedAt) then return end
+  local away = s.clock() - s.pausedAt
+  s.pausedAt = nil
+  if s.kind == "join" and s.inGame and away > Session.RESUME_AFTER
+     and s.client and s.client.status == "joined" then
+    s.client.conn:close()
+    s.redialNow = true
+  end
 end
 
 -- what the hosting screen shows: the players with the cartridge they play
@@ -443,10 +473,23 @@ function Session:update(dt, game)
   if self.status == "joining" and c.status == "joined" then self.status = "joined" end
   local live = self.status == "probed" or self.status == "joining" or self.status == "joined"
   if live and ENDS[c.status] and before ~= c.status then
-    self.status, self.reason = c.status, c.reason
-    if c.status == "refused" or c.status == "ended" or c.status == "closed" then
-      say("%s (%s)", c.status, tostring(c.reason))
+    if c.status == "closed" and self.kind == "join" and self.inGame and not self.leaving then
+      -- the link dropped under a running game: redial (design A11.9)
+      self.status = "reconnecting"
+      self.redialStarted, self.redialAt = self.clock(), self.clock()
+      self.lostReason = c.reason
+      self.linkNote = "lost"
+      say("lost the host (%s): reconnecting", tostring(c.reason))
+    else
+      self.status, self.reason = c.status, c.reason
+      if c.status == "refused" or c.status == "ended" or c.status == "closed" then
+        say("%s (%s)", c.status, tostring(c.reason))
+      end
     end
+  end
+  if self.status == "reconnecting" then
+    self:_redial()
+    c = self.client
   end
   for i = (self.seenRejections or 0) + 1, #c.rejections do
     if c.rejections[i].reason == "bad_step" then self.resync = true end
@@ -454,13 +497,16 @@ function Session:update(dt, game)
   self.seenRejections = #c.rejections
   if self.host then self:_watchRoster() end
   if c.status == "joined" then
-    if not (self.window and self.window.client == c) then self.window = Window.new(c) end
+    -- a link that came back keeps its window (#20)
+    if not self.window then self.window = Window.new(c) end
+    if self.window.client ~= c then self.window.client = c end
     if game then
       self.inGame = true
       -- a co-op bag holds 40 rows while the session's world is open (#16, A6.8)
       require("src.coop.campaign.Items").openBag(game.data)
       self:_report(game)
       require("src.coop.game.SharedWorld").step(self.window, game)
+      require("src.coop.game.Battles").step(game)
     end
     self:_narrate()
   end
@@ -468,11 +514,52 @@ function Session:update(dt, game)
     local notice = self.status == "ended" and "The host closed the session."
       or self.status == "refused" and ("The host turned this game away (" .. tostring(self.reason) .. ").")
       or "The connection to the host was lost."
+    -- why, over the world, before the launcher (design A11.11)
+    local now = self.clock()
+    if game and self.kind == "join" and not self.leaving then
+      if not self.endShowUntil then
+        self.endShowUntil = now + Session.END_SHOW
+        self.linkNote = "ended"
+        return nil
+      end
+      if now < self.endShowUntil then return nil end
+    end
     self:_stop()
     Session.writeReturn(notice, self.cartridge.game)
     return "launcher"
   end
   return nil
+end
+
+-- one frame of reconnecting (design A11.9): a new link every REDIAL
+-- seconds, a hello as the same player, until REDIAL_FOR seconds are over
+function Session:_redial()
+  local c = self.client
+  local now = self.clock()
+  if c and c.status == "joined" then
+    self.status = "joined"
+    self.resync = true -- the first position after a reconnect is a warp
+    self.redialStarted = nil
+    self.linkNote = "back"
+    say("back in the session")
+    return
+  end
+  if c and c.status == "refused" then
+    self.status, self.reason = "refused", c.reason
+    return
+  end
+  if now - (self.redialStarted or now) >= Session.REDIAL_FOR then
+    self.status, self.reason = "closed", self.lostReason or (c and c.reason)
+    return
+  end
+  local waiting = c and (c.status == "joining") and now - self.redialAt < Session.REDIAL * 2
+  if not waiting and (self.redialNow or now - self.redialAt >= Session.REDIAL) then
+    self.redialNow = nil
+    self.redialAt = now
+    if c and not c.conn.closed then c.conn:close() end
+    self:_client(self.dialFn(self.address), self.address, self.address)
+    self.client:join()
+  end
 end
 
 -- close everything without a note
@@ -500,6 +587,7 @@ end
 -- everyone.  In a running game the co-op screen says why afterwards.
 function Session:leave(notice)
   if Session.current ~= self and not self.client then return end
+  self.leaving = true
   self.status = "ended"
   self:_stop()
   if self.inGame and notice then Session.writeReturn(notice, self.cartridge.game) end

@@ -521,6 +521,11 @@ In place (#16, [items.md](items.md), G22).
 
 ### A8. Co-op battles against the game: rules
 
+In place (#18, [battles.md](battles.md), G24): every rule below but their
+menu side, which is #19's presentation (making and showing suggestions,
+A9.3 and A9.4; A8.11's marks in the move list), and the catch's name list
+(A7.6, #17): a catch goes to the thrower.
+
 1. **carry** A player starts a battle alone; the other may explore or start a
    separate battle; no player or Pokémon is in two battles at once (brief,
    design §Battles).
@@ -595,6 +600,11 @@ In place (#16, [items.md](items.md), G22).
     synthetic test content of the source.
 
 ### A9. Co-op battles: presentation and menus
+
+In place (#19, [battles.md](battles.md)): every rule below but A9.5's
+question to leave the battle (#20) and the bag's battle-only list (the
+cartridge's bag stays, refusing the rest; accepted by the owner,
+2026-10-15).
 
 1. **adapt** A co-op battle uses the cartridge's own battle screen and menus: FIGHT /
    PKMN / ITEM / RUN, the move list with TYPE/PP, a party list six rows at a
@@ -701,6 +711,13 @@ In place (#16, [items.md](items.md), G22).
    (D87, D93).
 
 ### A11. Leaving, reconnecting, taking over and shutting down
+
+In place (#20, [battles.md](battles.md), [session.md](session.md)): every
+rule below but the per-player reconnection secrets of A11.10 (a player is
+recognised by their remembered id and name, as since #10). A11.13 is met by
+the transport's own flush on close (ENet delivers the bye or `ended` for up
+to 0.5 s before the socket goes), not by deferring `love.quit`. The owner
+accepted both as built (2026-10-15).
 
 1. **carry** Leaving and dropping are one rule (owner, D61): a participant who uses
    LEAVE BATTLE or loses the link is absent: back at their return point; their
@@ -837,10 +854,11 @@ In place (#16, [items.md](items.md), G22).
 ### A14. Presence, finding the partner, the CO-OP menu and the run button
 
 In place (#15, [presence.md](presence.md)), with what a session without
-battles supports. Left for #34: the "!" where a battle started, who is not
-drawn in a battle, the opening or the Cable Club, the menu's fight, join,
-battle and trade rows, "in a battle", "in the opening" and the last save,
-the battle notice, and SELECT in a co-op battle.
+battles supports; the battle parts since #34 ([battles.md](battles.md)):
+the "!" where a battle started, a joiner from elsewhere not drawn, JOIN and
+REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle. Left: who
+is not drawn in the opening or the Cable Club, the BATTLE and TRADE rows
+and "in the opening" (#22, #23); the last save is in since #13.
 
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
@@ -1002,7 +1020,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A5 Shared world | #14 ([world.md](world.md)); story items and the gift race #16 ([items.md](items.md)), party at rest points #17 |
 | A6 Items, bag, money and story gifts | #16 ([items.md](items.md)) |
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
-| A8 Co-op battles: rules | #18 |
+| A8 Co-op battles: rules | #18 ([battles.md](battles.md)) |
 | A9 Co-op battles: presentation and menus | #19 |
 | A10 Unique encounters, trainers, rival scenes, the League | #21 |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
@@ -1214,3 +1232,20 @@ sibling's D-numbers.
   `PLAYER2` until a host knows it. The launcher shows the two-player rows
   only when CONTROLS has a device for each player. Details:
   [split.md](split.md).
+- **G24. Co-op battles are lockstep; the host keeps the record** (#18,
+  2026-10-15, accepted by the owner the same day). A8.2 asked for a scene-free battle
+  engine on the host, with upstream's lockstep link battles as the
+  alternative to weigh. The engine's battle is one `BattleState` with its
+  presentation woven through its logic, and the host runs in the hosting
+  game's process, so a second, headless copy there would share that game's
+  sounds, mods and singletons. Every window in a battle instead runs the
+  game's own battle from the host's record: the opening the opener's world
+  prepared, a seed the host deals, and the numbered inputs (teams that
+  joined, accepted commands), applied at the battle's questions; each window
+  reports where its copy stands, and the host takes the first report of a
+  revision and logs a different one as a desync. So every window shows the
+  cartridge's own battle (#19 builds on it), a joiner catches up by playing
+  the record without a screen, and the host stays free of the engine. Costs:
+  a desync is detected, not repaired; a window has to run its copy for its
+  player's Pokémon to get their results (a player away from the battle is
+  #20). Details: [battles.md](battles.md).

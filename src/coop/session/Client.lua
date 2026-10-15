@@ -24,6 +24,13 @@
 -- when).  Story items (#16): c.gifts lists what the host owes this player
 -- (Window.lua applies each once and drops it).
 --
+-- Co-op battles (#18): c.battles holds each battle this player is in or
+-- joining, as the host sent it: { id, seed, open, inputs, rev, players, ask,
+-- by, suggestions, ended }; the inputs accumulate in order.  A battle the
+-- host ended stays in c.battles with `ended` until the window drops it
+-- (Client:dropBattle).  battleOpen/battleJoin/battleCmd/battleSuggest/
+-- battleAt send the intentions.
+--
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
 --
@@ -63,6 +70,7 @@ function Client.new(conn, opts)
     story = nil, -- the shared story as the host last sent it (#14)
     storyApplied = 0, storyRev = 0,
     gifts = {}, -- items the host owes this player, oldest first (#16)
+    battles = {}, -- battles this player is in or joining, by id (#18)
     dropped = 0,
     onWelcome = opts.onWelcome,
     log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
@@ -124,6 +132,67 @@ function Client:sendPatch(set, unset, bag)
   return self:send({ type = "patch", set = set or {}, unset = unset or {}, bag = bag })
 end
 
+-- co-op battles (#18, design A8) ----------------------------------------
+
+-- a battle this window's world opened: opening = { kind, enemy, map,
+-- trainer, hooked, foe }, team = the player's packed Pokémon
+function Client:battleOpen(opening, team, otId, expAll)
+  return self:send({ type = "battle_open", kind = opening.kind, enemy = opening.enemy,
+                     map = opening.map, trainer = opening.trainer, hooked = opening.hooked,
+                     foe = opening.foe, team = team, otId = otId, expAll = expAll })
+end
+
+function Client:battleJoin(id, team, otId, expAll)
+  return self:send({ type = "battle_join", battle = id, team = team, otId = otId,
+                     expAll = expAll })
+end
+
+function Client:battleCmd(id, rev, cmd)
+  return self:send({ type = "battle_cmd", battle = id, rev = rev, cmd = cmd })
+end
+
+-- cmd nil takes the suggestion back
+function Client:battleSuggest(id, rev, cmd)
+  return self:send({ type = "battle_suggest", battle = id, rev = rev, cmd = cmd })
+end
+
+-- where this window's copy stands: ask/by at rev, or ended
+function Client:battleAt(id, rev, ask, by, hash, ended)
+  return self:send({ type = "battle_at", battle = id, rev = rev, ask = ask, by = by,
+                     hash = hash, ended = ended })
+end
+
+-- LEAVE BATTLE (or call off a queued join), REJOIN, TAKE OVER (#20)
+function Client:battleLeave(id)
+  return self:send({ type = "battle_leave", battle = id })
+end
+
+function Client:battleRejoin(id)
+  return self:send({ type = "battle_rejoin", battle = id })
+end
+
+function Client:battleTakeover(id, owner)
+  return self:send({ type = "battle_takeover", battle = id, owner = owner })
+end
+
+function Client:dropBattle(id)
+  self.battles[id] = nil
+end
+
+function Client:_battle(msg)
+  local b = self.battles[msg.id]
+  if msg.from == 1 or not b then
+    if msg.from ~= 1 or not msg.open then return end -- a tail without its start
+    b = { id = msg.id, open = msg.open, inputs = {} }
+    self.battles[msg.id] = b
+  end
+  if msg.from ~= #b.inputs + 1 then return end -- out of order: a new link starts over
+  for _, input in ipairs(msg.inputs) do b.inputs[#b.inputs + 1] = input end
+  b.seed, b.rev, b.players = msg.seed, msg.rev, msg.players
+  b.ask, b.by, b.suggestions, b.ended = msg.ask, msg.by, msg.suggestions or {}, msg.ended
+  b.owner, b.offer, b.standins = msg.owner, msg.offer, msg.standins or {}
+end
+
 -- the `saved` messages since the last call, oldest first
 function Client:takeSaves()
   local out = self.saves
@@ -180,6 +249,8 @@ function Client:_handle(msg)
     for path, v in pairs(msg.set) do self.story[path] = v end
     for _, path in ipairs(msg.unset) do self.story[path] = nil end
     self.storyApplied, self.storyRev = msg.applied, msg.rev
+  elseif t == "battle" then
+    self:_battle(msg)
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
   elseif t == "saved" then
