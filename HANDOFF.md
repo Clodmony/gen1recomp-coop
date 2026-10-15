@@ -33,9 +33,15 @@ None.
   whatever Claude Code's attribution defaults say: they link the public
   repository to the owner's account. Keep `Co-Authored-By: Claude …` and
   the PR's "Generated with Claude Code" line (the AI disclosure). Add this
-  rule to `AGENTS.md` (*Hard rules*) on the next group branch. The 109
-  older commits still carry the line; removing it would mean rewriting
-  `gen1recomp-coop` with a force-push, which only the owner can decide.
+  rule to `AGENTS.md` (*Hard rules*) on the next group branch.
+- **History rewritten (owner, 2026-10-15):** the fork's commits on
+  `gen1recomp-coop` were rewritten without their session lines and
+  force-pushed; files, authors and dates are unchanged, and `main` was not
+  touched (the six upstream commits with such lines are upstream's). Every
+  commit id after upstream's `f63f485c` changed: a checkout made before
+  must be reset to `origin/gen1recomp-coop`, never pulled or pushed.
+  GitHub still serves the old commits by id and through the merged pull
+  requests (`refs/pull/*/head`) until GitHub Support purges them.
 - **Decision G26 was accepted by the owner (2026-10-15)** after #56
   merged: mark it accepted in `docs/coop/design.md` §6 (it still says
   "proposed") on the next group branch.
