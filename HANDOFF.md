@@ -6,61 +6,56 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-15 (after Group 8's first issue, #21: PR #56 merged).
+Last updated 2026-10-16 (after Group 8's #22: PR #58 open).
 
 ## Repository state
 
-- Default branch `gen1recomp-coop`; `main` = upstream main. Merged at the
-  owner's word on 2026-10-15, locally as Claude: #53, #54 and #56. Verify
-  on the merged branch: 36/37 tiers (only the Android importer tier: no
-  `javac` here).
-- Every merged branch is deleted, locally and on GitHub. Two stay
-  locally: `coop/group7a-party-pc` (checked out in the Superset worktree
-  `veiled-degree-…`) and that worktree's own branch `veiled-degree-…`.
-- Milestones: Groups 7 and 7a closed. Group 8 is open: #21 is closed;
-  #55 (split from #21 by the owner), #22, #23 and #34's rest remain.
-  Group 2 still has #12 and #15 (owner-side checks); Groups 9 and 10 are
-  open.
+- Default branch `gen1recomp-coop`; `main` = upstream main. #53, #54, #56
+  merged. Every merged branch deleted.
+- Milestones: Group 8 is open: #21 closed; #22 done by #58 (open); #55,
+  #57 (split from #22 by the owner, 2026-10-15), #23 and #34's rest
+  (friend battles) remain. Group 2 still has #12 and #15 (owner-side
+  checks); Groups 9 and 10 are open.
 
-## Open pull requests
+## Open pull requests (draft)
 
-None.
+- **#58** `coop/group8-opening` into `gen1recomp-coop`: closes #22, does
+  #34's opening part. A new player's private opening, the names, the
+  rival's starter, IN THE OPENING, no save in the opening, player 2's name.
+  `docs/coop/opening.md` has everything. Protocol 10, campaign file 4.
+  - Decision **G27** (design.md §6) is **proposed**: the private story
+    stays in the window (not a host-kept copy), the opening ends outside
+    `OAKS_LAB` with a starter, a new campaign is seeded by its first
+    finished opening.
+  - Verify 36/37 (only the Android tier: no `javac`). Live: US Red, two
+    ENet processes, both openings played from NEW GAME, 44 checks, none
+    failed (opening.md *Checked* lists what was not run).
+  - Merge after the owner's word, locally as Claude (`git merge --no-ff`),
+    then push and run `tools/verify.sh`.
 
-## For the next session
+## Next candidates
 
-- **No session links, ever (owner, 2026-10-15).** Commits and pull
-  requests carry no `Claude-Session:` line and no claude.ai session URL,
-  whatever Claude Code's attribution defaults say: they link the public
-  repository to the owner's account. Keep `Co-Authored-By: Claude …` and
-  the PR's "Generated with Claude Code" line (the AI disclosure). Add this
-  rule to `AGENTS.md` (*Hard rules*) on the next group branch.
-- **History rewritten (owner, 2026-10-15):** the fork's commits on
-  `gen1recomp-coop` were rewritten without their session lines and
-  force-pushed; files, authors and dates are unchanged, and `main` was not
-  touched (the six upstream commits with such lines are upstream's). Every
-  commit id after upstream's `f63f485c` changed: a checkout made before
-  must be reset to `origin/gen1recomp-coop`, never pulled or pushed.
-  GitHub still serves the old commits by id and through the merged pull
-  requests (`refs/pull/*/head`) until GitHub Support purges them.
-- **Decision G26 was accepted by the owner (2026-10-15)** after #56
-  merged: mark it accepted in `docs/coop/design.md` §6 (it still says
-  "proposed") on the next group branch.
-- **Next: #22, the private opening** (owner, 2026-10-15): branch
-  `coop/group8-opening` from `gen1recomp-coop`. First steps: design A4,
-  the issue's comment (split-screen's player 2 names themself the same
-  way), and #34's opening part ("in the opening" in the CO-OP box, nobody
-  drawn during the opening).
-
-## Next candidates after that
-
+- **#57** (start in Pallet Town, bring a single-player save; the
+  launcher's "how to start"). First steps: a canned post-opening story per
+  version for a Pallet start into a campaign with no story (the live run's
+  seed was ten entries: Oak's walk flags, `EVENT_BATTLED_RIVAL_IN_OAKS_LAB`,
+  the lab's Oak, rival and two balls, Pallet's Oak); the window's
+  `sendOpening(true, nil, chose)` is the way to say "past the opening".
 - **#55** (rival scenes, the team's League run, the Hall of Fame
-  continue): A10.5 needs a hook where each rival scene starts (no
-  map-script bytes here, G21) and a host lock per map; A10.6 builds on
-  `HostBattles.LEAGUE` and `Campaign.encounters`/`commits` (forget the
-  League's at the run's clear); A10.7 needs a restart hook.
+  continue): A10.5 needs a hook where each rival scene starts and a host
+  lock per map; A10.6 builds on `HostBattles.LEAGUE` and
+  `Campaign.encounters`/`commits`; A10.7 needs a restart hook.
 - **#23** friend battles and trades (a traded Pokémon keeps or gets its
   uid: `Campaign:_stampUids`); #34's friend-battle part with it.
 - Group 2 still has #12 and #15 (owner-side checks).
+
+## Rules for every session
+
+- **No session links, ever (owner, 2026-10-15):** now in `AGENTS.md`
+  (*Hard rules*) with #58.
+- **History rewritten (owner, 2026-10-15):** a checkout made before must
+  be reset to `origin/gen1recomp-coop`, never pulled or pushed. GitHub
+  still serves the old commits until GitHub Support purges them.
 
 ## Live-run recipe
 
@@ -129,6 +124,16 @@ None.
   (30,33) facing left, sight 4: stand at (27,33) facing right to be
   spotted; (29,33) facing right and A talks to it. The overworld's
   `npcPool["VIRIDIAN_FOREST_obj_2"]` is the trainer.
+- **The opening (#22).** `tests/drivers/util.lua`'s `newGame` mashes A
+  through Oak's speech (it types the rival's name as AAAAAAA). To play the
+  opening: `U.teleport(game, "PALLET_TOWN", 10, 2, "up")`, walk up until
+  Oak's script holds the player, mash A until
+  `EVENT_OAK_ASKED_TO_CHOOSE_MON` and the lab is idle, teleport to
+  `OAKS_LAB` (6, 7 or 8, 4) facing up, mash A for the ball, walk down to
+  the rival battle, mash A through it, then to the door at (4/5, 11):
+  tap A whenever something holds the player (the rival's walk-out lines).
+  A test client with no world in the campaign is in the opening until it
+  sends `sendOpening(true)`.
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -140,13 +145,13 @@ None.
 ## Worktrees and background processes
 
 - Main checkout on `gen1recomp-coop` (leave it; behind origin until pulled).
-- The Superset worktree `veiled-degree-…` holds the merged
-  `coop/group7a-party-pc`; this session ran in it, so it was not removed.
-  The owner removes it in Superset when they like; then
-  `git branch -D coop/group7a-party-pc veiled-degree-…` in the main
+- This Superset worktree `veiled-degree-…` holds `coop/group8-opening`
+  (pushed). Its old branch `coop/group7a-party-pc` (merged, pre-rewrite
+  ids) and the worktree's own branch `veiled-degree-…` stay until the
+  owner removes the worktree; then `git branch -D` them in the main
   checkout.
-- No background processes, no scratch worktrees. Group 8's scratch (live
-  import with the extracted cartridge data, drivers) is deleted.
+- No background processes, no scratch worktrees. #22's scratch (live
+  import with extracted cartridge data, drivers, verify logs) is deleted.
 
 ## Still open
 
@@ -158,3 +163,4 @@ None.
 
 - Done 2026-10-15 (owner approved): every merged branch, locally and on
   GitHub (the two above excepted); the milestones of Groups 1 to 7a.
+- Once #58 is merged: its branch, locally and on GitHub.
