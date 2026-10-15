@@ -433,6 +433,8 @@ In place (#14, [world.md](world.md), G21).
 
 ### A6. Items, bag, money and story gifts
 
+In place (#16, [items.md](items.md), G22).
+
 1. **carry** Bag and money are each player's; Pokémon Centers, Marts and Bill's PC
    work on that player's own team, bag, money and PC in their own world (design
    table, tc W07).
@@ -449,7 +451,9 @@ In place (#14, [world.md](world.md), G21).
    list: key items and HMs (TOWN MAP, BICYCLE, keys, S.S. TICKET, COIN CASE,
    ITEMFINDER, SILPH SCOPE, POKé FLUTE, EXP.ALL, rods, HM01 to HM05) and gift
    TMs (an `EVENT_GOT_TMxx` flag); each is a commit `gift:<item>` (D30, design
-   §Policies). Check the list against Yellow.
+   §Policies). Check the list against Yellow. Here (G22) a gift TM is one
+   gained with its `EVENT_GOT_TMxx` flag in the same change; Yellow names
+   the list's items alike.
 6. **carry** A full bag sends a shared gift to the PC's items (D30).
 7. **carry** Gift race: a window change that sets story flags or objects the campaign
    already has (it lost the race) has its item gains taken back, the first
@@ -462,7 +466,9 @@ In place (#14, [world.md](world.md), G21).
    put back when it closes; the host's spill to the PC uses the same 40; the PC
    keeps its 50; a co-op bag is never exported to a cartridge save (owner,
    D109). The target already has a mod `bagSize` override for Gen 1's single
-   bag; reuse it.
+   bag; reuse it. Here (G22) the bag is raised while the session's game
+   runs; every gift lands in a window, so the spill uses the window's 40;
+   a campaign's slot has no EXPORT.
 
 ### A7. Pokémon, party, PC, Pokédex and captures
 
@@ -983,8 +989,8 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A2 Launcher co-op flow | #12 ([launcher.md](launcher.md)); rival's name and how to start #22, both versions #9, split-screen entry #11 |
 | A3 Campaign state, saves and persistence | #13 ([campaign.md](campaign.md)) |
 | A4 New players and the opening | #22 |
-| A5 Shared world | #14 ([world.md](world.md)); story items and the gift race #16, party at rest points #17 |
-| A6 Items, bag, money and story gifts | #16 |
+| A5 Shared world | #14 ([world.md](world.md)); story items and the gift race #16 ([items.md](items.md)), party at rest points #17 |
+| A6 Items, bag, money and story gifts | #16 ([items.md](items.md)) |
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
 | A8 Co-op battles: rules | #18 |
 | A9 Co-op battles: presentation and menus | #19 |
@@ -1164,3 +1170,19 @@ sibling's D-numbers.
   player's world without the story and lays the story over it when it
   sends it. Campaign files move to version 2, the story built from a
   version 1 file's worlds by the team rule. Details: [world.md](world.md).
+- **G22. Story items ride on the window's patch** (#16, 2026-10-15,
+  proposed). A window notes its bag and money at every rest point. A patch
+  that sets story entries carries the bag's change since the last rest
+  point. The host shares a change that moved the story: every other player
+  is owed its gains and loses its key items, fossils excepted. A change
+  that moved nothing new had its gains taken back, unless money went down
+  or the item is a key item or HM. What a player is owed waits in the
+  campaign file, numbered. It lands at a window's rest point (bag, else
+  PC; a held key item or HM is skipped), and the save keeps the last
+  number landed. The host forgets an item once a saved world shows it, so
+  nothing is lost to a dropped link or given twice by a rejoin. The gift
+  list is the `gift:<item>` commits: the key items and HMs of A6.5, and a
+  TM gained with its `EVENT_GOT_TMxx` flag. A new player is owed all of
+  them. The bag holds 40 rows while a session's game runs, and a
+  campaign's slot is not exported to a `.sav`. Protocol 6, campaign file
+  version 3. Details: [items.md](items.md).
