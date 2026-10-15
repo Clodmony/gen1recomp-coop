@@ -33,6 +33,9 @@
 -- world, then what changed since, with the last of their patches applied
 -- (A5.2, A5.3).  A player's world is kept without the story and sent with
 -- it laid over (A5.19).  Opening a campaign drops the walk flags (A5.13).
+-- Story items (#16, design A6): a patch carries its window's bag change;
+-- the items the campaign owes a player go out in `gifts`, each once per
+-- link (a new link hears them all again; the window applies each once).
 --
 -- Per-link limits (#32): each frame the host decodes at most FRAME_BUDGET of
 -- one link's messages (the rest waits for the next frame), so one link cannot
@@ -332,12 +335,26 @@ function Host:_patch(link, msg)
   local p = self:_sequence(link, msg)
   if not p then return end
   self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
-  local n = self.state:patch(p.id, msg.set, msg.unset)
+  local n = self.state:patch(p.id, msg.set, msg.unset, msg.bag)
   p.patchSeq = msg.seq
   local asked = #msg.unset
   for _ in pairs(msg.set) do asked = asked + 1 end
   self:_log("patch", { seq = msg.seq, entries = asked, changed = n,
-                       revision = self.state.revision }, p)
+                       revision = self.state.revision, bag = msg.bag }, p)
+end
+
+-- The items the campaign owes this player that this link has not heard
+-- (#16, design A6.2): oldest first, MAX_ITEMS a message.
+function Host:_sendGifts(link, p)
+  local cp = self.state:player(p.id)
+  local list = {}
+  for _, g in ipairs(cp and cp.gifts or {}) do
+    if g.seq > (link.giftSent or 0) and #list < Protocol.MAX_ITEMS then list[#list + 1] = g end
+  end
+  if #list == 0 then return end
+  link.giftSent = list[#list].seq
+  self:_log("gifts", { first = list[1].seq, last = link.giftSent, n = #list }, p)
+  self:_send(link, { type = "gifts", list = list })
 end
 
 -- A window's world: its game saved.  With checkpoint, a real SAVE asks for
@@ -648,7 +665,10 @@ function Host:update()
   if self.status == "running" then
     for _, link in ipairs(self.links) do
       local p = link.player
-      if p and p.link == link and not link.conn.closed then self:_sendStory(link, p) end
+      if p and p.link == link and not link.conn.closed then
+        self:_sendStory(link, p)
+        self:_sendGifts(link, p)
+      end
     end
   end
   if self.status == "running" and self.store then

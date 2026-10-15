@@ -16,7 +16,8 @@ What partners share of one Gen 1 world, and when (#14, area A5 in
 - `src/coop/game/SharedWorld.lua`: that frame, built from the running Gen 1
   overworld; also the Vermilion rule a map script asks about.
 - `src/coop/campaign/Campaign.lua` keeps the story (`story`, `patch`,
-  `worldFor`). `Host.lua` and `Client.lua` carry it (protocol 5).
+  `worldFor`). `Host.lua` and `Client.lua` carry it (protocol 5; 6 adds
+  story items, [items.md](items.md)).
 
 ## Who owns what (A5.1)
 
@@ -144,7 +145,8 @@ restores surfing on water.
 
 ## Campaign files
 
-Version 2. The campaign's section holds `story` as the flat map. A
+Version 2 (3 since #16, [items.md](items.md)). The campaign's section
+holds `story` as the flat map. A
 version 1 file is migrated on reading. Its story is built from the
 players' worlds: a flag any player set stands, and an entry held with two
 values takes the first player's. The worlds then lose those entries.
@@ -154,7 +156,8 @@ values takes the first player's. The worlds then lose those entries.
 - Party and PC changes at rest points, and the party sent before a battle
   the world asks for: #17.
 - A battle the host runs for a player holding them: #18.
-- Story items reaching every player, and the gift race: #16.
+- Story items reaching every player, and the gift race: done in #16,
+  [items.md](items.md).
 - A new player's private opening: #22. Today a new player's window takes
   the campaign's story at its first rest point.
 

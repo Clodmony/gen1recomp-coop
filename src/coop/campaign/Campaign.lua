@@ -5,7 +5,8 @@
 --   local p = c:addPlayer({ id = "p…", name = "RED", game = "red" })
 --   c:setWorld(p.id, save)          -- the player's world (World.lua), uids stamped
 --   c:commit("gift:BICYCLE", function(c) … end)  -- once; a repeat returns false
---   c:patch(p.id, set, unset)       -- a window's change to the shared story
+--   c:patch(p.id, set, unset, bag)  -- a window's change to the shared story
+--   c:player(p.id).gifts            -- the items owed to a player (#16)
 --   c:worldFor(p.id)                -- their world with the story over it
 --
 -- Campaign: id, title, cartridge (game, SHA-1), the shared story (#14: a
@@ -25,9 +26,17 @@
 -- matched to the player's last world by its fingerprint, else given the
 -- next serial.  #17 refines the matching (an unchanged row first, the
 -- window's hint).
+--
+-- Story items (#16, design A6, Items.lua): a patch that moves the story
+-- shares the items its window gained in that change and takes the key
+-- items it lost; one that lost a gift race has its gains taken back.  What
+-- a player is owed waits in their `gifts` ({ seq, item, qty, once, from,
+-- race }, qty < 0 takes), numbered by their `giftSeq`, until a world they
+-- save shows it taken (`coopGifts`, the last seq their window applied).
 
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
+local Items = require("src.coop.campaign.Items")
 
 local Campaign = {}
 Campaign.__index = Campaign
@@ -64,9 +73,14 @@ function Campaign:player(id) return self.byId[id] end
 function Campaign:addPlayer(info)
   local p = self.byId[info.id]
   if not p then
-    p = { id = info.id, name = info.name, game = info.game, serial = 0 }
+    p = { id = info.id, name = info.name, game = info.game, serial = 0,
+          gifts = {}, giftSeq = 0 }
     self.players[#self.players + 1] = p
     self.byId[p.id] = p
+    -- a late joiner is handed the gift list (design A6.5)
+    for _, id in ipairs(self:giftList()) do
+      self:_owe(p, { item = id:match("^gift:(.+)$"), qty = 1, once = true })
+    end
     self:touch()
   end
   if info.name and info.name ~= p.name then p.name = info.name; self:touch() end
@@ -92,6 +106,53 @@ function Campaign:commit(id, apply)
 end
 
 function Campaign:applied(id) return self.commits[id] == true end
+
+-- the gift list's commits (`gift:<item>`), sorted (design A6.5)
+function Campaign:giftList()
+  local out = {}
+  for id in pairs(self.commits) do
+    if id:find("^gift:") then out[#out + 1] = id end
+  end
+  table.sort(out)
+  return out
+end
+
+-- an item owed to player `q` (a take when qty < 0)
+function Campaign:_owe(q, gift)
+  q.gifts = q.gifts or {}
+  q.giftSeq = (q.giftSeq or 0) + 1
+  gift.seq = q.giftSeq
+  q.gifts[#q.gifts + 1] = gift
+  self:touch()
+end
+
+-- Story items (design A6.2, A6.3, A6.5, A6.7).  `fresh` is how many of the
+-- patch's set entries the story did not have yet.  `bag`: { gained, lost
+-- (item -> count), spent (money went down in the same change) }.
+function Campaign:_items(p, set, fresh, bag)
+  if fresh > 0 then
+    for id, n in pairs(bag.gained or {}) do
+      local gift = Items.giftId(id, set)
+      if gift then self:commit(gift) end
+      for _, q in ipairs(self.players) do
+        if q ~= p then self:_owe(q, { item = id, qty = n, once = Items.isKey(id), from = p.name }) end
+      end
+    end
+    for id, n in pairs(bag.lost or {}) do
+      if Items.isKey(id) and not Items.isFossil(id) then
+        for _, q in ipairs(self.players) do
+          if q ~= p then self:_owe(q, { item = id, qty = -n, from = p.name }) end
+        end
+      end
+    end
+  elseif not bag.spent then
+    -- the race was lost: the winner's share stands in for this window's
+    -- own gains; a key item was given once and stays
+    for id, n in pairs(bag.gained or {}) do
+      if not Items.isKey(id) then self:_owe(p, { item = id, qty = -n, race = true }) end
+    end
+  end
+end
 
 function Campaign:nextUid(playerId)
   local p = assert(self.byId[playerId], "no such player")
@@ -165,6 +226,13 @@ function Campaign:setWorld(playerId, save)
   save.options = nil
   Ownership.strip(save)
   self:_stampUids(p, save)
+  -- the gifts this world has taken are owed no more (design A6.2)
+  local took = type(save.coopGifts) == "number" and save.coopGifts or 0
+  local owed = {}
+  for _, g in ipairs(p.gifts or {}) do
+    if g.seq > took then owed[#owed + 1] = g end
+  end
+  p.gifts = owed
   p.world = save
   p.trainer = type(save.player.id) == "number" and save.player.id or p.trainer
   self:touch()
@@ -174,16 +242,22 @@ end
 -- A window's change to the shared story (design A5.2): `set` (path ->
 -- value) and `unset` (paths), applied entry by entry, so two windows' flags
 -- set at once both stand.  An entry the campaign does not own, or with a
--- value it may not hold, is skipped.  Returns how many entries changed.
-function Campaign:patch(playerId, set, unset)
-  assert(self.byId[playerId], "no such player")
-  local n = 0
+-- value it may not hold, is skipped.  `bag` is the window's bag change in
+-- the same rest-to-rest change (#16, `_items`).  Returns how many entries
+-- changed.
+function Campaign:patch(playerId, set, unset, bag)
+  local p = assert(self.byId[playerId], "no such player")
+  local n, sets = 0, 0
   for path, value in pairs(set or {}) do
-    if Ownership.valid(path, value) and self.story[path] ~= value then
-      self.story[path] = value
-      n = n + 1
+    if Ownership.valid(path, value) then
+      sets = sets + 1
+      if self.story[path] ~= value then
+        self.story[path] = value
+        n = n + 1
+      end
     end
   end
+  local fresh = n
   for _, path in ipairs(unset or {}) do
     if Ownership.owns(path) and self.story[path] ~= nil then
       self.story[path] = nil
@@ -191,6 +265,7 @@ function Campaign:patch(playerId, set, unset)
     end
   end
   if n > 0 then self:touch() end
+  if type(bag) == "table" and sets > 0 then self:_items(p, set, fresh, bag) end
   return n
 end
 
@@ -227,7 +302,7 @@ function Campaign:snapshot(skipBoxes)
   local players = {}
   for i, p in ipairs(self.players) do
     local entry = { id = p.id, name = p.name, game = p.game, serial = p.serial,
-                    trainer = p.trainer }
+                    trainer = p.trainer, giftSeq = p.giftSeq or 0, gifts = p.gifts or {} }
     if p.world then
       local rest, boxes = World.split(p.world)
       entry.world = rest
@@ -301,7 +376,12 @@ function Campaign.fromSnapshot(data, boxesOf)
     local p = { id = entry.id, name = entry.name,
                 game = Protocol.gameId(entry.game) and entry.game or nil,
                 serial = tonumber(entry.serial) or 0,
-                trainer = tonumber(entry.trainer) }
+                trainer = tonumber(entry.trainer),
+                giftSeq = tonumber(entry.giftSeq) or 0, gifts = {} }
+    for _, g in ipairs(type(entry.gifts) == "table" and entry.gifts or {}) do
+      local gift = Protocol.gift(g)
+      if gift and gift.seq <= p.giftSeq then p.gifts[#p.gifts + 1] = gift end
+    end
     if entry.world ~= nil then
       local boxes = entry.boxes
       if boxes == nil and boxesOf then boxes = boxesOf(entry.id) end

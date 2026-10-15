@@ -407,6 +407,12 @@ P["SAVED JUST NOW"] = "GERADE GESPEICHERT"
 P["SAVED %d MIN AGO"] = "VOR %d MIN GESP."
 P["SAVED %d H AGO"] = "VOR %d H GESP."
 P["AUTOSAVE: ON"] = "AUTO-SPEICHERN: AN"
+-- co-op story items (#16)
+P["%s shared %s."] = "%s teilt %s."
+P["%s went to the PC."] = "%s liegt jetzt im PC."
+P["%s handed over %s."] = "%s hat %s abgegeben."
+P["No room for %s!"] = "Kein Platz: %s!"
+P["Got %s."] = "%s erhalten."
 
 -- battle
 P["FOE"] = "GEGNER"

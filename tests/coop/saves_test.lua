@@ -122,6 +122,14 @@ do
   eq(d.slots[1].campaign, nil, "slot 1 is a solo save")
   eq(ids(s), "play:" .. a .. ",export:" .. a .. ",delete:" .. a .. ",export:" .. b .. ",delete:" .. b .. ",new,import",
     "PLAY, EXPORT and DELETE per solo slot; a campaign's slot plays from its campaign")
+  -- a campaign's world (a 40-row bag) never goes to a cartridge save (#16, A6.8)
+  for _, r in ipairs(s:items()) do
+    if r.id == "export" then
+      eq(r.enabled, r.slot == a, "EXPORT is offered for the solo slot only: " .. r.slot)
+    end
+  end
+  eq(pick(s, "export", b), nil, "EXPORT on a campaign's slot does nothing")
+  eq(s.notice, nil, "and writes nothing")
   -- PLAY makes the slot active and boots the game on it
   local cmd = pick(s, "play", a)
   eq(cmd and cmd.kind .. "/" .. cmd.version .. "/" .. tostring(cmd.newGame), "boot/red/false",

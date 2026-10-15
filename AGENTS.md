@@ -31,6 +31,8 @@ Read before working:
   `--coop-host`/`--coop-join` development entry).
 - [docs/coop/world.md](docs/coop/world.md): what partners share of one
   world and when (ownership, patches, rest points, per-place rules).
+- [docs/coop/items.md](docs/coop/items.md): story items reaching every
+  player, the gift list, the gift race and the 40-row bag.
 - [docs/coop/presence.md](docs/coop/presence.md): what a session shows in
   the game (partners, arrow, CO-OP menu, notices, run) and its hooks in
   upstream files.
@@ -91,7 +93,10 @@ Read before working:
   failing test first) and fix it, one commit or more per issue. Then run
   `tools/verify.sh`, update the docs, push and open one draft pull request
   that says `Closes #N` for every issue it finishes. Then rewrite
-  `HANDOFF.md` (open pull requests, branch state, next group, cleanup) and
+  `HANDOFF.md` (open pull requests, branch state, next group, cleanup),
+  then ask the owner about everything still theirs to do or decide (merges,
+  proposed decisions, wording, cleanup) as choices with options, the
+  recommended one first (owner, 2026-10-15), record the answers, and
   stop: the owner starts a fresh session for the next group. If a group grows too long, stop
   at an issue boundary, open the pull request for the finished issues, and
   leave the rest of the group for the next session. An issue found on the

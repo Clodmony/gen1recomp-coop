@@ -33,7 +33,7 @@ local SaveSerializer = require("src.core.SaveSerializer")
 local CampaignFile = {}
 
 CampaignFile.FORMAT = "gen1recomp-coop campaign"
-CampaignFile.VERSION = 2
+CampaignFile.VERSION = 3
 CampaignFile.DIR = "coop/campaigns"
 -- twelve full PCs and more; a campaign file is never this long
 CampaignFile.MAX_FILE = 64 * 1024 * 1024
@@ -59,6 +59,18 @@ CampaignFile.MIGRATIONS[1] = function(data)
   data.campaign.story = Ownership.merge(worlds)
   for i, rest in pairs(rests) do
     data.players[i].world = SaveSerializer.encode(Ownership.strip(rest))
+  end
+  return data
+end
+
+-- 2 to 3 (#16): each player holds the items the campaign owes them
+-- (`gifts`, numbered by `giftSeq`); nobody is owed anything yet
+CampaignFile.MIGRATIONS[2] = function(data)
+  for _, entry in ipairs(type(data.players) == "table" and data.players or {}) do
+    if type(entry) == "table" then
+      entry.gifts = entry.gifts or {}
+      entry.giftSeq = entry.giftSeq or 0
+    end
   end
   return data
 end
