@@ -162,6 +162,19 @@ function Client:battleAt(id, rev, ask, by, hash, ended)
                      hash = hash, ended = ended })
 end
 
+-- LEAVE BATTLE (or call off a queued join), REJOIN, TAKE OVER (#20)
+function Client:battleLeave(id)
+  return self:send({ type = "battle_leave", battle = id })
+end
+
+function Client:battleRejoin(id)
+  return self:send({ type = "battle_rejoin", battle = id })
+end
+
+function Client:battleTakeover(id, owner)
+  return self:send({ type = "battle_takeover", battle = id, owner = owner })
+end
+
 function Client:dropBattle(id)
   self.battles[id] = nil
 end
@@ -177,6 +190,7 @@ function Client:_battle(msg)
   for _, input in ipairs(msg.inputs) do b.inputs[#b.inputs + 1] = input end
   b.seed, b.rev, b.players = msg.seed, msg.rev, msg.players
   b.ask, b.by, b.suggestions, b.ended = msg.ask, msg.by, msg.suggestions or {}, msg.ended
+  b.owner, b.offer, b.standins = msg.owner, msg.offer, msg.standins or {}
 end
 
 -- the `saved` messages since the last call, oldest first

@@ -58,6 +58,8 @@ Protocol.REASONS = {
   in_battle = true, no_battle = true, not_in_battle = true, stale = true,
   not_ready = true, not_yours = true, bad_cmd = true, roster_full = true,
   no_pokemon = true, run_initiator = true,
+  -- leaving and taking over (#20)
+  opener_stays = true, not_away = true,
 }
 
 -- a player's world travels as the game's save text (World.lua checks it):
@@ -475,6 +477,13 @@ Protocol.TO_HOST = {
                                              rev = int(0, Protocol.MAX_SEQ) }),
                      { ask = enum(Protocol.ASKS), by = Protocol.playerId, hash = text(64),
                        ended = enum(Protocol.RESULTS) }),
+  -- LEAVE BATTLE, or call off a queued join (#20, design A11.1, A11.4)
+  battle_leave = record(withType("battle_leave", { seq = seq, battle = Protocol.battleId })),
+  -- REJOIN a battle this player left
+  battle_rejoin = record(withType("battle_rejoin", { seq = seq, battle = Protocol.battleId })),
+  -- TAKE OVER for `owner`, who dropped (design A11.6)
+  battle_takeover = record(withType("battle_takeover", { seq = seq, battle = Protocol.battleId,
+                                                         owner = Protocol.playerId })),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -528,10 +537,16 @@ Protocol.TO_CLIENT = {
   battle = record(withType("battle", {
     id = Protocol.battleId, rev = int(0, Protocol.MAX_SEQ), seed = int(1, 2147483646),
     from = int(1, Protocol.MAX_SEQ), inputs = listOf(input, Protocol.MAX_INPUTS),
-    players = listOf(record({ id = Protocol.playerId, present = bool }), Protocol.MAX_ROSTER),
+    players = listOf(record({ id = Protocol.playerId, present = bool }, { left = bool }),
+                     Protocol.MAX_ROSTER),
   }), {
     open = record(extend(opening, { by = Protocol.playerId }), openingOpt),
-    ask = enum(Protocol.ASKS), by = Protocol.playerId,
+    -- by: who decides (the owner, a stand-in, or the first present player);
+    -- owner: whose Pokemon the question is about; offer: an owner who
+    -- dropped, whom the present players may take over for (#20)
+    ask = enum(Protocol.ASKS), by = Protocol.playerId, owner = Protocol.playerId,
+    offer = Protocol.playerId,
+    standins = listOf(record({ owner = Protocol.playerId, by = Protocol.playerId }), Protocol.MAX_ROSTER),
     suggestions = listOf(record({ by = Protocol.playerId, cmd = cmd }), Protocol.MAX_PLAYERS),
     ended = enum(Protocol.RESULTS),
   }),

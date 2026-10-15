@@ -117,6 +117,7 @@ function Host.new(opts)
     -- (HostBattles.lua, #18); a campaign saves only when both are empty
     -- (design A3.7)
     battles = {}, joins = {},
+    missed = {}, -- player id -> battles that ended while their link was down (#20)
   }, Host)
   self.state = opts.state or Campaign.new({
     id = self.campaign.id, title = self.campaign.title,
@@ -594,7 +595,10 @@ local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    battle_join = battleHandler(HostBattles.join),
                    battle_cmd = battleHandler(HostBattles.cmd),
                    battle_suggest = battleHandler(HostBattles.suggest),
-                   battle_at = battleHandler(HostBattles.at) }
+                   battle_at = battleHandler(HostBattles.at),
+                   battle_leave = battleHandler(HostBattles.leave),
+                   battle_rejoin = battleHandler(HostBattles.rejoin),
+                   battle_takeover = battleHandler(HostBattles.takeover) }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -717,7 +721,10 @@ function Host:update()
     self.dirty = false
     self:_broadcast()
   end
-  if self.status == "running" then self:_shareOwnLog() end
+  if self.status == "running" then
+    self:_shareOwnLog()
+    HostBattles.tick(self, now)
+  end
   if self.status == "ending" and (#self.links == 0 or now >= self.endAt) then
     self:_finish()
   end
@@ -732,6 +739,13 @@ function Host:shutdown(reason)
   -- the campaign is saved on shutdown; with a battle running, the state
   -- without it goes to the journal (design A3.9)
   if self.store and not self:_autosave("shutdown") then self.store:poll(true) end
+  -- battles still running end as fled, and their players hear it (A11.7)
+  HostBattles.endAll(self)
+  for _, link in ipairs(self.links) do
+    if link.player and link.player.link == link and not link.conn.closed then
+      HostBattles.sendTo(self, link, link.player)
+    end
+  end
   self:_shareOwnLog(true) -- the host's last lines go out before `ended`
   self.status = "ending"
   self.endAt = self.clock() + Host.GRACE
