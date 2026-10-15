@@ -197,6 +197,8 @@ function HostBattles.cmd(host, p, msg)
   if (c.kind == "move" or c.kind == "mimic") and not (c.slot or c.index) then return nil, "bad_cmd" end
   if (c.kind == "item" or c.kind == "ball") and not c.item then return nil, "bad_cmd" end
   if c.kind == "choice" and c.yes == nil then return nil, "bad_cmd" end
+  -- a catch is for a player in the battle (design A7.6)
+  if c.target and not participant(b, c.target) then return nil, "bad_cmd" end
   -- RUN flees for the player whose world started the fight (design A9.5);
   -- leaving a battle is #20
   if c.kind == "run" and p.id ~= b.open.by then return nil, "run_initiator" end

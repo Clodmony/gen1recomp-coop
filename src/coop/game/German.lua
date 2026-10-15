@@ -421,6 +421,9 @@ P["The battle is over."] = "Der Kampf ist vorbei."
 P["Could not join the battle."] = "Beitritt zum Kampf ging nicht."
 P["Only %s can\nrun from this\nbattle!"] = "Nur %s kann\naus diesem Kampf\nfliehen!"
 P["%s caught\n%s!"] = "%s hat\n%s gefangen!"
+P["%s joined\nthe battle!"] = "%s hilft\nim Kampf!"
+P["decides"] = "wählt"
+P["%s suggests"] = "%s rät zu"
 
 -- battle
 P["FOE"] = "GEGNER"
