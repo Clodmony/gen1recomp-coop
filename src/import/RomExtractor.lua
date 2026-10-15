@@ -1961,6 +1961,25 @@ function RomExtractor:germanField(data)
       self.rom:bytes(trades.bank, row + 3, 11), charmap)
   end
   data.credits.screens = self:creditScreens()
+  -- The menu words the engine draws itself, by label (the list the manifest
+  -- generator stamps into field.words; a pair reads that many consecutive
+  -- strings); rows separated by `next` come out newline-joined.  A label
+  -- the manifest cannot place is left out and the engine's wording stands.
+  local words = {}
+  for _, entry in ipairs(type(data.words) == "table" and data.words or {}) do
+    local name, count = entry, 1
+    if type(entry) == "table" then name, count = entry[1], entry[2] end
+    if type(name) == "string" and self.symbols[name] then
+      local s = self:symbol(name)
+      local parts, address = {}, s.address
+      for i = 1, count do
+        local text, consumed = self.rom:readString(s.bank, address, charmap, 0x50, 256)
+        parts[i], address = text, address + consumed
+      end
+      words[name] = table.concat(parts, "\n")
+    end
+  end
+  data.words = words
   -- engine/movie/credits.asm TheEndTextString: the top row of letter
   -- columns, $60 + 2 * letter (T, H, E, N, D), " " a gap; German ends on
   -- E N D E

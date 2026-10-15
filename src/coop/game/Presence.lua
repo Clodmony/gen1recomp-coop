@@ -18,6 +18,7 @@
 local Arrow = require("src.coop.game.Arrow")
 local Colors = require("src.coop.game.Colors")
 local Notices = require("src.coop.game.Notices")
+local Strings = require("src.core.Strings")
 local FieldDefaults = require("src.world.FieldDefaults")
 local SpriteRenderer = require("src.render.SpriteRenderer")
 
@@ -196,12 +197,12 @@ local function narrate(self, state, me)
   if self.seen then
     for id, name in pairs(now) do
       if name and not self.seen[id] then
-        Notices.push(("%s joined the session."):format(name))
+        Notices.push(Strings("%s joined the session.", name))
       end
     end
     for id, name in pairs(self.seen) do
       if name and not now[id] then
-        Notices.push(("%s left the session."):format(name))
+        Notices.push(Strings("%s left the session.", name))
       end
     end
   end

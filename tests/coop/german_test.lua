@@ -74,6 +74,16 @@ for _, pair in ipairs({ { "red_de", "red" }, { "blue_de", "blue" } }) do
     check(de.symbols[name] ~= nil, id .. " manifest locates " .. name)
   end
   eq(#de.text.labels, #us.text.labels, id .. " has the same text labels")
+  -- the menu words the engine draws itself (German.lua reads field.words)
+  local words = de.field.words
+  check(type(words) == "table" and #words > 50, id .. " manifest lists the cartridge's menu words")
+  local placed = true
+  for _, entry in ipairs(words or {}) do
+    local name = type(entry) == "table" and entry[1] or entry
+    placed = placed and de.symbols[name] ~= nil
+  end
+  check(placed, id .. " manifest locates every menu word label")
+  check(us.field.words == nil, base .. "'s manifest has no such list")
   eq(de.field.credits.theEnd.column, 7, id .. " ends its credits at column 7")
   eq(de.charmap["192"], "Ä", id .. " charmap has the German letters")
   eq(de.charmap["190"], "ß", id .. " charmap has ß")
@@ -131,6 +141,9 @@ local rom = romWith({
   -- a metric #DEX entry: kind, 19 dm, 1200 hg, TX_FAR
   [0x4400] = { 0x10, 0x44 },
   [0x4410] = join(text("KIND"), { 19, 0xB0, 0x04, 0x17, 0x00, 0x50, 0x2A }),
+  -- menu words: two `next`-joined rows, and three consecutive strings
+  [0x4500] = join({ 0x80 + 5, 0x80 + 6, 0x4E, 0x80 + 17, 0x80 + 13 }, { 0x50 }),
+  [0x4520] = join(text("AT"), text("DF"), text("SP")),
 })
 local deManifest = {
   language = "de",
@@ -142,14 +155,20 @@ local deManifest = {
     TradeMons = { 1, 0x4040 }, CreditsOrder = { 1, 0x4100 },
     CreditsTextPointers = { 1, 0x4200 }, CreditsMons = { 1, 0x4300 },
     PokedexEntryPointers = { 1, 0x4400 }, TheEndTextString = { 1, 0x4320 },
+    BattleMenuText = { 1, 0x4500 }, StatModTextStrings = { 1, 0x4520 },
   },
 }
+charmap["78"] = "\n"
 local x = RomExtractor.new(rom, deManifest)
 local field = {
   trades = { { give = "RHYDON", get = "KANGASKHAN", dialogset = 1 } },
   credits = { mons = {}, theEnd = { letters = "THEND", column = 7 } },
+  words = { "BattleMenuText", { "StatModTextStrings", 3 }, "NotInThisManifest" },
 }
 x:germanField(field)
+eq(field.words.BattleMenuText, "FG\nRN", "a menu word label is read, its rows newline-joined")
+eq(field.words.StatModTextStrings, "AT\nDF\nSP", "a (label, n) pair reads n consecutive strings")
+check(field.words.NotInThisManifest == nil, "a label the manifest cannot place is left out")
 eq(field.presetNames.customOption, "NAME", "the custom-name row is the cartridge's")
 eq(table.concat(field.presetNames.player, ","), "ONE,TWO,SIX", "player presets read")
 eq(table.concat(field.presetNames.rival, ","), "TEN,SUN,SKY", "rival presets read")

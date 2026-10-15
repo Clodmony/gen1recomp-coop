@@ -517,27 +517,32 @@ end
 function ContinueInfo:draw()
   local save = self.save
   -- box at (4,7), 8x14 content; labels double-spaced from (5,9)
-  Font.drawBox(4, 7, 16, 10)
+  -- co-op (#25): the German panel starts at column 3, its labels at 4
+  -- (src/coop/game/German.lua layout.savePanel)
+  local de = require("src.coop.game.German").layoutFor("savePanel")
+  local bx, bw, lx = 4, 16, 40
+  if de then bx, bw, lx = de.boxX, de.boxW, de.labelX * 8 end
+  Font.drawBox(bx, 7, bw, 10)
   love.graphics.setColor(0, 0, 0, 1)
   -- the name follows the label's real width (one space after it), so a
   -- localized label longer than PLAYER's six glyphs cannot run into it
   local playerLabel = Strings("PLAYER")
-  Font.draw(playerLabel, 40, 72)
+  Font.draw(playerLabel, lx, 72)
   Font.draw((save.player and save.player.name) or "RED",
-    math.max(96, 40 + (#Font.split(playerLabel) + 1) * 8), 72)
+    math.max(96, lx + (#Font.split(playerLabel) + 1) * 8), 72)
   local badges = require("src.inventory.Badges").count(self.game.data, save)
-  Font.draw(Strings("BADGES"), 40, 88)
+  Font.draw(Strings("BADGES"), lx, 88)
   -- engine/menus/main_menu.asm:370
   Font.draw(("%2d"):format(badges), 17 * 8, 11 * 8)
   local owned = 0
   for _ in pairs(save.pokedex and save.pokedex.owned or {}) do
     owned = owned + 1
   end
-  Font.draw(Strings("POKéDEX"), 40, 104)
+  Font.draw(Strings("POKéDEX"), lx, 104)
   -- engine/menus/main_menu.asm:372
   Font.draw(("%3d"):format(owned), 16 * 8, 13 * 8)
   local t = math.floor(save.playTime or 0)
-  Font.draw(Strings("TIME"), 40, 120)
+  Font.draw(Strings("TIME"), lx, 120)
   Font.draw(("%3d:%02d"):format(math.floor(t / 3600),
                                 math.floor(t / 60) % 60), 104, 120)
   love.graphics.setColor(1, 1, 1, 1)

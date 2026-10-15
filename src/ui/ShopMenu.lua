@@ -333,7 +333,7 @@ function ShopMenu.new(game, stock, onQuit)
       onSelect = chosen(function() buy(game, stock, menu) end) },
     { label = Strings("SELL"), keepOpen = true,
       onSelect = chosen(function() sell(game, menu) end) },
-    { label = Strings("QUIT"), keepOpen = true, onSelect = chosen(farewell) },
+    { label = Strings("QUIT", "shop"), keepOpen = true, onSelect = chosen(farewell) }, -- co-op (#25)
     -- data/text_boxes.asm:34
   }, { tx = 0, ty = 0, tw = 11, th = 7, keepOnCancel = true })
   menu.onCancel = chosen(farewell)

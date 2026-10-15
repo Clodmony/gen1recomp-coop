@@ -86,15 +86,20 @@ function StartMenu.new(game)
         if panel.delay == 30 then panel.openPrompt() end
       end,
       draw = function()
-        Font.drawBox(4, 0, 16, 10)
+        -- co-op (#25): the German panel starts at column 3, its labels at
+        -- 4 (src/coop/game/German.lua layout.savePanel)
+        local de = require("src.coop.game.German").layoutFor("savePanel")
+        local bx, bw, lx = 4, 16, 5
+        if de then bx, bw, lx = de.boxX, de.boxW, de.labelX end
+        Font.drawBox(bx, 0, bw, 10)
         love.graphics.setColor(0, 0, 0, 1)
-        Font.draw(Strings("PLAYER"), 5 * 8, 2 * 8)
+        Font.draw(Strings("PLAYER"), lx * 8, 2 * 8)
         Font.draw(game.save.player.name or "RED", 12 * 8, 2 * 8)
-        Font.draw(Strings("BADGES"), 5 * 8, 4 * 8)
+        Font.draw(Strings("BADGES"), lx * 8, 4 * 8)
         Font.draw(("%2d"):format(badges), 17 * 8, 4 * 8)
-        Font.draw(Strings("POKéDEX"), 5 * 8, 6 * 8)
+        Font.draw(Strings("POKéDEX"), lx * 8, 6 * 8)
         Font.draw(("%3d"):format(owned), 16 * 8, 6 * 8)
-        Font.draw(Strings("TIME"), 5 * 8, 8 * 8)
+        Font.draw(Strings("TIME"), lx * 8, 8 * 8)
         Font.draw(("%3d:%02d"):format(math.floor(t / 3600),
                                       math.floor(t / 60) % 60), 13 * 8, 8 * 8)
         love.graphics.setColor(1, 1, 1, 1)
