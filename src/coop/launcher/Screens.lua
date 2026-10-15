@@ -831,6 +831,22 @@ function C.list(p, coop, c, top)
   return y + 30
 end
 
+-- HOW YOU START and the row under it (#57): a label and a button each,
+-- as the form's other rows; returns the y under them
+local START_ROWS = { how = true, starter = true, save = true }
+local function startRows(p, c, rows, py)
+  for i, row in ipairs(rows) do
+    if START_ROWS[row.id] then
+      p:text(c.x + 10, py, row.label, "ink")
+      py = py + LINE + 2
+      rowButton(p, c.x + 10, py, c.w - 20, 24, i, row,
+        { label = row.value, detail = row.id == "save" and L("PICK") or L("CHANGE") })
+      py = py + 32
+    end
+  end
+  return py
+end
+
 function C.new(p, coop, c)
   local rows = coop:items()
   local y = c.y + heading(p, c, c.y, L("Start a shared adventure"),
@@ -844,6 +860,7 @@ function C.new(p, coop, c)
     rowButton(p, c.x + 10, py, c.w - 20, 24, i, row, { label = row.value, detail = L("EDIT") })
     py = py + 32
   end
+  py = startRows(p, c, rows, py) -- how the host's player starts (#57)
   p:text(c.x + 10, py, L("CARTRIDGE"), "ink")
   p:text(c.x + 10 + 90, py, L("%s · %s", Games.label(coop.version),
     CoopMenu.languageName(coop.version)), "muted")
@@ -1053,6 +1070,7 @@ function C.connecting(p, coop, c)
     py = py + p:para(c.x + 10, py, c.w - 20,
       L("This device is %s in that campaign.", d.known), "muted") + 2
   end
+  if rowOf(rows, "how") then py = startRows(p, c, rows, py + 4) end -- a new player (#57)
   for _, tip in ipairs(d.tips or {}) do
     p:text(c.x + 10, py, "·", "muted")
     py = py + p:para(c.x + 22, py, c.w - 32, tip, "ink") + 4
@@ -1062,11 +1080,36 @@ function C.connecting(p, coop, c)
   local list = {}
   for i, row in ipairs(rows) do
     local primary = row.id == "join" or row.id == "retry" or row.id == "switch"
-    list[#list + 1] = { index = i, row = row, style = primary and "primary" or nil,
-      label = (row.id == "join" or row.id == "switch") and (row.label .. " →") or nil }
+    if not START_ROWS[row.id] then
+      list[#list + 1] = { index = i, row = row, style = primary and "primary" or nil,
+        label = (row.id == "join" or row.id == "switch") and (row.label .. " →") or nil }
+    end
   end
   actionsRight(p, c, y, list)
   return y + 30
+end
+
+-- BRING A SAVE's pick (#57, design A4.1): this device's solo saves of the
+-- game, those past Oak's lab
+function C.bring(p, coop, c)
+  local rows = coop:items()
+  local y = c.y + heading(p, c, c.y, L("Bring a trainer"),
+    L("Your team, PC, bag, money and place come along. The solo save stays as it is."), true)
+  local any = false
+  for i, row in ipairs(rows) do
+    if row.id == "slot" then
+      any = true
+      local sv = row.save
+      local sub = L("BADGES %d · POKéDEX %d · TIME %s", sv.badges or 0, sv.dex or 0, sv.time or "0:00")
+      if not sv.bringable then sub = L("%s · NO STARTER YET", sub) end
+      rowButton(p, c.x, y, c.w, 36, i, row, { sub = sub })
+      y = y + 42
+    end
+  end
+  if not any then
+    y = y + p:para(c.x, y, c.w, L("No single-player save of this game on this device."), "muted") + 8
+  end
+  return y + 8
 end
 
 function C.entry(p, coop, c, ui)

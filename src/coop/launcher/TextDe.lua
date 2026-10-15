@@ -415,6 +415,27 @@ return {
   ["Is a game on this device hosting?"] = "Hostet ein Spiel auf diesem Gerät?",
   ["Is the address spelled right?"] = "Ist die Adresse richtig geschrieben?",
 
+  -- #57: how a new player starts
+  ["HOW YOU START"] = "SO BEGINNST DU",
+  ["THE OPENING"] = "DER SPIELANFANG",
+  ["START IN PALLET"] = "START IN ALABASTIA",
+  ["BRING A SAVE"] = "SPIELSTAND MITBRINGEN",
+  ["STARTER"] = "STARTER",
+  ["BULBASAUR"] = "BISASAM",
+  ["CHARMANDER"] = "GLUMANDA",
+  ["SQUIRTLE"] = "SCHIGGY",
+  ["SAVE"] = "SPIELSTAND",
+  ["PICK A SAVE"] = "SPIELSTAND WÄHLEN",
+  ["PICK"] = "WÄHLEN",
+  ["CHANGE"] = "WECHSELN",
+  ["Bring a trainer"] = "Bring einen Trainer mit",
+  ["Your team, PC, bag, money and place come along. The solo save stays as it is."] =
+    "Team, PC, Beutel, Geld und Ort kommen mit. Der Solo-Spielstand bleibt, wie er ist.",
+  ["%s · NO STARTER YET"] = "%s · NOCH KEIN STARTER",
+  ["No single-player save of this game on this device."] =
+    "Kein Solo-Spielstand dieses Spiels auf diesem Gerät.",
+  ["Your start could not be made: %s"] = "Dein Start ließ sich nicht anlegen: %s",
+
   -- text entry
   ["Type on the keyboard, or pick the letters with a pad or a tap. START or END finishes."] =
     "Tippe auf der Tastatur oder wähle die Zeichen mit Controller oder Finger. START oder ENDE schließt ab.",
