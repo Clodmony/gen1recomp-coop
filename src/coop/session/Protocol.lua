@@ -29,8 +29,11 @@ local Protocol = {}
 -- opening is, and in `state`; a walk-in joins the running one.  10: the
 -- opening (#22): a window's `opening` (in it or done, the rival's name,
 -- the starter chosen), and who is in it, the rival's name and the
--- starter he counters in `state`.
-Protocol.VERSION = 10
+-- starter he counters in `state`.  11: friend battles and trades (#23):
+-- `invite`, `invite_answer`, `pair_msg`, `pair_end`, `trade_team`,
+-- `trade_pick` and `trade_confirm` to the host, `invite`, `pair` and
+-- `pair_msg` to the client, and who meets whom (`meeting`) in `state`.
+Protocol.VERSION = 11
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -66,6 +69,9 @@ Protocol.REASONS = {
   no_pokemon = true, run_initiator = true,
   -- leaving and taking over (#20)
   opener_stays = true, not_away = true,
+  -- friend battles and trades (#23)
+  partner_busy = true, partner_away = true, no_partner = true, invite_pending = true,
+  no_invite = true, no_pair = true, bad_team = true, bad_pick = true,
 }
 
 -- a player's world travels as the game's save text (World.lua checks it):
@@ -317,6 +323,7 @@ local publicPlayer = record({
   map = Protocol.mapId, x = cell, y = cell, facing = enum(FACINGS),
   travel = enum(TRAVELS), battle = pattern("^b[0-9a-f]+$", 17),
   opening = bool, -- #22: playing the opening (design A4.8)
+  meeting = enum({ battle = true, trade = true }), -- #23: a friend battle or trade
 })
 
 -- the lobby view of a player (probe answers and the LAN beacon)
@@ -593,6 +600,84 @@ Protocol.TO_CLIENT = {
     ended = enum(Protocol.RESULTS),
   }),
 }
+
+-- friend battles and trades (#23, design A12.1 to A12.6) -------------------
+
+Protocol.INVITE_KINDS = { battle = true, trade = true }
+-- how an invitation ended, as both players hear it (A12.2)
+Protocol.INVITE_ANSWERS = { accepted = true, declined = true, timeout = true, busy = true,
+                            left = true }
+-- how a window's side of a pairing ended
+Protocol.PAIR_RESULTS = { win = true, lose = true, draw = true, forfeit = true, cancel = true,
+                          done = true }
+-- why the host ended a pairing for both (A12.4, A12.6)
+Protocol.PAIR_ENDS = { released = true, left = true, cancel = true }
+Protocol.inviteId = pattern("^i[0-9a-f]+$", 17)
+Protocol.pairId = pattern("^t[0-9a-f]+$", 17)
+-- a team's rows as the game's save text (src/coop/campaign/Trade.lua)
+Protocol.MAX_TEAM_TEXT = 64 * 1024
+-- one message of upstream's link battle, passed on between the two
+-- windows (src/link/LinkBattle.lua; the receiving window's link session
+-- checks it with src/link/Wire.lua): plain data with a type
+local function linkMsg(v)
+  local out, why = plain(v)
+  if out == nil then return nil, why end
+  if type(out) ~= "table" or type(out.type) ~= "string" or #out.type > 40 then
+    return nil, "no type"
+  end
+  return out
+end
+local pairKinds = enum(Protocol.INVITE_KINDS)
+
+-- invite `to` to a friend battle or trade (A12.1, A12.2)
+Protocol.TO_HOST.invite = record(withType("invite", { seq = seq, to = Protocol.playerId,
+                                                      kind = pairKinds }))
+-- the invited player's YES or NO
+Protocol.TO_HOST.invite_answer = record(withType("invite_answer", {
+  seq = seq, invite = Protocol.inviteId, yes = bool,
+}))
+-- the n-th message of this window's link battle in the pairing
+Protocol.TO_HOST.pair_msg = record(withType("pair_msg", {
+  seq = seq, pair = Protocol.pairId, n = int(1, Protocol.MAX_SEQ), msg = linkMsg,
+}))
+-- this window's side of the pairing ended
+Protocol.TO_HOST.pair_end = record(withType("pair_end", {
+  seq = seq, pair = Protocol.pairId, result = enum(Protocol.PAIR_RESULTS),
+}))
+-- a trade: this player's team as the trade screen opened, the slot they
+-- offer, and their TRADE (yes) or CANCEL (no) once both offered (A12.6)
+Protocol.TO_HOST.trade_team = record(withType("trade_team", {
+  seq = seq, pair = Protocol.pairId, team = blob(Protocol.MAX_TEAM_TEXT),
+}))
+Protocol.TO_HOST.trade_pick = record(withType("trade_pick", {
+  seq = seq, pair = Protocol.pairId, slot = int(1, Protocol.MAX_TEAM),
+}))
+Protocol.TO_HOST.trade_confirm = record(withType("trade_confirm", {
+  seq = seq, pair = Protocol.pairId, yes = bool,
+}))
+
+-- an invitation to this player (no answer yet), or how one this player
+-- sent or got ended
+Protocol.TO_CLIENT.invite = record(withType("invite", {
+  id = Protocol.inviteId, from = Protocol.playerId, to = Protocol.playerId, kind = pairKinds,
+}), { answer = enum(Protocol.INVITE_ANSWERS) })
+-- a pairing this player is in, as it stands: the partner, the link
+-- battle's side (role) and seed, the partner away (A12.4), the end; for a
+-- trade both teams, both offers, both answers and whether the host
+-- committed the swap (done)
+Protocol.TO_CLIENT.pair = record(withType("pair", {
+  id = Protocol.pairId, kind = pairKinds, partner = Protocol.playerId,
+  role = enum({ host = true, guest = true }), seed = int(1, 2147483646),
+}), {
+  name = name, away = bool, ended = enum(Protocol.PAIR_ENDS),
+  mine = blob(Protocol.MAX_TEAM_TEXT), theirs = blob(Protocol.MAX_TEAM_TEXT),
+  myPick = int(1, Protocol.MAX_TEAM), theirPick = int(1, Protocol.MAX_TEAM),
+  confirmed = bool, theirConfirmed = bool, done = bool,
+})
+-- the partner's n-th link battle message
+Protocol.TO_CLIENT.pair_msg = record(withType("pair_msg", {
+  pair = Protocol.pairId, n = int(1, Protocol.MAX_SEQ), msg = linkMsg,
+}))
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))
 

@@ -54,6 +54,10 @@
 -- battle engine; src/coop/battle/HostBattles.lua keeps each battle's
 -- opening, inputs and question, and every window in it runs the battle
 -- from those (src/coop/battle/Replica.lua).
+--
+-- Friend battles and trades (#23, design A12, G31): invitations, the
+-- pairings, the link battle messages between the two windows and a
+-- trade's swap, committed once, are src/coop/friends/HostFriends.lua's.
 
 local GameVersion = require("src.core.GameVersion")
 local Json = require("src.link.Json")
@@ -64,6 +68,7 @@ local Campaign = require("src.coop.campaign.Campaign")
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
 local HostBattles = require("src.coop.battle.HostBattles")
+local HostFriends = require("src.coop.friends.HostFriends")
 
 local Host = {}
 Host.__index = Host
@@ -282,6 +287,7 @@ function Host:_disconnect(link, why)
     self.dirty = true
     self:_log("left", { why = why }, p)
     HostBattles.left(self, p)
+    HostFriends.left(self, p, why) -- #23
     -- a player leaving saves the campaign (design A3.9); nobody has to save
     -- before leaving (A3.12)
     if self.status == "running" then self:_autosave("leave") end
@@ -386,6 +392,7 @@ function Host:_world(link, msg)
   local save, why = World.decode(msg.save)
   if save then
     self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+    HostFriends.layOver(self, p, save) -- #23: a traded Pokémon stays traded
     local ok, bad = self.state:setWorld(p.id, save)
     if not ok then save, why = nil, bad end
     if ok then self:_sendUids(link, bad) end
@@ -430,6 +437,7 @@ function Host:_holdings(link, msg)
   local world, why = World.join(msg.world, msg.boxes)
   if world then
     self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+    HostFriends.layOver(self, p, world) -- #23
     local ok, assigned = self.state:setHoldings(p.id, world)
     if ok then
       self:_log("holdings", { revision = self.state.revision, bytes = #msg.world,
@@ -655,7 +663,15 @@ local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    battle_at = battleHandler(HostBattles.at),
                    battle_leave = battleHandler(HostBattles.leave),
                    battle_rejoin = battleHandler(HostBattles.rejoin),
-                   battle_takeover = battleHandler(HostBattles.takeover) }
+                   battle_takeover = battleHandler(HostBattles.takeover),
+                   -- friend battles and trades (#23)
+                   invite = battleHandler(HostFriends.invite),
+                   invite_answer = battleHandler(HostFriends.answer),
+                   pair_msg = battleHandler(HostFriends.msg),
+                   pair_end = battleHandler(HostFriends.finish),
+                   trade_team = battleHandler(HostFriends.team),
+                   trade_pick = battleHandler(HostFriends.pick),
+                   trade_confirm = battleHandler(HostFriends.confirm) }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -678,7 +694,8 @@ function Host:_receive(link, raw)
   -- their handlers, as a summary; a window's battle reports are many
   local t = msg.type
   if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "holdings" and t ~= "battle_open"
-     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" then
+     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening"
+     and t ~= "pair_msg" and t ~= "trade_team" then -- #23: many, or long
     self:_log("message", msg, link.player)
   end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
@@ -700,6 +717,7 @@ function Host:_broadcast()
   local players = {}
   for i, p in ipairs(self.players) do
     players[i] = publicView(p, HostBattles.fighting(self, p.id))
+    players[i].meeting = HostFriends.meeting(self, p.id) -- #23
   end
   local battles = HostBattles.summaries(self)
   for _, link in ipairs(self.links) do
@@ -763,6 +781,7 @@ function Host:update()
         self:_sendStory(link, p)
         self:_sendGifts(link, p)
         HostBattles.sendTo(self, link, p)
+        HostFriends.sendTo(self, link, p) -- #23
       end
     end
     HostBattles.sweep(self)
@@ -782,6 +801,7 @@ function Host:update()
   if self.status == "running" then
     self:_shareOwnLog()
     HostBattles.tick(self, now)
+    HostFriends.tick(self) -- #23
   end
   if self.status == "ending" and (#self.links == 0 or now >= self.endAt) then
     self:_finish()
@@ -799,6 +819,7 @@ function Host:shutdown(reason)
   if self.store and not self:_autosave("shutdown") then self.store:poll(true) end
   -- battles still running end as fled, and their players hear it (A11.7)
   HostBattles.endAll(self)
+  HostFriends.endAll(self) -- #23
   for _, link in ipairs(self.links) do
     if link.player and link.player.link == link and not link.conn.closed then
       HostBattles.sendTo(self, link, link.player)
