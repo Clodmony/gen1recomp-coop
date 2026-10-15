@@ -115,7 +115,8 @@ back.
 ## Not yet
 
 - Player 2's trainer name is `PLAYER2` until a host knows them (the
-  development entry takes a name); naming new players is #22.
-- Player 2's game is silent (G23).
+  development entry takes a name); player 2 names themself with #22
+  (owner, 2026-10-15).
+- Player 2's game is silent (G23); its sound effects are #51.
 - Co-op battles (#18, #19) will feed each half's own menus (G2).
 - Phone halves (design A15.3) are #7.

@@ -1198,7 +1198,9 @@ sibling's D-numbers.
   them. The bag holds 40 rows while a session's game runs, and a
   campaign's slot is not exported to a `.sav`. Protocol 6, campaign file
   version 3. Details: [items.md](items.md).
-- **G23. Split-screen: two worlds, one mix** (#11, 2026-10-15, proposed).
+- **G23. Split-screen: two worlds, one mix** (#11, 2026-10-15, accepted by
+  the owner the same day, with player 2's sound effects to follow in #51
+  and player 2's naming in #22).
   The second seat's game is a second set of the game's modules in the same
   process (`package.loaded` swapped per world). It is a client of the
   session like any other player: it dials the in-process host's loopback

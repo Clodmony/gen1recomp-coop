@@ -13,14 +13,15 @@ Last updated 2026-10-15 (after Group 6, #11, PR #50).
 - Default branch `gen1recomp-coop`; `main` = upstream main. Groups 1 to 5a
   are merged (#42-#49, 2026-10-15).
 - Milestones: Group 6 (#11) is done by #50, open until the owner merges.
-  Group 2 still has #12 and #15 (owner-side checks); Groups 7, 7a, 8, 9,
-  10 are open.
+  Group 6 also holds #51 (player 2's sound effects, the owner's choice on
+  G23). Group 2 still has #12 and #15 (owner-side checks); Groups 7, 7a, 8,
+  9, 10 are open.
 
 ## Open pull request (draft)
 
 - **#50** `coop/group6-split-screen` into `gen1recomp-coop`: closes #11,
   local split-screen. `src/coop/split/` (Worlds, Layout, Split), docs
-  `docs/coop/split.md`, decision **G23 (proposed)**.
+  `docs/coop/split.md`, decision **G23** (accepted 2026-10-15).
   - The second seat's game is a second set of the game's modules
     (`package.loaded` swapped per world), silent, a loopback (or remote)
     client as seat 2, in the campaign's `slot2`, with a `-seat2` log.
@@ -33,7 +34,10 @@ Last updated 2026-10-15 (after Group 6, #11, PR #50).
     PLAYERS, pads routed per seat, seat 2 saved and continued its world in
     a second run, a wild battle in seat 2's half. Not run: real pads, a
     real window (resize), audio, a split pair joining a remote host.
-  - Needs from the owner: G23, a check with two real pads, the merge.
+  - CI (coop-ci, luacheck included) passed.
+  - **Owner (2026-10-15): merge after their own check with two real pads**
+    from the launcher in a real window. Once they say so, merge locally as
+    Claude (`git merge --no-ff`), push, run `tools/verify.sh`.
 
 ## Next candidates
 
@@ -42,9 +46,10 @@ Last updated 2026-10-15 (after Group 6, #11, PR #50).
   already gives each seat its own battle screen (G2); #19 feeds both.
 - **Group 7a (#17)** party and PC at rest points (design A7).
 - Group 2 still has #12 and #15 (owner-side checks).
-- Split-screen follow-ups if the owner wants them: player 2's name on the
-  launcher (now `PLAYER2` until a host knows them; naming new players is
-  #22), player 2's sound effects (G23).
+- **#51** (Group 6): player 2's sound effects in the shared mix. First
+  steps: `ChipAudio`'s thread channels are process-global; route player 2's
+  `Sound` calls to player 1's audio path (music stays player 1's).
+- Player 2 names themself with #22 (owner, 2026-10-15; comment on #22).
 
 ## Live-run recipe
 
