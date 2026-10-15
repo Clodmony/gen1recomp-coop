@@ -391,7 +391,7 @@ local mon = record({
 }, {
   exp = int(0, 16777215), status = pattern("^[A-Z]+$", 8), sleepTurns = int(0, 7),
   nickname = text(11), dvs = stats5(15), statExp = stats5(65535), ot = text(11),
-  otId = int(0, 65535), uid = pattern("^[%w_%-]+$", 40), extra = plain,
+  otId = int(0, 65535), uid = pattern("^[%w_:%-]+$", 40), extra = plain,
 })
 local team = function(v)
   local out, why = listOf(mon, Protocol.MAX_TEAM)(v)

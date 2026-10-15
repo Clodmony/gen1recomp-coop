@@ -4794,6 +4794,9 @@ function BattleState:awardExp()
   local pendingStep = {}
   local function applyShare(mon, split, announce)
     local playerId = self.game.save.player and self.game.save.player.id
+    -- co-op (#18): a co-op battle's roster holds every player's Pokémon;
+    -- each is traded or not against its own owner's trainer id (A7.10)
+    if self.expTrainerId then playerId = self:expTrainerId(mon) end
     -- GainExperience (engine/battle/experience.asm:69-88) compares the
     -- stored MON_OTID against wPlayerID every award; no persistent flag
     -- mon.traded covers otId-less mons (repairTradedOtIds, old link peers) #1488
@@ -4896,7 +4899,10 @@ function BattleState:awardExp()
   end
   local awardCtx = { battle = self, participants = participants, alive = alive,
                       applyShare = applyShare }
-  if Runtime.wantsHook("battle.exp_award") then
+  -- co-op (#18): EXP.ALL splits per team in a co-op battle (A8.15)
+  if self.expAward then
+    self:expAward(awardCtx)
+  elseif Runtime.wantsHook("battle.exp_award") then
     Runtime.call("battle.exp_award", vanillaExpAward, awardCtx)
   else
     vanillaExpAward(awardCtx)
@@ -5269,7 +5275,6 @@ end
 -- pick re-prompts (via the menu-phase guard), a healthy pick is sent
 -- out with no free enemy move.
 function BattleState:openReplacementMenu()
-  local game = self.game
   self.phase = "messages"
   self.afterQueue = "menu"
   self:ui(function()
@@ -5290,25 +5295,32 @@ function BattleState:openReplacementMenu()
           return -- the menu-phase guard reopens the menu
         end
         if menu then menu:close() end
-        self:restoreMimicked(self.player)
-        local previous = self.player
-        self.player = makeBattler(self.data, mon, true,
-                                  self.kind ~= "link" and game.save or nil)
-        clearTrapping(self.enemy) -- SendOutMon clears foe trap
-        self:syncSides()
-        Runtime.emit("battle.battler_switched", {
-          battle = self, side = self.sides[1], battler = self.player,
-          previous = previous,
-        })
-        self:markParticipant()
-        self.nextInsert = 0
-        sendOutMonCursors(self)
-        self.sendingOut = true
-        self:sayNextAuto(self:sendOutText(self.player.name))
-        self:queueSendOutAnim(false)
+        self:sendOutReplacement(mon)
       end,
     })
   end)
+end
+
+-- the healthy pick of ChooseNextMon goes out (co-op #18: a method of its
+-- own, so a co-op battle sends out the pick its owner made elsewhere)
+function BattleState:sendOutReplacement(mon)
+  local game = self.game
+  self:restoreMimicked(self.player)
+  local previous = self.player
+  self.player = makeBattler(self.data, mon, true,
+                            self.kind ~= "link" and game.save or nil)
+  clearTrapping(self.enemy) -- SendOutMon clears foe trap
+  self:syncSides()
+  Runtime.emit("battle.battler_switched", {
+    battle = self, side = self.sides[1], battler = self.player,
+    previous = previous,
+  })
+  self:markParticipant()
+  self.nextInsert = 0
+  sendOutMonCursors(self)
+  self.sendingOut = true
+  self:sayNextAuto(self:sendOutText(self.player.name))
+  self:queueSendOutAnim(false)
 end
 
 -- ---------------------------------------------------------------------
