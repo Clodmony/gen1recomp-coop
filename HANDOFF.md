@@ -37,7 +37,8 @@ Last updated 2026-10-15 (after Group 5a, #16, PR #49).
   - `gift:<item>` commits build the late joiner's list.
   - The bag holds 40 rows during a session, and a campaign's slot has no
     EXPORT.
-  - Protocol 6, campaign file version 3. Decision **G22 (proposed)**.
+  - Protocol 6, campaign file version 3. Decision **G22** (accepted by
+    the owner 2026-10-15, as built).
     Docs: `docs/coop/items.md`.
   - Verify: 36/37 (only the javac tier fails locally).
   - Live run (US Red, three processes) passed: an item ball, Daisy's TOWN

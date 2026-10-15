@@ -1171,7 +1171,8 @@ sibling's D-numbers.
   sends it. Campaign files move to version 2, the story built from a
   version 1 file's worlds by the team rule. Details: [world.md](world.md).
 - **G22. Story items ride on the window's patch** (#16, 2026-10-15,
-  proposed). A window notes its bag and money at every rest point. A patch
+  accepted by the owner the same day: the race's take-back, the late
+  joiner's list, the 40-row bag and the German notices as built). A window notes its bag and money at every rest point. A patch
   that sets story entries carries the bag's change since the last rest
   point. The host shares a change that moved the story: every other player
   is owed its gains and loses its key items, fossils excepted. A change
