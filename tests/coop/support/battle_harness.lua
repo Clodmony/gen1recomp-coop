@@ -51,7 +51,7 @@ function H.newGame(name, otId, party)
       local b = g and g.stack:top()
       if b and b.coop then
         local q, by = Replica.decider(b)
-        if q == "menu" and by == b.coop.me then return false end
+        if q and by == b.coop.me then return false end
       end
       return true
     end,

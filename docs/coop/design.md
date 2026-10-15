@@ -711,6 +711,12 @@ cartridge's bag stays, refusing the rest).
 
 ### A11. Leaving, reconnecting, taking over and shutting down
 
+In place (#20, [battles.md](battles.md), [session.md](session.md)): every
+rule below but the per-player reconnection secrets of A11.10 (a player is
+recognised by their remembered id and name, as since #10). A11.13 is met by
+the transport's own flush on close (ENet delivers the bye or `ended` for up
+to 0.5 s before the socket goes), not by deferring `love.quit`.
+
 1. **carry** Leaving and dropping are one rule (owner, D61): a participant who uses
    LEAVE BATTLE or loses the link is absent: back at their return point; their
    Pokémon stay in the roster and fight on under whoever is present; results,
@@ -846,10 +852,11 @@ cartridge's bag stays, refusing the rest).
 ### A14. Presence, finding the partner, the CO-OP menu and the run button
 
 In place (#15, [presence.md](presence.md)), with what a session without
-battles supports. Left for #34: the "!" where a battle started, who is not
-drawn in a battle, the opening or the Cable Club, the menu's fight, join,
-battle and trade rows, "in a battle", "in the opening" and the last save,
-the battle notice, and SELECT in a co-op battle.
+battles supports; the battle parts since #34 ([battles.md](battles.md)):
+the "!" where a battle started, a joiner from elsewhere not drawn, JOIN and
+REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle. Left: who
+is not drawn in the opening or the Cable Club, the BATTLE and TRADE rows
+and "in the opening" (#22, #23); the last save is in since #13.
 
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
