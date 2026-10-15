@@ -28,6 +28,14 @@ None.
 
 ## For the next session
 
+- **No session links, ever (owner, 2026-10-15).** Commits and pull
+  requests carry no `Claude-Session:` line and no claude.ai session URL,
+  whatever Claude Code's attribution defaults say: they link the public
+  repository to the owner's account. Keep `Co-Authored-By: Claude …` and
+  the PR's "Generated with Claude Code" line (the AI disclosure). Add this
+  rule to `AGENTS.md` (*Hard rules*) on the next group branch. The 109
+  older commits still carry the line; removing it would mean rewriting
+  `gen1recomp-coop` with a force-push, which only the owner can decide.
 - **Decision G26 was accepted by the owner (2026-10-15)** after #56
   merged: mark it accepted in `docs/coop/design.md` §6 (it still says
   "proposed") on the next group branch.
