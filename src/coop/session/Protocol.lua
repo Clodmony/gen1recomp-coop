@@ -23,8 +23,10 @@ local Protocol = {}
 -- bag change on a `patch` and the host's `gifts`.  7: co-op battles (#18):
 -- `battle_open`, `battle_join`, `battle_cmd`, `battle_suggest` and
 -- `battle_at` to the host, `battle` to the client, and who is in which
--- battle in `state`.
-Protocol.VERSION = 7
+-- battle in `state`.  8: Pokémon, party and PC (#17): a window's
+-- `holdings` at its rest points, the host's `uids`, and each team's `room`
+-- for a catch.
+Protocol.VERSION = 8
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -79,6 +81,8 @@ Protocol.MAX_PATH = 96
 -- a bag change moves, and how many items one message names
 Protocol.MAX_QTY = 999
 Protocol.MAX_ITEMS = 256
+-- the rows of a team and a PC (#17): 6 + 12 * 20
+Protocol.MAX_ROWS = 246
 
 -- co-op battles (#18, design A8): a team is at most six, the allied roster
 -- at most twelve; one `battle` message carries at most MAX_INPUTS of the
@@ -419,7 +423,7 @@ local openingOpt = {
 -- one input of a battle, in the order every window applies them: a team
 -- that joined, or an accepted command
 local input = record({ kind = enum({ join = true, cmd = true }), player = Protocol.playerId }, {
-  name = name, team = team, otId = int(0, 65535), expAll = bool, cmd = cmd,
+  name = name, team = team, otId = int(0, 65535), expAll = bool, room = bool, cmd = cmd,
 })
 -- a running battle in `state`: who started it, against what, who is in it
 local battleSummary = record({
@@ -450,6 +454,10 @@ Protocol.TO_HOST = {
   world = record(withType("world", {
     seq = seq, save = blob(Protocol.MAX_WORLD), checkpoint = bool,
   }), { kind = enum(Protocol.SAVE_KINDS) }),
+  -- the player's holdings at a rest point (#17, design A7.2): the world
+  -- without the PC (World.split), and the PC when it changed
+  holdings = record(withType("holdings", { seq = seq, world = blob(Protocol.MAX_WORLD) }),
+                    { boxes = blob(Protocol.MAX_WORLD) }),
   -- a window's change to the shared story since its last patch (#14,
   -- design A5.2): entries set (path -> value) and cleared
   -- bag (#16): the window's bag change in the same rest-to-rest change
@@ -458,12 +466,13 @@ Protocol.TO_HOST = {
   -- co-op battles (#18, design A8): a battle this window's world opened,
   -- with this player's team (otId: their trainer id; expAll: an EXP.ALL in
   -- their bag)
+  -- room: a catch fits in their team or PC (#17, design A7.6)
   battle_open = record(withType("battle_open", extend(opening, { seq = seq, team = team })),
-                       extend(openingOpt, { otId = int(0, 65535), expAll = bool })),
+                       extend(openingOpt, { otId = int(0, 65535), expAll = bool, room = bool })),
   -- join a running battle with this team (applied at the next safe point)
   battle_join = record(withType("battle_join", { seq = seq, battle = Protocol.battleId,
                                                  team = team }),
-                       { otId = int(0, 65535), expAll = bool }),
+                       { otId = int(0, 65535), expAll = bool, room = bool }),
   -- answer the battle's question at revision rev
   battle_cmd = record(withType("battle_cmd", { seq = seq, battle = Protocol.battleId,
                                                rev = int(0, Protocol.MAX_SEQ), cmd = cmd })),
@@ -530,6 +539,13 @@ Protocol.TO_CLIENT = {
   -- items owed to this player (#16, design A6): sent once per link, in
   -- order; the window applies each seq once
   gifts = record(withType("gifts", { list = listOf(gift, Protocol.MAX_ITEMS) })),
+  -- the uids the host gave rows of this player's last holdings or world
+  -- (#17, design A7.3): the row at box (0: the team) and slot, if it still
+  -- has fingerprint fp
+  uids = record(withType("uids", { list = listOf(record({
+    box = int(0, 12), slot = int(1, 20), uid = pattern("^p[0-9a-f]+:%d+$", 40),
+    fp = text(200),
+  }), Protocol.MAX_ROWS) })),
   -- a battle this player is in or joining (#18): its inputs from `from`
   -- on (rev: how many there are in all), the opening with the first ones,
   -- what it asks of whom, the suggestions, its participants (present or

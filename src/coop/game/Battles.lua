@@ -97,7 +97,7 @@ local function teamOf(game)
   end
   local inv = game.save.inventory or {}
   return Replica.packTeam(live), live, game.save.player and game.save.player.id,
-         (inv.EXP_ALL or 0) > 0
+         (inv.EXP_ALL or 0) > 0, Replica.room(game.save)
 end
 
 -- the end in this window: the record is dropped; a joiner who lost whites
@@ -195,9 +195,11 @@ function Battles.take(game, battle, npc)
   local s = session()
   if not s or not Battles.joinable(battle) then return end
   local client = s.client
-  local team, live, otId, expAll = teamOf(game)
+  local team, live, otId, expAll, room = teamOf(game)
   if #team == 0 then return end
-  local seq = client:battleOpen(Battles.opening(game, battle), team, otId, expAll)
+  -- the holdings so far reach the host before the battle holds the player (#17)
+  if s.window then s.window:flushHoldings(game.save) end
+  local seq = client:battleOpen(Battles.opening(game, battle), team, otId, expAll, room)
   if not seq then return end
   local p = { seq = seq, client = client, me = client.player, live = live, since = clock() }
   battle.coopPending = p
@@ -402,8 +404,8 @@ end
 function Battles.join(game, summary, byName)
   local s = session()
   if not s then return end
-  local team, live, otId, expAll = teamOf(game)
-  local seq = s.client:battleJoin(summary.id, team, otId, expAll)
+  local team, live, otId, expAll, room = teamOf(game)
+  local seq = s.client:battleJoin(summary.id, team, otId, expAll, room)
   if not seq then return end
   local w = JoinWait.new(game, summary.id, seq, byName or "?")
   w.live = live

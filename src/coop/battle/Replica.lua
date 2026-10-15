@@ -179,6 +179,7 @@ local function applyJoin(b, input)
   c.names[input.player] = input.name or c.names[input.player]
   c.otIds[input.player] = input.otId
   c.expAll[input.player] = input.expAll == true
+  c.room[input.player] = input.room ~= false
   local live = input.player == c.me and c.live or nil
   local later = #c.roster > 0
   for i, packed in ipairs(input.team or {}) do
@@ -301,8 +302,19 @@ local function applyCmd(b, input)
   end
 end
 
+-- the species out on both sides, seen by every participant at the end
+-- (design A7.7)
+local function noteAppeared(b)
+  local c = b.coop
+  for _, side in ipairs({ b.player, b.enemy }) do
+    local species = side and side.mon and side.mon.species
+    if species then c.appeared[species] = true end
+  end
+end
+
 local function applyInput(b, input)
   local c = b.coop
+  noteAppeared(b)
   c.applying = true
   local ok, err = pcall(function()
     if input.kind == "join" then applyJoin(b, input) else applyCmd(b, input) end
@@ -544,12 +556,54 @@ function Replica.facade(b)
                       move = o.moveIndex })
   end
   facade.throwBall = function(_, ball)
+    -- nobody in the battle has room: the throw is refused and the ball
+    -- kept, as the cartridge refuses it (design A7.6)
+    if not next(Replica.withRoom(b)) then return Replica.refuseBall(b, ball) end
     -- whom the catch is for (design A7.6)
     View.askCatcher(b, ball, function(pid)
       Replica.send(b, { kind = "ball", item = ball, target = pid })
     end)
   end
   return facade, copies, index
+end
+
+-- whether a catch fits in this save: room in the team, or in a box (this
+-- engine fills the next box with room, Boxes.deposit) (#17, design A7.6)
+function Replica.room(save)
+  if #(save.party or {}) < 6 then return true end
+  local Boxes = require("src.pokemon.Boxes")
+  if type(save.boxes) ~= "table" then return true end
+  for i = 1, Boxes.COUNT do
+    local box = save.boxes[i]
+    if type(box) ~= "table" or #box < Boxes.CAPACITY then return true end
+  end
+  return false
+end
+
+-- the players in the battle a catch fits with, in roster order
+function Replica.withRoom(b)
+  local c = b.coop
+  local out, seen = {}, {}
+  for _, mon in ipairs(c.roster) do
+    local pid = c.owners[mon]
+    if pid and not seen[pid] and c.room[pid] ~= false then
+      seen[pid] = true
+      out[#out + 1] = pid
+    end
+  end
+  return out
+end
+
+-- BoxFullCannotThrowBall (item_effects.asm): the ball goes back into the
+-- bag the bag spent it from and the menu stays
+function Replica.refuseBall(b, ball)
+  local inv = b.coop.real.save.inventory
+  if type(inv) == "table" then inv[ball] = (inv[ball] or 0) + 1 end
+  local line = b:romText("_BoxFullCannotThrowBallText",
+                         "The POKéMON BOX\nis full! Can't\nuse that item!")
+  b.coop.refusal = line
+  local TextBox = require("src.render.TextBox")
+  b.game.stack:push(TextBox.new(b.game, line, function() end))
 end
 
 function Replica.openParty(b)
@@ -648,10 +702,17 @@ function Replica.findLive(save, uid)
 end
 
 -- This window's own Pokémon get what the battle did to them (design
--- A8.14); the prize the battle paid goes to this player (A8.16).
+-- A8.14); the prize the battle paid goes to this player (A8.16); every
+-- species that appeared is seen in this player's Pokédex (A7.7: a joiner's
+-- copy played the whole record, so they are credited with all of it).
 local function writeBack(b)
   local c = b.coop
   local real = c.real.save
+  noteAppeared(b)
+  local dex = real.pokedex
+  if type(dex) == "table" and type(dex.seen) == "table" then
+    for species in pairs(c.appeared) do dex.seen[species] = true end
+  end
   local leveled = {}
   for _, copy in ipairs(c.roster) do
     if c.owners[copy] == c.me then
@@ -680,6 +741,7 @@ function Replica.make(b, rec, opts)
   b.coop = {
     id = opts.id, client = opts.client, me = opts.me, real = real, save = save,
     roster = {}, owners = {}, names = {}, otIds = {}, expAll = {}, liveOf = {},
+    room = {}, appeared = {},
     live = opts.live, applied = 0, onEnd = opts.onEnd, onLeave = opts.onLeave,
     opener = rec.open.by,
   }

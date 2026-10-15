@@ -119,14 +119,21 @@ function World.join(restText, boxesText)
   return rest
 end
 
--- every Pokémon of a save with where it is: { mon, box } (box 0: the team)
+-- every Pokémon of a save with where it is: { mon, box, slot } (box 0: the
+-- team)
 function World.mons(save)
   local out = {}
-  for _, mon in ipairs(save.party or {}) do out[#out + 1] = { mon = mon, box = 0 } end
+  for i, mon in ipairs(save.party or {}) do out[#out + 1] = { mon = mon, box = 0, slot = i } end
   for b, box in ipairs(save.boxes or {}) do
-    for _, mon in ipairs(box) do out[#out + 1] = { mon = mon, box = b } end
+    for i, mon in ipairs(box) do out[#out + 1] = { mon = mon, box = b, slot = i } end
   end
   return out
+end
+
+-- the row at a place (box 0: the team), or nil
+function World.at(save, box, slot)
+  local list = box == 0 and save.party or (save.boxes or {})[box]
+  return type(list) == "table" and list[slot] or nil
 end
 
 return World

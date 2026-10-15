@@ -24,8 +24,9 @@
 -- deposits, trades and evolutions (design A3.2): a world's Pokémon keep the
 -- uid they carry; one without (a new catch the window has not heard of) is
 -- matched to the player's last world by its fingerprint, else given the
--- next serial.  #17 refines the matching (an unchanged row first, the
--- window's hint).
+-- next serial, preferring an unchanged row, then the row's place (#17,
+-- design A7.3).  A window sends its holdings at its rest points
+-- (setHoldings, #17) as well as its saves.
 --
 -- Story items (#16, design A6, Items.lua): a patch that moves the story
 -- shares the items its window gained in that change and takes the key
@@ -34,6 +35,7 @@
 -- race }, qty < 0 takes), numbered by their `giftSeq`, until a world they
 -- save shows it taken (`coopGifts`, the last seq their window applied).
 
+local SaveSerializer = require("src.core.SaveSerializer")
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
 local Items = require("src.coop.campaign.Items")
@@ -179,7 +181,21 @@ function Campaign.fingerprint(mon)
                         tostring(mon.catchRate) }, "|")
 end
 
--- stamp a uid on every Pokémon of `save` (design A3.2)
+-- a row's content without its uid, to tell an unchanged row (design A7.3)
+local function content(mon)
+  local body = {}
+  for k, v in pairs(mon) do
+    if k ~= UID_FIELD then body[k] = v end
+  end
+  return SaveSerializer.encode(body)
+end
+
+-- Stamp a uid on every Pokémon of `save` (design A3.2, A7.3).  A row keeps
+-- the uid it carries, once.  A row without one takes a uid of the player's
+-- last world with its fingerprint that no row carries: first the one whose
+-- row is unchanged, then the one that stood on its place (the window's
+-- hint: twins keep their uids), then any; else the next serial.  Returns
+-- the rows given a uid: { box, slot, uid, fp } (box 0: the team).
 function Campaign:_stampUids(p, save)
   local before = {}
   if p.world then
@@ -188,32 +204,54 @@ function Campaign:_stampUids(p, save)
       if Campaign.uid(uid) then
         local fp = Campaign.fingerprint(at.mon)
         before[fp] = before[fp] or {}
-        table.insert(before[fp], uid)
+        table.insert(before[fp], { uid = uid, mon = at.mon, place = at.box .. ":" .. at.slot })
       end
     end
   end
   local seen = {}
   local mons = World.mons(save)
   -- a uid the world carries stays, once
+  local open = {}
   for _, at in ipairs(mons) do
     local uid = at.mon[UID_FIELD]
     if Campaign.uid(uid) and not seen[uid] then
       seen[uid] = true
     else
       at.mon[UID_FIELD] = nil
+      at.fp = Campaign.fingerprint(at.mon)
+      open[#open + 1] = at
     end
   end
-  for _, at in ipairs(mons) do
-    if not at.mon[UID_FIELD] then
-      local uid
-      for _, old in ipairs(before[Campaign.fingerprint(at.mon)] or {}) do
-        if not seen[old] then uid = old; break end
+  local function take(at, ok)
+    for _, old in ipairs(before[at.fp] or {}) do
+      if not seen[old.uid] and ok(old) then
+        seen[old.uid] = true
+        at.mon[UID_FIELD] = old.uid
+        return
       end
-      uid = uid or self:nextUid(p.id)
+    end
+  end
+  for _, at in ipairs(open) do
+    local text = content(at.mon)
+    take(at, function(old) return content(old.mon) == text end)
+  end
+  for _, at in ipairs(open) do
+    if not at.mon[UID_FIELD] then
+      local place = at.box .. ":" .. at.slot
+      take(at, function(old) return old.place == place end)
+    end
+  end
+  local assigned = {}
+  for _, at in ipairs(open) do
+    if not at.mon[UID_FIELD] then take(at, function() return true end) end
+    if not at.mon[UID_FIELD] then
+      local uid = self:nextUid(p.id)
       seen[uid] = true
       at.mon[UID_FIELD] = uid
     end
+    assigned[#assigned + 1] = { box = at.box, slot = at.slot, uid = at.mon[UID_FIELD], fp = at.fp }
   end
+  return assigned
 end
 
 -- the player's world, as their game saved it (World.check'ed); the uids are
@@ -225,7 +263,7 @@ function Campaign:setWorld(playerId, save)
   if why then return false, why end
   save.options = nil
   Ownership.strip(save)
-  self:_stampUids(p, save)
+  local assigned = self:_stampUids(p, save)
   -- the gifts this world has taken are owed no more (design A6.2)
   local took = type(save.coopGifts) == "number" and save.coopGifts or 0
   local owed = {}
@@ -236,7 +274,17 @@ function Campaign:setWorld(playerId, save)
   p.world = save
   p.trainer = type(save.player.id) == "number" and save.player.id or p.trainer
   self:touch()
-  return true
+  return true, assigned
+end
+
+-- The player's holdings, as a window sends them at a rest point (#17,
+-- design A7.2, A7.4): their world without the PC, and the PC only when it
+-- changed (`world.boxes` nil keeps the PC the campaign has).  Taken as
+-- setWorld takes a save; returns the same.
+function Campaign:setHoldings(playerId, world)
+  local p = assert(self.byId[playerId], "no such player")
+  if world.boxes == nil and p.world then world.boxes = p.world.boxes end
+  return self:setWorld(playerId, world)
 end
 
 -- A window's change to the shared story (design A5.2): `set` (path ->

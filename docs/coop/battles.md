@@ -57,7 +57,8 @@ The battle only moves when the command comes back as an input.
   a fight held while away; battles built again after coming back; the end
   of a battle in the window.
 - `src/coop/game/Presence.lua`: partners in a battle in the world (#34).
-- `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7.
+- `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7
+  (8 adds `room`, #17).
 
 Upstream files, with marked hooks:
 
@@ -94,9 +95,17 @@ Upstream files, with marked hooks:
   player's bag spends the item, the choice goes to the host, and the item's
   effect comes back as an input that every copy applies with upstream's link
   item code (`src/link/LinkItems.lua`) (A8.13).
-- **A catch** goes to the player who threw the ball: their party, else their
-  box, and their Pokédex; the other copies only say who caught it. Naming
-  another participant comes with #17 (A7.6).
+- **A catch** goes to the player the thrower named (#17, A7.6): their
+  party, else their box, and their Pokédex, stored by that player's own
+  copy; the other copies only say who caught it. Each team says whether a
+  catch fits with its player (`room`: a party under six, or a box with
+  space, since this engine fills the next box). The host refuses a catch
+  for a player without room (`bad_cmd`). With no room anywhere the throw is
+  refused before it is sent: the ball goes back into the bag and the
+  cartridge's "The POKéMON BOX is full! Can't use that item!" shows.
+- **The Pokédex** (A7.7): at the end every species that was out on either
+  side is seen in each participant's Pokédex, so a joiner, whose copy played
+  the whole record, is credited with all of it.
 - **RUN** flees for the player whose world opened the battle; the others are
   told only they can (A9.5; leaving a battle is #20).
 
@@ -143,8 +152,8 @@ has played out in the window that makes it. On top of that
 - **The end** (A9.6). Once the battle is decided, a line waiting for a
   press moves on by itself after 1.5 s, so the battle closes after its last
   line without anybody pressing.
-- **A ball** asks whom the catch is for, each player in the battle once
-  (A7.6); with one player it asks nothing.
+- **A ball** asks whom the catch is for, each player in the battle with
+  room once (A7.6). With only one such player it names them without asking.
 - **The bag** is the cartridge's (A9.1 asks for the battle items only; the
   cartridge lists every item and refuses the others with OAK's line).
 
@@ -262,12 +271,12 @@ nobody is left.
 - in a co-op battle SELECT opens nothing: the battle screen is on top and
   its SELECT swaps moves as in the cartridge (A14.9).
 
-## Protocol 7
+## Protocol 7 (8)
 
 | Client to host | Fields |
 |---|---|
-| `battle_open` | `seq`, `kind` (`wild`, `trainer`), `enemy` (packed Pokémon), `map`, `team` (this player's, at most six), optional `trainer` (`class`, `index`, `rival`), `hooked`, `foe`, `otId`, `expAll` |
-| `battle_join` | `seq`, `battle`, `team`, optional `otId`, `expAll` |
+| `battle_open` | `seq`, `kind` (`wild`, `trainer`), `enemy` (packed Pokémon), `map`, `team` (this player's, at most six), optional `trainer` (`class`, `index`, `rival`), `hooked`, `foe`, `otId`, `expAll`, `room` (8) |
+| `battle_join` | `seq`, `battle`, `team`, optional `otId`, `expAll`, `room` (8) |
 | `battle_cmd` | `seq`, `battle`, `rev`, `cmd` |
 | `battle_suggest` | `seq`, `battle`, `rev`, optional `cmd` (none takes it back) |
 | `battle_at` | `seq`, `battle`, `rev`, then `ask` and `by` (the question and the owner of the Pokémon it is about) with `hash`, or `ended` (`win`, `lose`, `run`, `caught`) |
@@ -284,7 +293,7 @@ A command is `kind` (`move`, `struggle`, `fight`, `switch`, `item`,
 `ball`, `run` answer the menu; `replace`, `learn`, `mimic`, `choice` the
 other questions) with `slot`, `index` (a roster row), `item`, `move`,
 `yes`, `forget` or `target` as it needs. An input is a `join` (`player`,
-`name`, `team`, `otId`, `expAll`) or a `cmd` (`player`, `cmd`). A packed
+`name`, `team`, `otId`, `expAll`, `room`) or a `cmd` (`player`, `cmd`). A packed
 Pokémon is upstream's link codec's (`species`, `level`, `hp`, `moves`,
 `exp`, `status`, `dvs`, `statExp`, `nickname`, `ot`, `otId`) and its
 campaign `uid`; the receiving window rebuilds and clamps it.
@@ -323,15 +332,31 @@ and the joining box removes itself wherever it is on the stack.
 - GREEN's ENet link was closed under the running game: the game showed
   `reconnecting`, redialled and was back as the same player (#20).
 
+Catches and the Pokédex (#17, same setup; RED's SQUIRTLE and GREEN's
+BULBASAUR given by the drivers, which also sent the commands):
+
+- RED switched to GREEN's BULBASAUR, and GREEN's MASTER BALL named RED. The
+  wild RATTATA went into RED's team with RED as its trainer and was owned
+  in RED's Pokédex. GREEN's team and Pokédex did not own it. Both copies
+  ended `caught`, with no `battle_desync`.
+- RED's Pokédex saw BULBASAUR and GREEN's saw SQUIRTLE and RATTATA (A7.7).
+- With every player's room set to none, GREEN's ball went back into the bag
+  and the copy showed the ROM's `_BoxFullCannotThrowBallText`.
+- With room for both, the name list held both players.
+
 Not run yet: real pads in a real window, the menus driven by hand (the
-drivers sent the replacement and the switch as commands), a move to learn,
-MIMIC, a catch, items and Pay Day with the cartridge (the first four are
-covered by the ROM-free tests), three players,
-split-screen, and a trainer that uses items.
+drivers sent the replacement, the switch and the ball as commands), the
+name list picked by hand, a move to learn, MIMIC, items and Pay Day with
+the cartridge (the first two are covered by the ROM-free tests), three
+players, split-screen, and a trainer that uses items.
 
 ## Tests
 
 ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
+
+- `tests/coop/holdings_test.lua` (#17): a catch for the named player, the
+  name list offering only players with room, the host's refusal, a ball
+  kept when nobody has room, and the Pokédex of both players.
 
 - `tests/coop/battle_host_test.lua`: the host's rules over loopback, with
   the windows' reports sent by hand: opening and seed, one battle per
