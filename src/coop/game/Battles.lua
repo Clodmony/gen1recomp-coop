@@ -38,13 +38,23 @@
 -- back after a drop) is built from the record: one still running comes
 -- back on screen, one that ended while they were away plays out of sight
 -- and ends with its line.
+--
+-- Unique encounters (#21, design A10.1 to A10.4): a trainer or a one-off
+-- wild Pokémon is an encounter, by its map object (Battles.encounterOf).
+-- A world that walks into one a partner is fighting joins that fight: its
+-- own battle becomes the copy of the partner's record once its team is
+-- in, and keeps the world's onFinish (the trainer's flag, the whiteout).
+-- One the campaign has beaten counts as won without a fight: the world's
+-- onFinish hears a win.  A trainer the host names as in a battle spots
+-- nobody (Battles.engaged, the sight gate); talking to it still joins.
 
 local Strings = require("src.core.Strings")
 local Replica = require("src.coop.battle.Replica")
 local View = require("src.coop.battle.View")
 
 -- live: every copy this window runs (on screen or away), by battle id
-local Battles = { away = {}, held = nil, live = {} }
+-- walking: the encounters a pending battle of this window opened (#21)
+local Battles = { away = {}, held = nil, live = {}, walking = {} }
 
 Battles.WAIT = 10 -- seconds the opener waits for the host before fighting alone
 
@@ -68,12 +78,37 @@ function Battles.joinable(battle)
   return true
 end
 
+-- the unique encounter a battle is (#21, design A10.2, A10.3): a trainer
+-- or a one-off wild Pokémon, by its map object; nil for anything else
+function Battles.encounterOf(battle, npc)
+  local key = battle.coopEncounter
+  if not key then
+    local id = npc and npc.id
+    if type(id) ~= "string" or not id:find("^[A-Z0-9_]+_obj_%d+$") then return nil end
+    key = (battle.kind == "trainer" and "trainer:" or "static:") .. id
+  end
+  return require("src.coop.session.Protocol").encounter(key)
+end
+
+-- the sight gate (#21, design A10.4): a trainer the host names as in a
+-- battle spots nobody else; talking to it, or JOIN, still joins
+function Battles.engaged(npc)
+  local s = session()
+  if not s or not npc or type(npc.id) ~= "string" then return false end
+  local key = "trainer:" .. npc.id
+  for _, b in ipairs(s.client.state.battles or {}) do
+    if b.encounter == key then return true end
+  end
+  return false
+end
+
 -- what the world prepared, as the host's opening
-function Battles.opening(game, battle)
+function Battles.opening(game, battle, npc)
   local ow = game.overworld
   local open = {
     kind = battle.kind,
     map = (ow and ow.map and ow.map.id) or (game.save.player and game.save.player.map) or "UNKNOWN",
+    encounter = Battles.encounterOf(battle, npc),
   }
   if battle.kind == "trainer" then
     local enemy = {}
@@ -137,9 +172,15 @@ function Battles.release(game)
   if ow and ow.pushBattle then ow:pushBattle(h.battle, h.npc) end
 end
 
+-- a pending battle is settled: bound, alone, or ended without a fight
+local function settled(battle, p)
+  battle.coopPending = nil
+  if p.encounter then Battles.walking[p.encounter] = nil end
+end
+
 -- the opener's battle becomes the co-op copy of the host's record
 local function bind(game, battle, rec, p)
-  battle.coopPending = nil
+  settled(battle, p)
   battle.draw = nil
   Replica.make(battle, rec, { client = p.client, id = rec.id, me = p.me, real = game,
                               live = p.live, onEnd = onEnd(game, false), onLeave = onLeave })
@@ -149,9 +190,63 @@ end
 
 -- no host battle: the world's own, alone (design A8.22)
 local function solo(battle, p)
-  battle.coopPending = nil
+  settled(battle, p)
   battle.enter, battle.update, battle.draw = nil, nil, nil
   if p.entered then battle:enter() end
+end
+
+-- the world walked into a partner's fight (#21, A10.2): once this
+-- player's team is in, its battle becomes the copy of that record, caught
+-- up without a screen, and keeps the world's onFinish
+local function walkIn(game, battle, rec, p)
+  settled(battle, p)
+  battle.draw = nil
+  rec.bound = true
+  Replica.make(battle, rec, { client = p.client, id = rec.id, me = p.me, real = game,
+                              live = p.live, onEnd = onEnd(game, false), onLeave = onLeave })
+  Battles.live[rec.id] = battle
+  Replica.catchUp(battle, rec)
+  if p.entered then battle:enter() end
+end
+
+-- a unique encounter the campaign has beaten counts as won (#21, A10.2):
+-- no fight, and the world's onFinish hears a win
+local function asWon(battle, p, foe)
+  settled(battle, p)
+  battle.enter, battle.update, battle.draw = nil, nil, nil
+  battle.result = "win"
+  battle.evolutionsChecked, battle.pikachuMoodChecked = true, true
+  require("src.coop.game.Notices").push(Strings("%s was already beaten.", foe or "?"))
+  if p.entered then battle:finish() else battle.enter = function(b) b.enter = nil; b:finish() end end
+end
+
+-- a walk-in that found no room ends as a flight: the encounter stays
+local function turnedAway(battle, p, text)
+  settled(battle, p)
+  battle.enter, battle.update, battle.draw = nil, nil, nil
+  battle.result = "run"
+  battle.evolutionsChecked, battle.pikachuMoodChecked = true, true
+  require("src.coop.game.Notices").push(text)
+  if p.entered then battle:finish() else battle.enter = function(b) b.enter = nil; b:finish() end end
+end
+
+-- the record of the encounter this pending battle walked into, if any
+local function walkedInto(client, p)
+  if not p.encounter then return nil end
+  for _, rec in pairs(client.battles) do
+    if rec.open and rec.open.encounter == p.encounter and rec.open.by ~= p.me
+       and not rec.ended and not rec.bound then
+      return rec
+    end
+  end
+  return nil
+end
+
+local function joinedIn(rec, me)
+  for _, input in ipairs(rec.inputs) do
+    if input.kind == "join" and input.player == me then return true end
+  end
+  return false
 end
 
 -- the host's record of a battle this player opened, not bound yet
@@ -199,10 +294,13 @@ function Battles.take(game, battle, npc)
   if #team == 0 then return end
   -- the holdings so far reach the host before the battle holds the player (#17)
   if s.window then s.window:flushHoldings(game.save) end
-  local seq = client:battleOpen(Battles.opening(game, battle), team, otId, expAll, room)
+  local opening = Battles.opening(game, battle, npc)
+  local seq = client:battleOpen(opening, team, otId, expAll, room)
   if not seq then return end
-  local p = { seq = seq, client = client, me = client.player, live = live, since = clock() }
+  local p = { seq = seq, client = client, me = client.player, live = live, since = clock(),
+              encounter = opening.encounter }
   battle.coopPending = p
+  if p.encounter then Battles.walking[p.encounter] = true end
   battle.enter = function() p.entered = true end
   battle.draw = function() end
   battle.update = function(b)
@@ -211,8 +309,19 @@ function Battles.take(game, battle, npc)
       rec.bound = true
       return bind(game, b, rec, p)
     end
+    -- a partner's fight this world walked into (#21): wait for the team to
+    -- go in, however long the battle takes to ask for a move
+    local into = walkedInto(client, p)
+    if into then
+      p.since = clock()
+      if joinedIn(into, p.me) then return walkIn(game, b, into, p) end
+    end
     for _, r in ipairs(client.rejections) do
-      if r.seq == p.seq then return solo(b, p) end
+      if r.seq == p.seq then
+        if r.reason == "beaten" then return asWon(b, p, opening.foe) end
+        if r.reason == "roster_full" then return turnedAway(b, p, Strings("The battle is full.")) end
+        return solo(b, p)
+      end
     end
     if client.status ~= "joined" or clock() - p.since > Battles.WAIT then
       p.gaveUp = true
@@ -260,6 +369,8 @@ end
 -- inputs to play
 function Battles.rebuildable(client, rec)
   if Battles.waitingFor(rec.id) or Battles.live[rec.id] then return false end
+  -- a fight this window's pending battle walked into binds that battle (#21)
+  if rec.open.encounter and Battles.walking[rec.open.encounter] then return false end
   if rec.open.by == client.player and not rec.ended then
     -- the opener's own record is bound by its pending battle; one with no
     -- pending battle came back after a drop
