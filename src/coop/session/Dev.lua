@@ -5,6 +5,8 @@
 --
 -- (or POKEPORT_COOP_HOST=PORT, POKEPORT_COOP_JOIN=ADDRESS,
 -- POKEPORT_COOP_NAME=NAME, POKEPORT_COOP_LOGS=off for scripted runs).
+-- --coop-campaign=ID (POKEPORT_COOP_CAMPAIGN) hosts that campaign again
+-- from its file (#13) instead of a new one.
 -- The launcher's co-op screens (#12) are the way in for players; this entry
 -- skips them for scripted runs.  Once a game runs, the host side hosts a
 -- new campaign on UDP PORT (default 24680) with the LAN beacon, and the
@@ -37,6 +39,8 @@ function Dev.parse(args, getenv)
       cfg.name = value
     elseif key == "logs" then
       cfg.logs = value
+    elseif key == "campaign" and value ~= "" then
+      cfg.campaign = value
     end
   end
   if not cfg.mode then
@@ -51,6 +55,8 @@ function Dev.parse(args, getenv)
   cfg.name = cfg.name or getenv("POKEPORT_COOP_NAME")
   if not Protocol.name(cfg.name) then cfg.name = cfg.mode == "host" and "HOST" or "GUEST" end
   cfg.port = cfg.port or Transport.DEFAULT_PORT
+  cfg.campaign = cfg.campaign or getenv("POKEPORT_COOP_CAMPAIGN")
+  if not Protocol.campaignId(cfg.campaign) then cfg.campaign = nil end
   -- sharing the session log defaults on (#31, design A1.14)
   local logs = (cfg.logs or getenv("POKEPORT_COOP_LOGS") or ""):lower()
   cfg.logs = nil
@@ -72,10 +78,16 @@ function Dev.start()
   local cfg = Dev.config
   local cart = Session.cartridge()
   if cfg.mode == "host" then
-    Dev.session = Session.startHost({
-      campaign = { id = "c" .. Random.hex(16), title = cart.game:upper() .. " CO-OP" },
+    local refused
+    Dev.session, refused = Session.startHost({
+      campaign = { id = cfg.campaign or ("c" .. Random.hex(16)),
+                   title = cart.game:upper() .. " CO-OP" },
       cartridge = cart, name = cfg.name, port = cfg.port, shareLogs = cfg.shareLogs,
     })
+    if not Dev.session then
+      say("campaign refused: %s", refused and refused.why or "?")
+      Dev.config = nil
+    end
   else
     Dev.session = Session.startDial({ address = cfg.address, cartridge = cart,
                                  name = cfg.name, shareLogs = cfg.shareLogs })
@@ -92,6 +104,7 @@ function Dev.update(dt, game)
   if Session.takeLauncher() then return "launcher" end
   if not Dev.session then Dev.start() end
   local s = Dev.session
+  if not s then return nil end
   if s.kind == "join" and s.status == "probed" then s:join() end
   if s.status == "refused" and not s.said then
     s.said = true

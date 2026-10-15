@@ -286,6 +286,16 @@ The credit line of upstream's licence is not translated.
 | Restored %s. | %s ist wieder da. | |
 | The backup could not be restored. | Die Sicherung ließ sich nicht zurückholen. | |
 | The campaign could not be deleted. | Die Kampagne ließ sich nicht löschen. | |
+
+### #13: a campaign file the host refuses
+
+| English | German now | Better German |
+| --- | --- | --- |
+| This campaign was saved by a newer build. Update to host it. | Diese Kampagne stammt aus einer neueren Version. Aktualisiere, um sie zu hosten. | |
+| This campaign's file cannot be read. It was left as it is. | Die Datei dieser Kampagne ist nicht lesbar. Sie bleibt, wie sie ist. | |
+| Its backup: %s | Ihre Sicherung: %s | |
+| Your world from the campaign could not be read. | Deine Welt aus der Kampagne ist nicht lesbar. | |
+| Your world could not be written: %s | Deine Welt ließ sich nicht schreiben: %s | |
 | 1 campaign on this device | 1 Kampagne auf diesem Gerät | |
 | %d campaigns on this device | %d Kampagnen auf diesem Gerät | |
 | NEW CAMPAIGN | NEUE KAMPAGNE | |
@@ -705,6 +715,15 @@ characters, a menu row fewer.
 | END THE SESSION / FOR EVERYONE? | SITZUNG FÜR ALLE / BEENDEN? | |
 | %s joined the session. | %s ist der Sitzung beigetreten. | |
 | %s left the session. | %s hat die Sitzung verlassen. | |
+| Campaign saved. | Alles gespeichert. | |
+| %s saved the campaign. | %s hat die Kampagne gespeichert. | |
+| The campaign was not saved. | Die Kampagne wurde nicht gespeichert. | |
+| A battle is in / progress! / It can't be saved / right now. | Ein Kampf läuft / noch! / Speichern geht / gerade nicht. | |
+| NOT SAVED YET | NOCH NICHT GESP. | |
+| SAVED JUST NOW | GERADE GESPEICHERT | |
+| SAVED %d MIN AGO | VOR %d MIN GESP. | |
+| SAVED %d H AGO | VOR %d H GESP. | |
+| AUTOSAVE: ON | AUTO-SPEICHERN: AN | |
 
 #### battle
 

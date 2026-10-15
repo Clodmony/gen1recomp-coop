@@ -265,11 +265,14 @@ rival's name and how a new player starts (#22); the split-screen entry
     (D48, play §In the world). Nobody has to save before leaving.
 13. **carry** Several campaigns per host device, each its own file under
     `coop_campaigns/<game>/`, id `<game>-<unix time>-<tag>`, with a title; a
-    device is remembered per campaign (D49).
+    device is remembered per campaign (D49). Here: `coop/campaigns/<game>/<id>.campaign`
+    beside the campaign's card, with #12's ids (`c` and 16 hex digits) (G20).
 14. **adapt** A co-op world never writes the player's single-player saves: it plays
     on a scratch save area, restored on leaving; nothing is written back to a
     single-player save a player brought in (D29, D34). Split-screen needs one
-    scratch area per seat.
+    scratch area per seat. Here the scratch area is the campaign's save slot
+    on the device (G10), filled from the host's file on entering (G20); one
+    per seat comes with #11.
 15. **skip** Moving the earlier build's single campaign file in as FIRST CAMPAIGN
     (D49) and settling format-1 files with the intro state (D58, D66): source
     migrations with no target history.
@@ -968,7 +971,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 |---|---|
 | A1 Session and connection core | #10 (done: [session.md](session.md)); log sharing #31, flood limits #32 |
 | A2 Launcher co-op flow | #12 ([launcher.md](launcher.md)); rival's name and how to start #22, both versions #9, split-screen entry #11 |
-| A3 Campaign state, saves and persistence | #13 |
+| A3 Campaign state, saves and persistence | #13 ([campaign.md](campaign.md)) |
 | A4 New players and the opening | #22 |
 | A5 Shared world | #14 |
 | A6 Items, bag, money and story gifts | #16 |
@@ -1027,9 +1030,10 @@ sibling's D-numbers.
   slot of its own, created and named after the campaign; entering the
   campaign makes it the active slot, and the launcher puts the solo slot
   back afterwards. The host's campaign card holds the title, the game it was
-  started on, the players seen and the address a partner used last. The
-  campaign files of #13 replace the per-device slots with the host's
-  campaign state.
+  started on, the players seen and the address a partner used last. Since
+  #13 the slot is the scratch area the game plays in: the player's progress
+  lives in the host's campaign file, and entering fills the slot from it
+  (G20).
 - **G11. Colours by place** (#15, owner, 2026-10-14). Each player wears the colour of their place in the
   session, the host's player first: red, blue, green, purple, orange, teal,
   pink, brown, then again. A colour is an OBJ palette (white, skin, the
@@ -1115,4 +1119,20 @@ sibling's D-numbers.
   the game's own importer. A slot that a campaign plays in (G10) shows its
   campaign and has no PLAY here: entering it goes through CAMPAIGNS, which
   keeps the session and the slot together; it can still be exported and
-  deleted. Campaign files (#13) replace this slot per campaign later.
+  deleted. Since #13 the slot's content comes from the host's campaign file
+  on entering (G20).
+- **G20. A campaign file holds each player's world whole until the shared
+  world** (#13, 2026-10-14). The host's file (`coop/campaigns/<game>/<id>.campaign`,
+  JSON) has the campaign's section (id, title, cartridge, revision, the
+  shared story, the unique-encounter registry, the applied commits) and a
+  section per player whose world is the game's own save text
+  (`SaveSerializer`, read back by its safe parser), the PC apart for the
+  journal. Until the world patches of #14 move the shared keys (flags,
+  badges, toggled objects) into the campaign's story, each player's world
+  keeps its own. Every write of the game's save in a co-op world sends that
+  world to the host as a real SAVE; the device still plays from the
+  campaign's save slot (G10), which the launcher fills from the host's file
+  on entering. Each Pokémon carries its uid in `coopUid`. `love.filesystem`
+  has no rename, so the swap renames in the real save folder and falls back
+  to writing in place with the checked `.tmp` as the witness. Details:
+  [campaign.md](campaign.md).

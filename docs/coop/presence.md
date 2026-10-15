@@ -5,7 +5,8 @@ What a co-op session shows in the game (#15, area A14 in
 partner out of sight, their icons on the TOWN MAP, the CO-OP menu, notices,
 and hold B to run. It lives in `src/coop/game/` and reads the running
 session ([session.md](session.md)); a solo game shows none of it. The parts
-that need battles, the opening, friend battles or campaign files are #34.
+that need battles, the opening or friend battles are #34; the last save in
+the CO-OP box came with the campaign files (#13).
 
 ## Files
 
@@ -48,7 +49,7 @@ Upstream files have one marked hook each (`co-op (#15)`):
 | 5. Easing | A step is eased over 16 frames walking or surfing, 8 running or riding. A jump of more than two cells (a warp, a fly) lands at once. A step through a connection keeps easing across the seam. A partner reports the cell their step heads for, so the others ease it while they walk it. |
 | 6. Arrow | See *The arrow*. |
 | 7. TOWN MAP | The TOWN MAP item, the CO-OP menu's TOWN MAP row and the fly map show each connected partner's icon in their colour, under the player's own. The Pokédex's area view shows none. |
-| 8. START > CO-OP | A CO-OP row after OPTION, only in a session. Upstream's START menu ends with MODS and QUIT, where the cartridge has EXIT, so CO-OP comes before those. Red, Blue and Yellow share this menu. See *The CO-OP menu*. Fight offers, JOIN, REJOIN, BATTLE, TRADE, "in a battle", "in the opening" and the last save are #34. |
+| 8. START > CO-OP | A CO-OP row after OPTION, only in a session. Upstream's START menu ends with MODS and QUIT, where the cartridge has EXIT, so CO-OP comes before those. Red, Blue and Yellow share this menu. See *The CO-OP menu*. Fight offers, JOIN, REJOIN, BATTLE, TRADE, "in a battle" and "in the opening" are #34; the last save is in the box since #13. |
 | 9. SELECT | SELECT on the map opens the CO-OP menu in a session. The START menu, the bag, a battle and the party are screens of their own, so their own SELECT is untouched. In a co-op battle nothing opens: #34. |
 | 10. Notices | "BLUE joined the session." and "BLUE left the session." Light text on a dark band at the top of the screen. Each stays 180 frames (3 s) and fades over the last 30; at most three show at once. There is no refusal in the world yet; the battle refusals of #34 use the same notices. |
 | 11. Hold B to run | In a session, a walking step with B held takes the bike's 8 frames. The bike (the Cycling Road slope too) and surfing keep their own; a solo game walks as the cartridge does; there is no setting. Upstream Gen 1 has no run option: its `movement.speed` hook is where a mod adds one (`tests/mod_qol_hooks_tests.lua`). A mod there still wraps this. |
@@ -92,6 +93,8 @@ Drawn with the cartridge's font, boxes and cursor. The upper box shows:
 - the campaign's name;
 - on the host, `IP` and this device's first address (a VPN first, then the
   home network; `Addresses.mine()`);
+- when the campaign was last saved (SAVED JUST NOW, SAVED 2 MIN AGO, NOT
+  SAVED YET) and AUTOSAVE: ON (#13, [campaign.md](campaign.md));
 - each partner with the TOWN MAP name of where they are, or AWAY for one who
   left.
 

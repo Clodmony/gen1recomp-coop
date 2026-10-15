@@ -26,6 +26,14 @@
 -- (nextMove); the console prints who joined, left and changed maps.  A
 -- session that ends while the game runs asks main.lua to go back to the
 -- launcher and leaves a note (takeReturn) for the co-op screen.
+--
+-- The campaign (#13): hosting reads the campaign's file
+-- (src/coop/campaign/CampaignFile.lua), or starts it; a file that cannot be
+-- read, or is of a newer build, is refused (startHost returns nil and why,
+-- with the backup's name).  Once joined, the client holds this player's
+-- world from the campaign (worldReady, takeWorld); each time the game
+-- saves, its world goes to the host (sendWorld), a real SAVE asking the
+-- host to save the campaign; saveRefusal says when the host would refuse.
 
 local Transport = require("src.coop.session.Transport")
 local Protocol = require("src.coop.session.Protocol")
@@ -35,6 +43,10 @@ local Beacon = require("src.coop.session.Beacon")
 local Identity = require("src.coop.session.Identity")
 local SessionLog = require("src.coop.session.SessionLog")
 local Json = require("src.link.Json")
+local Campaign = require("src.coop.campaign.Campaign")
+local CampaignFile = require("src.coop.campaign.CampaignFile")
+local Store = require("src.coop.campaign.Store")
+local World = require("src.coop.campaign.World")
 
 local Session = { current = nil }
 Session.__index = Session
@@ -99,17 +111,48 @@ function Session:_client(conn, hostKey, via)
   return self.client
 end
 
+-- The campaign's state from its file, or a new one; nil and
+-- { why, backup } when the file is refused (design A3.5).  `fs` is
+-- CampaignFile's file calls.
+function Session.openCampaign(fs, campaign, cartridge)
+  local state, info = CampaignFile.read(fs, cartridge.game, campaign.id)
+  if state then return state, info end
+  if info.why ~= "missing" then return nil, info end
+  return Campaign.new({ id = campaign.id, title = campaign.title, game = cartridge.game,
+                        sha1 = cartridge.sha1, created = os.time() }), { new = true }
+end
+
 -- Host a campaign ({ id, title, players }) with this device's cartridge.
 -- opts: name, port, shareLogs, listen (false: loopback only), beacon
--- (false: none), onRoster(roster) when the players change; tests pass
--- identity, logFs or log = false, clock, hex.
+-- (false: none), onRoster(roster) when the players change, campaignFs
+-- (CampaignFile's file calls; the save folder's by default, false: no
+-- file); tests pass identity, logFs or log = false, clock, hex.  Returns
+-- the session, or nil and { why, backup } when the campaign's file is
+-- refused.
 function Session.startHost(opts)
-  local s = newSession("host", opts)
   local campaign = opts.campaign
+  local state, store, info
+  local campaignFs = opts.campaignFs
+  if campaignFs == nil and love and love.filesystem then campaignFs = CampaignFile.loveFs() end
+  if campaignFs then
+    state, info = Session.openCampaign(campaignFs, campaign, opts.cartridge)
+    if not state then
+      say("campaign %s refused: %s", campaign.id, tostring(info.why))
+      return nil, info
+    end
+  end
+  local s = newSession("host", opts)
   s.port = opts.port or Transport.DEFAULT_PORT
+  if state then
+    store = Store.new({ campaign = state, fs = campaignFs, clock = opts.clock,
+                        saved = not info.new,
+                        log = s.log and function(kind, data) s.log:write("host", kind, data) end })
+    -- a new campaign has its file from the start
+    if info.new then store:checkpoint("new") end
+  end
   s.host = Host.new({
     campaign = { id = campaign.id, title = campaign.title },
-    players = campaign.players,
+    players = campaign.players, state = state, store = store,
     cartridge = s.cartridge, hostName = opts.name, port = s.port, log = s.log,
     device = s.identity.device, clock = opts.clock, hex = opts.hex,
   })
@@ -191,6 +234,63 @@ function Session:join(name)
   self.client:join()
   self.status = "joining"
   return true
+end
+
+-- the campaign (#13) --------------------------------------------------------
+
+-- true once the host has sent this player's world (or said there is none)
+function Session:worldReady()
+  return self.client ~= nil and self.client.world ~= nil
+end
+
+-- this player's world from the campaign: a save table, or nil for a player
+-- who never saved in it (a fresh start); `false` when it did not read
+function Session:takeWorld()
+  local w = self.client and self.client.world
+  if not w or w.fresh or not w.save then return nil end
+  local save = World.decode(w.save)
+  return save or false
+end
+
+-- why the host would refuse a save now ("battle_in_progress"), or nil
+function Session:saveRefusal()
+  local state = self.client and self.client.state
+  if state and state.busy and state.busy ~= "" then return state.busy end
+  return nil
+end
+
+-- The game saved `save` (its live save table): the world goes to the host.
+-- checkpoint: a real SAVE, which asks the host to save the campaign
+-- (design A3.10, A3.11); kind names it.  Returns the seq, or nil.
+function Session:sendWorld(save, checkpoint, kind)
+  local c = self.client
+  if not (c and c.status == "joined") or type(save) ~= "table" then return nil end
+  local ok, text = pcall(World.encode, save)
+  if not ok or #text > Protocol.MAX_WORLD then
+    say("world not sent: %s", ok and "too long" or tostring(text))
+    return nil
+  end
+  return c:sendWorld(text, checkpoint, kind)
+end
+
+-- seconds since the campaign was last saved, by the host's word; nil when
+-- it never was
+function Session:savedAgo()
+  local at = self.client and self.client.savedAt
+  if not at then return nil end
+  return math.max(0, self.clock() - at)
+end
+
+-- the `saved` messages since the last call (the notices take them)
+function Session:takeSaves()
+  return self.client and self.client:takeSaves() or {}
+end
+
+-- the hosting app is paused: the host saves (design A3.9)
+function Session.pause()
+  local s = Session.current
+  if s and s.host then return s.host:pause() end
+  return false
 end
 
 -- what the hosting screen shows: the players with the cartridge they play

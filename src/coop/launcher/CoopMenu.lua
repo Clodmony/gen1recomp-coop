@@ -335,7 +335,17 @@ function CoopMenu:_startHost(campaign, name)
   self.campaign = self.env.campaigns.get(campaign.id) or campaign
   self.addressList = nil
   self.deleted = nil
-  self.session = self.env.host(self.campaign, name, self.version)
+  local session, refused = self.env.host(self.campaign, name, self.version)
+  if not session then
+    -- the campaign's file cannot be read, or is of a newer build: it is
+    -- left as it is and its backup named (#13, design A3.5)
+    local why = refused and refused.why == "newer"
+      and L("This campaign was saved by a newer build. Update to host it.")
+      or L("This campaign's file cannot be read. It was left as it is.")
+    if refused and refused.backup then why = why .. " " .. L("Its backup: %s", refused.backup) end
+    return self:notify(why)
+  end
+  self.session = session
   self:go("hosting")
   self.cursor = #self:items()
 end
@@ -360,6 +370,8 @@ end
 function CoopMenu:_enter()
   local s = self.session
   if not s then return nil end
+  -- the player's world from the campaign comes right after the welcome (#13)
+  if s.worldReady and not s:worldReady() then return nil end
   local campaign
   if s.kind == "host" then
     campaign = { id = self.campaign.id, title = self.campaign.title }
