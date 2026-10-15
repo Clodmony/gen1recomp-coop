@@ -24,15 +24,27 @@ stacked on #58).
 - **#61** `coop/group11` into `coop/group8-opening` (stacked): closes
   #57, #59, #55, #23, #60, #9, #34. Six agents, one per issue, merged
   one at a time; protocol 16 (11 scenes, 12 Red and Blue, 13 starts, 14
-  Cable Club, 15 friends, 16 League); decisions G28 to G33 proposed.
+  Cable Club, 15 friends, 16 League). Decisions G28, G32 and G33
+  accepted by the owner (2026-10-16); G29, G30 and G31 stay proposed for
+  a later look.
   Verify ALL PASSED at ecb289d4 (37/37 tiers). luacheck has not run on
   this code (not installed here, and CI does not run on a stacked PR):
   it runs once #61 targets `gen1recomp-coop`.
-  - Merge order: #58 first, then `gh pr edit 61 --base gen1recomp-coop`,
+  - **Owner (2026-10-16): test #58 and #61 together** in real windows
+    with the session; prepared playtest: see *Playtest* below.
+  - Merge order afterwards: #58 first, then `gh pr edit 61 --base gen1recomp-coop`,
     let CI (lint) pass, then merge #61 locally as Claude
     (`git merge --no-ff`), push, run `tools/verify.sh`.
 
-## Owner's open questions from Group 11 (recommended option first)
+## Group 11's detail choices (owner, 2026-10-16: every recommendation taken)
+
+Each detail keeps the first, recommended option below; the German wording
+stays for the owner's later review in `german-wording.md`. The follow-ups
+it calls for are filed in **Group 12: Group 11 follow-ups**: #62 (one
+trade core), #63 (a Cable Club trade owed, not lost), #64 (split-screen
+player 2 chooses how they start). Yellow mixing stays unsupported for
+good (#9's answer); a gift lost on a reset is accepted and documented
+(#55).
 
 ### #59 rival scenes (G29)
 1. Where a scene starts: accept as built (a script fighting the rival on a scene map while his flag is unset; one ScriptRunner hook) [rec] / explicit hooks per scene in data/scripts.
@@ -71,11 +83,7 @@ stacked on #58).
 
 ## Next candidates
 
-- The follow-ups proposed by the agents (file the ones the owner wants):
-  unify the two trade swap cores (#23's `Trade.lua`, #60's
-  `CableTrade.swap`); a Cable Club trade whose yes never reached a window
-  (owed like a gift); owed gifts re-sent after a restart (#55);
-  split-screen player 2 choosing how they start (#57).
+- Group 12 (#62, #63, #64) once #61 is merged.
 - Group 10 (#7 mobile, #27 launcher entries, #30 voxel mod) needs owner
   decisions per feature; Group 2's #12 and #15 are owner-side checks.
 

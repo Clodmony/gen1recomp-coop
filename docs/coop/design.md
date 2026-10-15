@@ -1394,7 +1394,7 @@ sibling's D-numbers.
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
 - **G28. A new player's start is written by the launcher and kept by the
-  host** (#57, 2026-10-16, proposed). A4.1 to A4.3 leave open where a
+  host** (#57, 2026-10-16, accepted by the owner the same day). A4.1 to A4.3 leave open where a
   skipper's world is made and how it reaches the campaign. Here the
   launcher asks HOW YOU START (THE OPENING, START IN PALLET with a
   STARTER, BRING A SAVE with a pick of the device's solo saves past Oak's
@@ -1506,7 +1506,7 @@ sibling's D-numbers.
   learning and evolution come after it, not during it. Protocol 15.
   Details: [friends.md](friends.md).
 - **G32. The Cable Club's rooms are its link screens; the session is the
-  cable** (#60, 2026-10-16, proposed). Upstream's Gen 1 Cable Club has no
+  cable** (#60, 2026-10-16, accepted by the owner the same day). Upstream's Gen 1 Cable Club has no
   rooms to walk into: the receptionist saves and opens a LAN link menu
   that pairs two games over a cable of its own, then runs the cartridge's
   trade screen or link battle. In a co-op world she opens the cartridge's
@@ -1530,7 +1530,7 @@ sibling's D-numbers.
   as upstream relocates the saves of its added rooms. Protocol 14.
   Details: [cable.md](cable.md).
 - **G33. Red and Blue are one game in two cartridges; the switch of both
-  versions is the campaign card's** (#9, 2026-10-16, proposed). A host lets
+  versions is the campaign card's** (#9, 2026-10-16, accepted by the owner the same day). A host lets
   in its own game and dump, and the other game of its pair (Red with Blue,
   Rot with Blau) when both are verified dumps (`GameVersion.acceptsSha1`);
   everything else is refused `content_mismatch`, the host's log saying
