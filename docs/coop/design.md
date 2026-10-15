@@ -603,7 +603,8 @@ A9.3 and A9.4; A8.11's marks in the move list), and the catch's name list
 
 In place (#19, [battles.md](battles.md)): every rule below but A9.5's
 question to leave the battle (#20) and the bag's battle-only list (the
-cartridge's bag stays, refusing the rest).
+cartridge's bag stays, refusing the rest; accepted by the owner,
+2026-10-15).
 
 1. **adapt** A co-op battle uses the cartridge's own battle screen and menus: FIGHT /
    PKMN / ITEM / RUN, the move list with TYPE/PP, a party list six rows at a
@@ -715,7 +716,8 @@ In place (#20, [battles.md](battles.md), [session.md](session.md)): every
 rule below but the per-player reconnection secrets of A11.10 (a player is
 recognised by their remembered id and name, as since #10). A11.13 is met by
 the transport's own flush on close (ENet delivers the bye or `ended` for up
-to 0.5 s before the socket goes), not by deferring `love.quit`.
+to 0.5 s before the socket goes), not by deferring `love.quit`. The owner
+accepted both as built (2026-10-15).
 
 1. **carry** Leaving and dropping are one rule (owner, D61): a participant who uses
    LEAVE BATTLE or loses the link is absent: back at their return point; their
@@ -1231,7 +1233,7 @@ sibling's D-numbers.
   only when CONTROLS has a device for each player. Details:
   [split.md](split.md).
 - **G24. Co-op battles are lockstep; the host keeps the record** (#18,
-  2026-10-15, proposed to the owner). A8.2 asked for a scene-free battle
+  2026-10-15, accepted by the owner the same day). A8.2 asked for a scene-free battle
   engine on the host, with upstream's lockstep link battles as the
   alternative to weigh. The engine's battle is one `BattleState` with its
   presentation woven through its logic, and the host runs in the hosting

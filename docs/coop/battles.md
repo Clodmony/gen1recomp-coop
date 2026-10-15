@@ -2,7 +2,7 @@
 
 Two or more players fight the game together: a wild Pokémon or a trainer
 one player's world met, with every player's team on the allied side (#18,
-area A8 in [design.md](design.md), decision G24), shown with the
+area A8 in [design.md](design.md), decision G24, accepted), shown with the
 cartridge's own battle screen and menus (#19, area A9); leaving it, coming
 back and taking over for a player who dropped (#20, area A11); and what the
 world shows of partners in a battle (#34, area A14).
