@@ -30,9 +30,25 @@ language, under every page and every message.
   and not offered until #4 and #11 work; IMPORT ROM for a cartridge with no
   ROM; LAST SESSION with HOST AGAIN or REJOIN.
 - **Solo**: CONTINUE (when the active save slot holds a save; name, badges and
-  play time shown), NEW GAME, IMPORT AGAIN. NEW GAME over a save starts in a
-  new save slot, so the old save stays on disk; choosing between slots comes
-  with #6.
+  play time shown), NEW GAME, SAVES, IMPORT AGAIN. NEW GAME over a save starts
+  in a new save slot, so the old save stays on disk.
+- **SAVES** (#6, from the solo sheet): the game's save slots, one card each
+  with the trainer's name, BADGES, POKéDEX and TIME (what the cartridge's
+  continue screen shows), the active slot marked, a campaign's slot named
+  after its campaign (it is entered from CAMPAIGNS, not here; decision G19).
+  PLAY makes a slot the active one and boots the game to continue it, + NEW
+  SAVE adds an empty slot and boots on it (the game offers NEW GAME), EXPORT
+  writes the slot as a cartridge save to `exports/<game>/gen1recomp-<game>-<slot>.sav`
+  in the save folder and names the file, DELETE asks first and removes the
+  slot for good. IMPORT .SAV takes a 32 KB cartridge save (.sav/.srm, as an
+  emulator or a cartridge reader writes it) by a dropped file or a typed or
+  pasted path and puts it into a new slot, made active; a bigger file asks
+  whether to take its first 32 KB; a file that is no save is refused with
+  the codec's reason. A .sav dropped on any page goes to the SAVES page of
+  the picked game (once its ROM is imported). The slots are upstream's
+  (GPL `SaveData`), the codec upstream's `SaveFileIO.importToSlot` and
+  `exportActiveSlot` (`SaveConvert`, `GenSave`): the same path the game's
+  own importer uses, never the proprietary launcher's screens.
 - **Import**: drop the ROM file on the window, or type or paste (Ctrl+V) its
   path and press Enter. The ROM is checked by SHA-1 (clean US dumps and the
   German Rote, Blaue and Gelbe Edition, `.zip`/`.7z` where the platform opens
@@ -41,10 +57,37 @@ language, under every page and every message.
   ROM is routed to its game whatever page is showing. A scripted import
   (`POKEPORT_IMPORT_ONLY`) that fails prints the error and exits with 1.
 - **CAMPAIGNS**: every campaign on this device (see *Co-op screens*).
-- **CONTROLS**: the launcher's keys, pad buttons, mouse and touch; per-player
-  devices are marked PLANNED (#4).
-- **SETTINGS**: LANGUAGE (ENGLISH or DEUTSCH) and THEME (LIGHT or DARK).
-  Video, sound and game options stay in each game's own OPTIONS menu until #5.
+- **CONTROLS** (#4): IN THE GAME lists the Game Boy buttons with the key and
+  the pad button each answers to (the defaults of `src/core/Input.lua`,
+  primary key first); a row waits for the next key or pad button, which
+  then answers to that button. A key another button answered to is swapped,
+  never stolen (that button gets the key this one had), as in the game's
+  own CONTROLS menu; RESET BINDINGS puts the defaults back. The rebinds are
+  written where the game reads them, `options.bindings` in `options.lua`
+  (GPL `SaveData`), so the game and its CONTROLS menu show the same. PLAYER
+  DEVICES is the seat of each player for couch co-op: a row asks that
+  player to press A on their pad or Enter for the keyboard, the connected
+  pads are listed with the player each is claimed for, CLEAR DEVICES
+  forgets them. A claim is remembered in `coop/launcher.json` by the pad's
+  GUID (and, between twins of one model, its order among the connected
+  pads). Without a claim player 1 uses any device, as in solo play. IN THE
+  LAUNCHER names the launcher's own keys, pad buttons, mouse and touch.
+  Key and pad button names are shown as SDL names them (ENTER, ESC, D-PAD
+  UP, BACK) in every language.
+- **SETTINGS**: LAUNCHER holds LANGUAGE (ENGLISH or DEUTSCH) and THEME
+  (LIGHT or DARK), the launcher's own, in `coop/launcher.json`. VIDEO, AUDIO
+  and GAME (#5) hold the game's: WINDOW (WINDOWED or BORDERLESS, the whole
+  screen), INTEGER SCALE (OFF, 1X to 4X: the game drawn at an exact multiple
+  of its pixels, upstream's faithful-resolution lock), MUSIC and SOUND (0 to
+  7), TEXT SPEED (FAST, MEDIUM, SLOW), BATTLE ANIMATION (ON, OFF) and BATTLE
+  STYLE (SHIFT, SET). A press moves a value on, left and right step it (the
+  volumes stop at 0 and 7, as in the game's menu). These are the keys the
+  game's own OPTIONS menu writes (`videoMode`, `faithfulRes`, `musicVol`,
+  `sfxVol`, `textSpeed`, `animations`, `battleStyle`) in `options.lua`,
+  written through GPL `SaveData.saveOptions` one key at a time, so the
+  launcher and the game always show the same value and the game applies
+  them at boot as it applies its own (decision G18 in
+  [design.md](design.md)). A phone or console has no WINDOW row.
 - **HELP**: how partners connect, SHARE LOGS (on by default; session logs go
   to the session's players and hold trainer names and addresses) and OPEN LOGS
   FOLDER on desktop, and the credits: the credit line, the fork, the AI
@@ -159,6 +202,20 @@ CONTINUE never opens a campaign's save.
   import modules (`RomArchive`, `GameVersion.forSha1`, `CacheFs`,
   `CacheContract`, `ExtractThread`, `RomExtractor`), never `RomImporter.lua`.
 - `Keypad.lua`: the text entry grid.
+- `Saves.lua` (#6): the SAVES page's model: the slots with their summary,
+  PLAY, NEW SAVE, DELETE and its question, IMPORT .SAV (typed, pasted or
+  dropped, the oversized question) and EXPORT of any slot (made active for
+  upstream's export, the active slot put back).
+- `GameOptions.lua` (#5): the game's options on SETTINGS: each row's key
+  in `options.lua`, its value's label and how it steps, read and written
+  through `SaveData`.
+- `Controls.lua` (#4): the CONTROLS page's model: the buttons' rows, the
+  capture of a key or pad press, the swap rule, the players' devices. The
+  seats themselves are `src/coop/game/Seats.lua`: one `Input` per player
+  (player 1 is upstream's singleton, so solo play is unchanged), the device
+  each one listens to, and `Seats.dispatch` for an event every seat sees
+  and filters (the hook is `Input.seatFilter`, marked `co-op (#4)` in
+  `src/core/Input.lua`).
 - `CoopSettings.lua`: what the launcher remembers on this device, and each
   campaign's save slot.
 - `../Campaigns.lua`: the hosting device's campaign cards.
@@ -176,7 +233,9 @@ fullscreen memory) is not on the licence's list and stays.
 Upstream features that only its launcher reaches are not offered yet: mod
 management and mod updates before a shortcut boot (`main.lua` asks for none),
 the save editor, the skin studio, the touch-controls editor, the Box, carts and
-the other games. Settings, controls, save slots and mobile are #4 to #7.
+the other games. Mobile is #7; the game's CONTROLS and OPTIONS menus stay
+in the game and agree with the launcher's pages (#4, #5), and the save
+editor stays upstream's (the SAVES page lists, imports and exports, #6).
 
 ## Save folder and upstream services
 
@@ -235,6 +294,33 @@ it joined, and both entered the game with both players in the session. Two
 machines on a LAN, pads, touch, the system-language default on a German
 desktop, Windows, macOS and phones have not been run with the new pages.
 
+The CONTROLS page (#4) was run on Linux desktop (LÖVE 11.5, offscreen) by a
+frame driver that opened it in English and German at 1024 x 768, 480 x 400
+and 960 x 540, with a bind capture and a seat capture showing; no pad was
+connected in that run, so the pad list showed "No pad connected." and the
+claims, twins and per-seat input were checked by the ROM-free tests only
+(fake pads). Two real pads, a claim on a real pad and a game taking the
+seats have not been run: the game uses the seats only once couch co-op
+(#11) starts it in couch mode.
+
+The SETTINGS page (#5) was run the same way: the page rendered in English
+and German at 1024 x 768 and 480 x 400, then TEXT SPEED, BATTLE ANIMATION,
+BATTLE STYLE, MUSIC, SOUND and INTEGER SCALE set through the page's rows
+and US Red (a private import of the owner's dump) booted from the launcher:
+the game's save options held the six values, its window was 320 x 288 for
+2X, and its OPTIONS menu opened on them. WINDOW (borderless) was not run
+on a screen: the offscreen driver has none, so it is covered by the reader
+(`VideoMode.applyOptions`) and the ROM-free tests only.
+
+The SAVES page (#6) was run on the same private US Red import: the solo
+sheet, the empty page, the import screen, then a fixture-built cartridge
+save (`tests/fixtures/save/gen1_build.lua`, trainer BRIO, three badges)
+imported by its typed path, the list with the slot, EXPORT (the file landed
+in the save folder's `exports/red/`), the DELETE question, the page in
+German at 1024 x 768 and 480 x 400, and PLAY booting Red on the slot: the
+game's save held BRIO with the badges. A real cartridge dump's .sav, a
+dropped file under LÖVE and a phone have not been run.
+
 ## Tests
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
@@ -248,7 +334,26 @@ headless on the fixture dataset and drives the launcher with keys, a pad, the
 mouse, the wheel and a file drop; `upstream_services_test.lua` checks that no
 boot path reaches the updater or cloud sync and that `conf.lua` uses the
 fork's identity; and `driver_launcher_boot_test.lua` runs a frame driver that
-boots a game from the launcher (#28). `launcher_coop_test.lua` (#12) runs two
+boots a game from the launcher (#28). `saves_test.lua` (#6) feeds the Gen 1 save codec from the fixture dataset
+and drives the page on an in-memory save folder: the list with names,
+badges, Pokédex and time, the active and a campaign's slot, PLAY, NEW SAVE,
+DELETE and its question, the import of a fixture-built .sav (and of an
+oversized one after the question, and the refusal of a wrong file), EXPORT
+of a slot that is not active, and the round trip of the export back in;
+the boot test drops a .sav on the launcher, exports, asks DELETE and plays.
+`game_options_test.lua` (#5) reads the defaults from no file, steps every
+row and reads each change back from `options.lua`, falls back from a broken
+file, and walks the rows in the menu (A, left, right); the boot test sets
+the options on the page through the real callbacks, boots Red on the
+fixture dataset and checks that the game's save options hold them.
+`seats_test.lua` (#4) drives two fake pads and the keyboard through the
+seats: solo merges them into player 1, couch co-op keeps each seat to its
+device (events and polled pads), twins are told apart, the claims round
+trip through the settings file, and the controls model writes
+`options.bindings` the way `Input` reads them (the swap, reset, claims);
+the menu, UI and boot tests open the page, lay it out capturing in both
+languages and drive a rebind and a pad claim through the real callbacks.
+`launcher_coop_test.lua` (#12) runs two
 devices in one process over a loopback hub that stands in for the network:
 hosting a new campaign, finding it nearby (once per campaign), joining under a
 typed name, the players and LAST USED on the hosting page, STOP HOSTING with a

@@ -409,13 +409,81 @@ function S.solo(p, menu, c)
 end
 
 function S.controls(p, menu, c)
+  local rows = menu:items()
   local y = c.y + heading(p, c, c.y, L("Controls"),
-    L("The launcher answers keyboard, pad, mouse and touch the same way."), false)
+    L("The game's buttons, and each player's device for couch co-op."), false)
+  -- a capture under way: the prompt, and nothing else takes a press (#4)
+  local prompt = menu:capturing()
+  if prompt then
+    local lines = Ui.wrap(prompt, c.w - 24)
+    local h = #lines * LINE + 16
+    p:rect(c.x, y, c.w, h, "lcd")
+    p:frame(c.x, y, c.w, h, "accent", 2)
+    for i, line in ipairs(lines) do p:text(c.x + 12, y + 8 + (i - 1) * LINE, line, "ink") end
+    y = y + h + 10
+  end
   local a, b, wide = columns(c, 0.55)
+  -- the game's buttons
   local close = panel(p, a.x, y, a.w)
   local ly = y + 10
-  sectionLabel(p, a.x + 10, ly, L("IN THE LAUNCHER"))
+  sectionLabel(p, a.x + 10, ly, L("IN THE GAME"))
   ly = ly + LINE + 4
+  for _, e in ipairs(rowsWith(rows, "bind")) do
+    rowButton(p, a.x + 10, ly, a.w - 20, 22, e.index, e.row, { detail = e.row.detail })
+    ly = ly + 26
+  end
+  local ri, rrow = rowOf(rows, "reset")
+  if ri then
+    rowButton(p, a.x + 10, ly + 2, fitWidth(rrow.label), 22, ri, rrow, { style = "quiet" })
+    ly = ly + 28
+  end
+  ly = ly + p:para(a.x + 10, ly + 2, a.w - 20,
+    L("A key and a pad button for each. The game's own CONTROLS menu shows the same."), "muted") + 4
+  close(ly + 6)
+  -- the players' devices
+  local by = wide and y or ly + 18
+  local close2 = panel(p, b.x, by, b.w)
+  local ry = by + 10
+  sectionLabel(p, b.x + 10, ry, L("PLAYER DEVICES"))
+  ry = ry + LINE + 4
+  for _, e in ipairs(rowsWith(rows, "seat")) do
+    rowButton(p, b.x + 10, ry, b.w - 20, 22, e.index, e.row, { detail = e.row.detail })
+    ry = ry + 26
+  end
+  local ci, crow = rowOf(rows, "clear")
+  if ci then
+    rowButton(p, b.x + 10, ry + 2, fitWidth(crow.label), 22, ci, crow, { style = "quiet" })
+    ry = ry + 28
+  end
+  if menu.controls then
+    sectionLabel(p, b.x + 10, ry + 4, L("CONNECTED PADS"))
+    ry = ry + LINE + 6
+    local pads = menu.controls:padList()
+    if #pads == 0 then
+      ry = ry + p:para(b.x + 10, ry, b.w - 20, L("No pad connected."), "muted") + 4
+    end
+    for _, e in ipairs(pads) do
+      local tag = e.player and L("P%d", e.player)
+      local room = b.w - 20 - (tag and width(tag) + 12 or 0)
+      p:text(b.x + 10, ry, Ui.fit(e.name, room), "ink")
+      if tag then
+        local tx = b.x + 10 + width(Ui.fit(e.name, room)) + 6
+        p:frame(tx, ry, width(tag) + 6, LINE - 1, "muted")
+        p:text(tx + 3, ry, tag, "muted")
+      end
+      ry = ry + LINE + 2
+    end
+  end
+  ry = ry + p:para(b.x + 10, ry + 4, b.w - 20,
+    L("Couch co-op seats each player at the device claimed here, remembered by pad. Without a claim, player 1 uses any device, as in solo play."),
+    "muted") + 4
+  close2(ry + 8)
+  -- the launcher itself
+  y = math.max(ly + 6, ry + 8) + 12
+  local close3 = panel(p, c.x, y, c.w)
+  local ky = y + 10
+  sectionLabel(p, c.x + 10, ky, L("IN THE LAUNCHER"))
+  ky = ky + LINE + 4
   for _, pair in ipairs({
     { L("MOVE"), L("Arrows or WASD · D-pad or stick") },
     { L("CONFIRM"), L("Z, Enter or Space · A or START") },
@@ -423,47 +491,62 @@ function S.controls(p, menu, c)
     { L("MOUSE"), L("A click chooses, a right click goes back.") },
     { L("TOUCH"), L("A tap chooses.") },
   }) do
-    p:text(a.x + 10, ly, pair[1], "ink")
-    ly = ly + p:para(a.x + 90, ly, a.w - 100, pair[2], "muted") + 4
+    p:text(c.x + 10, ky, pair[1], "ink")
+    ky = ky + p:para(c.x + 100, ky, c.w - 110, pair[2], "muted") + 4
   end
-  close(ly + 6)
-  local by = wide and y or ly + 18
-  local close2 = panel(p, b.x, by, b.w)
-  local ry = by + 10
-  sectionLabel(p, b.x + 10, ry, L("PLAYER DEVICES"))
-  p:frame(b.x + 14 + width(L("PLAYER DEVICES")), ry, width(L("PLANNED")) + 6, LINE - 1, "muted")
-  p:text(b.x + 17 + width(L("PLAYER DEVICES")), ry, L("PLANNED"), "muted")
-  ry = ry + LINE + 4
-  ry = ry + p:para(b.x + 10, ry, b.w - 20,
-    L("Couch co-op gives each player a controller of their own. It comes with a later version."),
-    "muted") + 6
-  ry = ry + p:para(b.x + 10, ry, b.w - 20,
-    L("In a game, the game's own controls apply, as in solo play."), "muted")
-  close2(ry + 8)
-  return math.max(ly + 6, ry + 8)
+  close3(ky + 6)
+  return ky + 6
 end
 
 function S.settings(p, menu, c)
   local rows = menu:items()
   local y = c.y + heading(p, c, c.y, L("Settings"),
-    L("The launcher's own settings. A game's text follows its cartridge."), false)
-  local close = panel(p, c.x, y, c.w)
-  local ry = y + 10
+    L("The launcher's own settings, then the game's. A pressed value moves on; left and right step it."), false)
   local notes = {
-    language = L("The language of the launcher."),
+    language = L("The language of the launcher. A game's text follows its cartridge."),
     theme = L("Light or dark colours for the launcher."),
+    window = L("A window, or the whole screen."),
+    scale = L("Draw the game at an exact multiple of its pixels; OFF fits the window."),
+    music = L("0 to 7."),
+    sound = L("0 to 7."),
+    textSpeed = L("How fast text appears."),
+    animations = L("Attack animations in battle."),
+    battleStyle = L("SHIFT asks before the next Pokemon; SET does not."),
   }
-  for i, row in ipairs(rows) do
-    p:text(c.x + 10, ry + 5, row.label, "ink")
-    p:para(c.x + 10, ry + 5 + LINE, c.w - 150, notes[row.id] or "", "muted", 1, 2)
-    local bw = math.max(100, fitWidth(row.detail))
-    rowButton(p, c.x + c.w - bw - 10, ry + 4, bw, 22, i, row, { label = row.detail })
-    ry = ry + 2 * LINE + 14
+  local groups = {
+    { "launcher", L("LAUNCHER") }, { "video", L("VIDEO") }, { "audio", L("AUDIO") }, { "game", L("GAME") },
+  }
+  for _, g in ipairs(groups) do
+    local mine = {}
+    for i, row in ipairs(rows) do
+      if (row.group or "launcher") == g[1] then mine[#mine + 1] = { index = i, row = row } end
+    end
+    if #mine > 0 then
+      local close = panel(p, c.x, y, c.w)
+      local ry = y + 10
+      sectionLabel(p, c.x + 10, ry, g[2])
+      ry = ry + LINE + 4
+      for _, e in ipairs(mine) do
+        local row = e.row
+        p:text(c.x + 10, ry + 5, row.label, "ink")
+        p:para(c.x + 10, ry + 5 + LINE, c.w - 150, notes[row.id] or "", "muted", 1, 2)
+        local bw = math.max(100, fitWidth(row.detail, 24))
+        rowButton(p, c.x + c.w - bw - 10, ry + 4, bw, 22, e.index, row,
+          { label = row.option and ("< " .. row.detail .. " >") or row.detail })
+        ry = ry + 2 * LINE + 14
+      end
+      close(ry + 4)
+      y = ry + 14
+    end
   end
-  ry = ry + p:para(c.x + 10, ry, c.w - 20,
-    L("Video, sound and game options are in each game's own OPTIONS menu."), "muted")
-  close(ry + 10)
-  return ry + 10
+  if not menu.gameOptions then
+    y = y + p:para(c.x + 10, y, c.w - 20,
+      L("Video, sound and game options are in each game's own OPTIONS menu."), "muted") + 4
+  else
+    y = y + p:para(c.x + 10, y, c.w - 20,
+      L("The game's options are the ones its own OPTIONS menu shows; a change here is a change there."), "muted") + 4
+  end
+  return y
 end
 
 function S.help(p, menu, c)
@@ -513,6 +596,115 @@ function S.help(p, menu, c)
   end
   close3(cy + 4)
   return cy + 4
+end
+
+-- the SAVES page (#6): the slots as cards, the questions, the import
+local function savesList(p, saves, c)
+  local rows = saves:items()
+  local d = saves:details()
+  local label = Games.label(saves.version)
+  local y = c.y + heading(p, c, c.y, L("%s saves", label),
+    L("Each slot is one adventure. The game continues the active one."), true)
+  local byslot = {}
+  for i, r in ipairs(rows) do
+    if r.slot then
+      byslot[r.slot] = byslot[r.slot] or {}
+      byslot[r.slot][r.id] = i
+    end
+  end
+  for _, slot in ipairs(d.slots) do
+    local idx = byslot[slot.id] or {}
+    local bws = { fitWidth(L("PLAY →")), fitWidth(L("EXPORT")), fitWidth(L("DELETE")) }
+    local bw = (idx.play and bws[1] + 6 or 0) + bws[2] + bws[3] + 6
+    local inline = c.w - bw - 20 >= 180
+    local ch = inline and 3 * LINE + 14 or 3 * LINE + 44
+    p:rect(c.x, y, c.w, ch, slot.active and "lcd" or "paper")
+    p:frame(c.x, y, c.w, ch, slot.active and "accent" or "line", slot.active and 2 or 1)
+    local tw = inline and c.w - bw - 30 or c.w - 20
+    local title = slot.name or L("Empty slot")
+    if slot.active then title = title .. " · " .. L("ACTIVE") end
+    p:text(c.x + 10, y + 7, Ui.fit(title, tw), "ink")
+    local line2 = slot.exists and L("BADGES %d · POKéDEX %d · TIME %s", slot.badges, slot.dex, slot.time)
+      or L("No save yet: the game starts from its title screen.")
+    p:text(c.x + 10, y + 7 + LINE, Ui.fit(line2, tw), "muted")
+    local line3 = slot.campaign and L("Campaign: %s (entered from CAMPAIGNS)", slot.campaign)
+      or (slot.label and slot.label ~= "" and slot.label ~= slot.name and L("%s · %s", slot.id, slot.label) or slot.id)
+    p:text(c.x + 10, y + 7 + 2 * LINE, Ui.fit(line3, tw), "muted")
+    local bx = inline and c.x + c.w - bw - 10 or c.x + 10
+    local by = inline and y + math.floor((ch - 22) / 2) or y + 3 * LINE + 14
+    if idx.play then
+      rowButton(p, bx, by, bws[1], 22, idx.play, rows[idx.play], { style = "primary" })
+      bx = bx + bws[1] + 6
+    end
+    rowButton(p, bx, by, bws[2], 22, idx.export, rows[idx.export])
+    bx = bx + bws[2] + 6
+    rowButton(p, bx, by, bws[3], 22, idx.delete, rows[idx.delete])
+    y = y + ch + 6
+  end
+  if #d.slots == 0 then
+    y = y + p:para(c.x, y, c.w, L("No saves for %s on this device yet.", label), "muted") + 6
+  end
+  y = y + 6
+  local n = #d.slots
+  p:text(c.x, y + 5, n == 1 and L("1 save slot") or L("%d save slots", n), "muted")
+  local ni, nrow = rowOf(rows, "new")
+  local ii, irow = rowOf(rows, "import")
+  actionsRight(p, c, y, { { index = ii, row = irow }, { index = ni, row = nrow, style = "primary" } })
+  y = y + 30
+  y = y + p:para(c.x, y + 4, c.w,
+    L("A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. Exports go to the exports folder of this device."),
+    "muted") + 4
+  return y
+end
+
+local function savesQuestion(p, saves, c, title)
+  local rows = saves:items()
+  local y = c.y + heading(p, c, c.y, title, nil, false)
+  local close = panel(p, c.x, y, c.w)
+  local py = y + 10 + p:para(c.x + 10, y + 10, c.w - 20, saves:prompt() or "", "ink")
+  close(py + 10)
+  y = py + 18
+  local list = {}
+  for i, row in ipairs(rows) do
+    list[#list + 1] = { index = i, row = row, style = row.id == "confirm" and "primary" or nil }
+  end
+  actionsRight(p, c, y, list)
+  return y + 30
+end
+
+local function savesImport(p, saves, c)
+  local label = Games.label(saves.version)
+  local y = c.y + heading(p, c, c.y, L("Import a save"),
+    L("A .sav for %s becomes a new save slot. Nothing is uploaded.", label), true)
+  local close = panel(p, c.x, y, c.w)
+  local py = y + 10
+  local help = saves.canType
+    and L("Drop the .sav file on this window, or type its path and press ENTER.")
+    or L("Drop the .sav file on this window.")
+  py = py + p:para(c.x + 10, py, c.w - 20, help, "ink") + 8
+  if saves.canType then
+    p:rect(c.x + 10, py, c.w - 20, 22, "field")
+    p:frame(c.x + 10, py, c.w - 20, 22, "line")
+    local shown = saves.path
+    while width(shown) > c.w - 40 do shown = shown:sub(2) end
+    p:text(c.x + 16, py + 5, shown .. "_", "ink")
+    py = py + 30
+  end
+  py = py + p:para(c.x + 10, py, c.w - 20,
+    L("32 KB in the cartridge's format (.sav, .srm). The save's trainer, team, items and progress come along; the slot it lands in is made the active one."),
+    "muted")
+  close(py + 10)
+  return py + 10
+end
+
+function S.saves(p, menu, c)
+  local saves = menu.saves
+  if not saves then return c.y end
+  local s = saves.screen
+  if s == "delete" then return savesQuestion(p, saves, c, L("Delete this save?")) end
+  if s == "confirm" then return savesQuestion(p, saves, c, L("A bigger file than expected")) end
+  if s == "import" then return savesImport(p, saves, c) end
+  return savesList(p, saves, c)
 end
 
 function S.import(p, menu, c)
@@ -944,6 +1136,9 @@ local function screenOf(menu)
     end
     return function(p, c, ui) return C[s](p, coop, c, ui) end, coop
   end
+  if menu.screen == "saves" and menu.saves then
+    return function(p, c) return S.saves(p, menu, c) end, menu.saves
+  end
   local fn = S[menu.screen] or S.play
   return function(p, c) return fn(p, menu, c) end, menu
 end
@@ -988,6 +1183,7 @@ function Screens.build(menu, ui, opts)
   if spare > 24 then page = make(math.floor(spare / 3)) end
   -- a new screen: the focus starts on the model's cursor, the page at its top
   local sig = menu.screen .. "/" .. tostring(menu.coop and menu.coop.screen)
+    .. "/" .. tostring(menu.saves and menu.saves.screen)
   if ui.sig ~= sig then
     ui.sig, ui.model = sig, nil
     if ui.focus and not ui.focus:find("^tab:") then ui.focus = nil end
