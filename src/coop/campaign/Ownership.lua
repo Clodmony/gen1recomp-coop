@@ -56,6 +56,10 @@ Ownership.PLAYER_FLAGS = {
   EVENT_AUTOWALKED_INTO_LORELEIS_ROOM = true, EVENT_AUTOWALKED_INTO_BRUNOS_ROOM = true,
   EVENT_AUTOWALKED_INTO_AGATHAS_ROOM = true,
   EVENT_LANCES_ROOM_LOCK_DOOR = true,
+  -- the League rooms' script bytes (#55, A10.6): the started bit the
+  -- lobby's reset reads, and the Champion room's run flag, so every window
+  -- that reaches his room meets him (src/coop/battle/League.lua)
+  EVENT_STARTED_ELITE_4 = true, EVENT_BEAT_CHAMPION_RIVAL_THIS_RUN = true,
   -- gift Pokémon, one per player (A7.9, D62); LAPRAS received (A5.15, D85)
   EVENT_GOT_EEVEE = true, EVENT_GOT_LAPRAS = true, EVENT_BOUGHT_MAGIKARP = true,
   EVENT_GOT_HITMONLEE = true, EVENT_GOT_HITMONCHAN = true,

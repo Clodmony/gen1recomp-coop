@@ -767,6 +767,7 @@ characters, a menu row fewer.
 | %s joined the session in the opening. | %s ist der Sitzung beigetreten und spielt den Anfang. | |
 | IN THE OPENING | IM SPIELANFANG | |
 | The opening can't / be saved. / Leave OAK's LAB / first! | Der Anfang wird / nicht gesichert. / Verlasse erst / EICHs LABOR! | |
+| Waiting for the host... | Warte auf den Host... | |
 
 #### battle
 

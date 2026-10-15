@@ -250,6 +250,9 @@ end
 -- unsaved progress discarded.  TitleState:enter restarts the title
 -- theme; stop() keeps the map song from bleeding over in the meantime.
 function Game:returnToTitle()
+  -- co-op (#55): a reset in a co-op window continues the co-op world
+  -- instead (src/coop/game/Restart.lua, design A10.7)
+  if require("src.coop.game.Restart").take(self, "reset") then return end
   require("src.core.Music").stop()
   while self.stack:top() do self.stack:pop() end
   self.stack:push(self:makeTitleState())

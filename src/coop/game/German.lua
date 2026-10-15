@@ -449,6 +449,8 @@ P["%s is in a battle against %s. START > CO-OP to join."] = "%s kämpft gegen %s
 P["%s joined the session in the opening."] = "%s ist der Sitzung beigetreten und spielt den Anfang."
 P["IN THE OPENING"] = "IM SPIELANFANG"
 P["The opening can't\nbe saved.\fLeave OAK's LAB\nfirst!"] = "Der Anfang wird\nnicht gesichert.\fVerlasse erst\nEICHs LABOR!"
+-- the Hall of Fame's continue, a reset (#55)
+P["Waiting for the host..."] = "Warte auf den Host..."
 
 -- battle
 P["FOE"] = "GEGNER"

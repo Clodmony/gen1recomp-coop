@@ -509,6 +509,7 @@ function Session:update(dt, game)
       self:_report(game)
       require("src.coop.game.SharedWorld").step(self.window, game)
       require("src.coop.game.Battles").step(game)
+      require("src.coop.game.League").step(self) -- the League run (#55)
     end
     self:_narrate()
   end

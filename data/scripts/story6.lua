@@ -302,6 +302,11 @@ M.INDIGO_PLATEAU_LOBBY = {
         if f[flag] then started = true break end
       end
     end
+    -- co-op (#55): the run is the team's; this player's part resets here,
+    -- the campaign's when the host clears it (src/coop/game/League.lua)
+    if require("src.coop.game.League").lobby(game, started and E4_RESET_FLAGS or nil) then
+      return
+    end
     if not started then return end
     f.EVENT_STARTED_ELITE_4 = nil
     for _, flag in ipairs(E4_RESET_FLAGS) do f[flag] = nil end

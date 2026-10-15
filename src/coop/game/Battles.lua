@@ -367,6 +367,17 @@ function Battles.step(game)
   end
 end
 
+-- The game reopened its world (#55, design A10.7): this window's copies
+-- went with the old one.  Finished battles are dropped; a running one this
+-- player is in is built again from its record, as after a drop (#20).
+function Battles.reopen(client)
+  Battles.away, Battles.live, Battles.walking = {}, {}, {}
+  Battles.held, Battles.joining, Battles.stray = nil, nil, nil
+  for id, rec in pairs(client and client.battles or {}) do
+    if rec.ended then client:dropBattle(id) else rec.bound = nil end
+  end
+end
+
 -- a record this window has no copy of: this player is in it (not just a
 -- queued join, not one they opened that is still being bound), and it has
 -- inputs to play

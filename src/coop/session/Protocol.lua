@@ -29,8 +29,11 @@ local Protocol = {}
 -- opening is, and in `state`; a walk-in joins the running one.  10: the
 -- opening (#22): a window's `opening` (in it or done, the rival's name,
 -- the starter chosen), and who is in it, the rival's name and the
--- starter he counters in `state`.
-Protocol.VERSION = 10
+-- starter he counters in `state`.  11: the team's League run and the
+-- Hall of Fame's continue (#55): a window's `league` (the lobby, an
+-- induction) and `restart`, and the host's `world` naming the restart it
+-- answers.
+Protocol.VERSION = 11
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -450,6 +453,12 @@ local battleSummary = record({
 -- the starters a rival counters (#22, design A4.6); Yellow's is #9
 Protocol.STARTERS = { BULBASAUR = true, CHARMANDER = true, SQUIRTLE = true }
 
+-- the team's League run (#55, design A10.6): a window entered the Indigo
+-- Plateau lobby (it asks for the run's clear) or was inducted into the Hall
+-- of Fame; a window's restart (A10.7): after the Hall of Fame, or a reset
+Protocol.LEAGUE_EVENTS = { lobby = true, inducted = true }
+Protocol.RESTART_KINDS = { hall = true, reset = true }
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -487,6 +496,11 @@ Protocol.TO_HOST = {
   -- the name it gave the rival in Oak's speech
   opening = record(withType("opening", { seq = seq, done = bool }),
                    { rival = name, chose = enum(Protocol.STARTERS) }),
+  -- the team's League run and the Hall of Fame's continue (#55, design
+  -- A10.6, A10.7): this window entered the lobby or was inducted; it
+  -- restarts and waits for its world
+  league = record(withType("league", { seq = seq, event = enum(Protocol.LEAGUE_EVENTS) })),
+  restart = record(withType("restart", { seq = seq, kind = enum(Protocol.RESTART_KINDS) })),
   -- co-op battles (#18, design A8): a battle this window's world opened,
   -- with this player's team (otId: their trainer id; expAll: an EXP.ALL in
   -- their bag)
@@ -542,8 +556,10 @@ Protocol.TO_CLIENT = {
          -- the campaign's rival: his name and the starter he counters (#22)
          rival = name, chose = enum(Protocol.STARTERS) }),
   -- the player's world from the campaign, once after welcome (#13); none
-  -- for a player who never saved in this campaign
-  world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),
+  -- for a player who never saved in this campaign; again as the answer to
+  -- a window's restart, naming it (#55)
+  world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD),
+                                                         restart = seq }),
   -- a save of the campaign (#13, design A3.12): `you` when this player
   -- asked for it; ok false with the reason when it was refused
   saved = record(withType("saved", { ok = bool, by = name, you = bool }),
