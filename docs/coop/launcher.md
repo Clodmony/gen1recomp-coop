@@ -145,7 +145,9 @@ there keeps running while the launcher shows it and on into the game.
   network, each labelled, the one a partner used last marked LAST USED; COPY
   copies one), a warning when the port is busy or no network was found (then
   only this device can join), STOP HOSTING and ENTER THE WORLD (at any time;
-  partners can join later). STOP HOSTING with a partner in asks first; the
+  partners can join later). With a device claimed on CONTROLS for each of
+  two players, ENTER WITH 2 PLAYERS (and JOIN WITH 2 PLAYERS on the
+  connection check) enters in split-screen ([split.md](split.md)). STOP HOSTING with a partner in asks first; the
   partner's game goes back to its launcher with "The host closed the
   session."
 - **Join a friend**: the hosts heard on the LAN beacon (one card per
@@ -184,6 +186,8 @@ active one. Since #13 the player's progress lives in the host's campaign
 file ([campaign.md](campaign.md)). Entering writes the player's world from it
 into the slot, so the title screen offers CONTINUE with it. A player the
 campaign has no world for keeps the slot as it is: NEW GAME the first time.
+A split-screen second player plays in a second slot of the campaign
+(`slot2`, "<campaign> P2").
 The launcher puts the solo slot back when it opens again (a fresh empty slot
 when the game had none), so a solo CONTINUE never opens a campaign's save.
 HOST on a campaign whose file does not read, or comes from a newer build,

@@ -88,12 +88,12 @@ local function newSession(kind, opts)
     kind = kind, opts = opts, name = opts.name,
     cartridge = opts.cartridge, clock = opts.clock or defaultClock,
     frames = 0, names = {}, maps = {}, last = nil,
-    status = "idle", reason = nil,
+    status = "idle", reason = nil, seat = opts.seat or 1,
   }, Session)
   s.identity = opts.identity or Identity.load(Identity.saveFolderStore())
   if opts.log ~= false then
     s.log = SessionLog.open({ fs = opts.logFs or SessionLog.saveFolderFs(),
-                              device = s.identity.device, name = opts.name, seat = 1,
+                              device = s.identity.device, name = opts.name, seat = s.seat,
                               share = opts.shareLogs ~= false,
                               frame = function() return s.frames end })
   end
@@ -105,12 +105,13 @@ function Session:_client(conn, hostKey, via)
   self.hostKey = hostKey
   self.client = Client.new(conn, {
     name = self.name, game = self.cartridge.game, sha1 = self.cartridge.sha1,
-    device = identity.device, seat = 1, known = identity:known(hostKey, 1), via = via,
+    device = identity.device, seat = self.seat, known = identity:known(hostKey, self.seat), via = via,
     clock = self.opts.clock,
-    -- the host's own player: its lines are already in the host's log
-    log = self.kind == "join" and self.log or nil,
+    -- the host's own player: its lines are already in the host's log; one
+    -- link per device carries the log, the first seat's (#11)
+    log = self.kind == "join" and self.seat == 1 and self.log or nil,
     onWelcome = function(c, msg)
-      identity:remember(hostKey, 1, msg.campaign, msg.player)
+      identity:remember(hostKey, self.seat, msg.campaign, msg.player)
       say("joined campaign %s as %s (%s)", msg.campaign, msg.player, c.name)
     end,
   })
@@ -185,8 +186,9 @@ function Session.startHost(opts)
 end
 
 -- Dial a host at `address` and probe it; join() once it answered.
--- opts: name, shareLogs, dial (Transport.dial by default); tests pass
--- identity, logFs or log = false, clock.
+-- opts: name, shareLogs, dial (Transport.dial by default), seat (2: a
+-- split-screen device's second player, #11); tests pass identity, logFs or
+-- log = false, clock.
 function Session.startDial(opts)
   local s = newSession("join", opts)
   s.address = opts.address
@@ -550,6 +552,9 @@ end
 -- the process quits: a running session says goodbye, and the co-op screen
 -- says so when the launcher opens again
 function Session.shutdown()
+  -- a split-screen second player leaves first (design A11.13, #11)
+  local Split = package.loaded["src.coop.split.Split"]
+  if Split then Split.stop() end
   local s = Session.current
   if not s then return end
   s:leave(s.kind == "host" and "You closed the session." or "You left the session.")

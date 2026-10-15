@@ -6,7 +6,10 @@
 -- (or POKEPORT_COOP_HOST=PORT, POKEPORT_COOP_JOIN=ADDRESS,
 -- POKEPORT_COOP_NAME=NAME, POKEPORT_COOP_LOGS=off for scripted runs).
 -- --coop-campaign=ID (POKEPORT_COOP_CAMPAIGN) hosts that campaign again
--- from its file (#13) instead of a new one.
+-- from its file (#13) instead of a new one.  --coop-split[=NAME]
+-- (POKEPORT_COOP_SPLIT=NAME, or 1) adds a second player on this device in
+-- split-screen (#11, src/coop/split/Split.lua), named NAME when the host
+-- does not know them yet.
 -- The launcher's co-op screens (#12) are the way in for players; this entry
 -- skips them for scripted runs.  Once a game runs, the host side hosts a
 -- new campaign on UDP PORT (default 24680) with the LAN beacon, and the
@@ -41,6 +44,8 @@ function Dev.parse(args, getenv)
       cfg.logs = value
     elseif key == "campaign" and value ~= "" then
       cfg.campaign = value
+    elseif key == "split" then
+      cfg.split = value ~= "" and value or "1"
     end
   end
   if not cfg.mode then
@@ -57,6 +62,12 @@ function Dev.parse(args, getenv)
   cfg.port = cfg.port or Transport.DEFAULT_PORT
   cfg.campaign = cfg.campaign or getenv("POKEPORT_COOP_CAMPAIGN")
   if not Protocol.campaignId(cfg.campaign) then cfg.campaign = nil end
+  cfg.split = cfg.split or getenv("POKEPORT_COOP_SPLIT")
+  if cfg.split == "" or cfg.split == "0" then cfg.split = nil end
+  if cfg.split then
+    cfg.splitName = Protocol.name(cfg.split) and cfg.split ~= "1" and cfg.split or nil
+    cfg.split = true
+  end
   -- sharing the session log defaults on (#31, design A1.14)
   local logs = (cfg.logs or getenv("POKEPORT_COOP_LOGS") or ""):lower()
   cfg.logs = nil
@@ -93,6 +104,9 @@ function Dev.start()
                                  name = cfg.name, shareLogs = cfg.shareLogs })
     say("dialling %s", Dev.session.address)
   end
+  if cfg.split and Dev.session then
+    require("src.coop.split.Split").request({ name = cfg.splitName })
+  end
 end
 
 -- One frame of a game: the session the launcher started, or the one this
@@ -100,6 +114,11 @@ end
 -- ended under the game (main.lua then goes back to the launcher).
 function Dev.update(dt, game)
   if not game then return nil end
+  -- split-screen (#11): a second player once player 1's session is in
+  local Split = require("src.coop.split.Split")
+  if Split.pending and Session.current and Session.current.status == "joined" then
+    Split.frame(game)
+  end
   if not Dev.config then return Session.tick(dt, game) end
   if Session.takeLauncher() then return "launcher" end
   if not Dev.session then Dev.start() end

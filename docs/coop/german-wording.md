@@ -339,6 +339,7 @@ The credit line of upstream's licence is not translated.
 | No network found: only this device can join. | Kein Netzwerk gefunden: Nur dieses Gerät kann beitreten. | |
 | STOP HOSTING | HOSTEN BEENDEN | |
 | ENTER THE WORLD | IN DIE WELT | |
+| ENTER WITH 2 PLAYERS | ZU ZWEIT IN DIE WELT | |
 | ENTER THE WORLD → | IN DIE WELT → | |
 | Close this session? | Diese Sitzung beenden? | |
 | 1 friend will return to their launcher. The session cannot pass to another player. | 1 Freund kehrt zu seinem Launcher zurück. Die Sitzung kann nicht an einen anderen Spieler gehen. | |
@@ -397,6 +398,7 @@ The credit line of upstream's licence is not translated.
 | TRY AGAIN | NOCHMAL VERSUCHEN | |
 | NEW NAME | NEUER NAME | |
 | JOIN AS %s | ALS %s BEITRETEN | |
+| JOIN WITH 2 PLAYERS | ZU ZWEIT BEITRETEN | |
 | USE %s | %s NEHMEN | |
 | The host plays %s in %s, this game is %s in %s. Both need the same language. | Der Host spielt %s auf %s, dieses Spiel ist %s auf %s. Beide brauchen dieselbe Sprache. | |
 | The host plays %s. This game is %s. | Der Host spielt %s. Dieses Spiel ist %s. | |

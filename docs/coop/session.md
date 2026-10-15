@@ -189,7 +189,8 @@ device.
   that joins later gets the lines it missed from that backlog.
 - A device that does not share sends nothing and gets nothing; a batch it
   sends anyway is ignored. The hosting device's own player and a second
-  seat on one device carry no log of their own: one process keeps one log.
+  seat on one device carry no log on their link. A second seat (split-screen,
+  [split.md](split.md)) writes its own file, `session-<stamp>-<device>-seat2.jsonl`.
 - A log's last line (`close`) counts the lines sent, received and not
   sent.
 
@@ -232,11 +233,12 @@ past the launcher's screens:
 love . --coop-host[=PORT] [--coop-name=NAME] [--coop-logs=off]  # host on UDP PORT (24680)
 love . --coop-join=ADDRESS[:PORT] [--coop-name=NAME] [--coop-logs=off]
 love . --coop-host --coop-campaign=ID  # host that campaign again from its file (#13)
+love . --coop-host --coop-split[=NAME]   # and a second player in split-screen (#11)
 ```
 
 Scripted runs can use `POKEPORT_COOP_HOST=PORT`, `POKEPORT_COOP_JOIN=ADDRESS`,
-`POKEPORT_COOP_NAME=NAME`, `POKEPORT_COOP_LOGS=off` and
-`POKEPORT_COOP_CAMPAIGN=ID` instead. Once a game
+`POKEPORT_COOP_NAME=NAME`, `POKEPORT_COOP_LOGS=off`,
+`POKEPORT_COOP_CAMPAIGN=ID` and `POKEPORT_COOP_SPLIT=NAME` (or `1`) instead. Once a game
 is running, the host side hosts a new campaign (a new id each time) and the
 join side dials the address and joins as soon as the host answers. A step
 through a map connection shows a cell off the map for one frame, which is

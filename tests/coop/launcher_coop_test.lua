@@ -106,6 +106,7 @@ local function device(name, opts)
       return { update = function() end, hosts = function() return d.nearbyHosts end }
     end,
     closeNearby = function() d.listening = false end,
+    splitReady = function() return opts.split == true end,
     host = function(campaign, playerName, version)
       return Session.startHost({
         campaign = campaign, cartridge = { game = version, sha1 = SHA[version] },
@@ -662,6 +663,46 @@ do
   fresh:restoreSlots(saves)
   eq(active.blue, "slot2", "afterwards solo play gets a fresh slot of its own")
   eq(#slots.blue, 2, "next to the campaign's")
+end
+
+-- split-screen (#11): two players on one device ------------------------------
+
+do
+  -- a device whose CONTROLS has a device for each of two players
+  local H = device("RED", { split = true, address = "192.168.1.30" })
+  local m = H.menu
+  choose(m, "new")
+  choose(m, "go")
+  frames({ H })
+  eq(m.screen, "hosting", "the two-player device hosts")
+  eq(ids(m):match("stop.*$"), "stop,enter2,enter", "ENTER WITH 2 PLAYERS beside ENTER THE WORLD")
+  eq(m:items()[m.cursor].id, "enter", "ENTER THE WORLD stays preselected")
+  fits(m, "hosting with two players")
+  local out = choose(m, "enter2")
+  check(out and out.kind == "coop_enter" and out.split == true,
+        "ENTER WITH 2 PLAYERS enters with a second player on this device")
+  local J = device("BLUE", { split = true, start = "join" })
+  J.nearbyHosts = { { address = H.address .. ":24680", lobby = H.menu.session.host:lobby() } }
+  frames({ J }, 1)
+  choose(J.menu, "nearby")
+  frames({ H, J })
+  eq(J.menu.session.status, "probed", "a two-player device found the host")
+  eq(ids(J.menu), "cancel,name,join2,join", "JOIN WITH 2 PLAYERS beside JOIN AS")
+  fits(J.menu, "connecting with two players")
+  choose(J.menu, "join2")
+  frames({ H, J })
+  check(J.command and J.command.kind == "coop_enter" and J.command.split == true,
+        "JOIN WITH 2 PLAYERS enters with a second player on this device")
+  -- a plain join on the same screen enters alone
+  local K = device("GREEN", { split = true, start = "join" })
+  K.nearbyHosts = J.nearbyHosts
+  frames({ K }, 1)
+  choose(K.menu, "nearby")
+  frames({ H, K })
+  choose(K.menu, "join")
+  frames({ H, K })
+  check(K.command and K.command.kind == "coop_enter" and K.command.split == nil,
+        "JOIN AS enters alone")
 end
 
 -- the return note ----------------------------------------------------------

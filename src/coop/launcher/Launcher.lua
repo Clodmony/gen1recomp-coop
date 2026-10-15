@@ -54,6 +54,8 @@ end
 
 function Launcher.new(onBoot, opts)
   opts = opts or {}
+  -- a split-screen second player ends with the game it played beside (#11)
+  require("src.coop.split.Split").stop()
   local self = setmetatable({
     onBoot = onBoot, bootOnImport = opts.bootOnImport == true,
     readyCache = {}, saveCache = {}, clock = 0, axis = {},
@@ -160,6 +162,7 @@ function Launcher:_coopEnv(version)
     settings = settings,
     campaigns = Campaigns,
     addresses = function() return require("src.coop.session.Addresses").mine() end,
+    splitReady = function() return Seats.complete(2) end,
     nearby = function()
       if not launcher.nearby and not launcher.nearbyError then
         local listener, why = require("src.coop.session.Beacon").listener()
@@ -231,7 +234,7 @@ function Launcher:_savesEnv(version)
     canType = not mobile(),
     campaignOf = function(slotId)
       for id, entry in pairs(settings.slots or {}) do
-        if entry.version == version and entry.slot == slotId then
+        if entry.version == version and (entry.slot == slotId or entry.slot2 == slotId) then
           local card = require("src.coop.Campaigns").get(id)
           return card and card.title or L("a campaign")
         end
@@ -321,6 +324,10 @@ function Launcher:_run(command)
     self:_coopWorld(SaveData, command.version, slot)
     if self.nearby then self.nearby:close() end
     self.nearby = nil
+    -- two players on this device (#11): the second joins once the game runs
+    if command.split then
+      require("src.coop.split.Split").request({ settings = self:_coopSettings() })
+    end
     self:_boot(command.version)
   elseif command.kind == "copy" then
     if love.system.setClipboardText then love.system.setClipboardText(command.text) end

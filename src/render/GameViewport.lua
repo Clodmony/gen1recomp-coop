@@ -11,6 +11,11 @@ local Viewport = {
   canvas = nil,
   generation = nil,
   frameActive = false,
+  -- co-op (#11): a split-screen seat's view, { x, y, width, height } in
+  -- window units, set around this world's draw by src/coop/split/Split.lua;
+  -- it stands in for a layout mod's rect, and finish leaves the rest of the
+  -- window (the other seat's view) as it is
+  forced = nil,
 }
 
 local function finite(value)
@@ -62,11 +67,12 @@ function Viewport.begin(generation)
       return { x = 0, y = 0, width = ctx.width, height = ctx.height }
     end, context)
   end
-  local rect = clampRect(requested, w, h)
+  local rect = clampRect(Viewport.forced or requested, w, h) -- co-op (#11): forced
   Viewport.full = context
   Viewport.rect = rect
   Viewport.generation = generation
-  local active = type(requested) == "table" and requested.capture == true
+  local active = Viewport.forced ~= nil -- co-op (#11)
+    or type(requested) == "table" and requested.capture == true
     or rect.x ~= 0 or rect.y ~= 0
     or rect.width ~= w or rect.height ~= h
   Viewport.frameActive = active
@@ -156,7 +162,13 @@ function Viewport.finish(game)
   G.setScissor()
   G.setShader()
   G.setBlendMode("alpha")
-  G.clear(0, 0, 0, 1)
+  -- co-op (#11): a split-screen view clears only its own part of the window
+  if Viewport.forced then
+    G.setColor(0, 0, 0, 1)
+    G.rectangle("fill", rect.x, rect.y, rect.width, rect.height)
+  else
+    G.clear(0, 0, 0, 1)
+  end
   local context = {
     canvas = Viewport.canvas,
     x = rect.x, y = rect.y, width = rect.width, height = rect.height,
