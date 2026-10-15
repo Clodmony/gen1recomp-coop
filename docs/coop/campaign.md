@@ -40,6 +40,9 @@ game saved. The session that carries it is in [session.md](session.md).
   options and without the story's entries. It holds the team, the PC
   (twelve boxes of twenty) and current box, bag, money, map, cell, facing
   and the rest. A world sent to the player has the story laid over it.
+- the items the campaign owes them (`gifts`, numbered by `giftSeq`, #16,
+  [items.md](items.md)): kept until a world they save shows each taken
+  (its `coopGifts`).
 
 The battle a player is in and their return point come with #18. Whether a
 player is connected is the session's business and is not stored.
@@ -65,8 +68,9 @@ and changes nothing. Gifts (#16) and victories (#18, #21) use it.
 `coop/campaigns/<game>/<id>.campaign` in the save folder, beside the
 campaign's card (`coop/campaigns/<id>.json`, #12). It is JSON:
 
-- `format` (`"gen1recomp-coop campaign"`) and `version` (2; version 1,
-  from before the shared world, is migrated: [world.md](world.md));
+- `format` (`"gen1recomp-coop campaign"`) and `version` (3; version 1,
+  from before the shared world, is migrated: [world.md](world.md); version
+  2, from before story items, gets empty gift lists: [items.md](items.md));
 - `saved` (unix time);
 - `campaign`, the campaign section;
 - `players`, a list with one entry per player: their `world` (the game's

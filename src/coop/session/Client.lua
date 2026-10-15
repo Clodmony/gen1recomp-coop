@@ -20,8 +20,9 @@
 -- The shared world (#14): c.story is the campaign's story as the host last
 -- sent it (a flat map of Ownership paths, nil until the first `story`),
 -- c.storyApplied the last of this player's patches the host applied;
--- c:sendPatch(set, unset) sends this window's change (Window.lua decides
--- when).
+-- c:sendPatch(set, unset, bag) sends this window's change (Window.lua decides
+-- when).  Story items (#16): c.gifts lists what the host owes this player
+-- (Window.lua applies each once and drops it).
 --
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
@@ -61,6 +62,7 @@ function Client.new(conn, opts)
     savedAt = nil, -- clock time the campaign was last saved, by the host's word
     story = nil, -- the shared story as the host last sent it (#14)
     storyApplied = 0, storyRev = 0,
+    gifts = {}, -- items the host owes this player, oldest first (#16)
     dropped = 0,
     onWelcome = opts.onWelcome,
     log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
@@ -115,10 +117,11 @@ function Client:sendWorld(text, checkpoint, kind)
 end
 
 -- This window's change to the shared story (#14, design A5.2): entries
--- set (path -> value) and cleared (a list of paths).  Returns the seq, or
--- nil when not joined.
-function Client:sendPatch(set, unset)
-  return self:send({ type = "patch", set = set or {}, unset = unset or {} })
+-- set (path -> value) and cleared (a list of paths), and the window's bag
+-- change in the same change (#16; nil when the bag did not move).  Returns
+-- the seq, or nil when not joined.
+function Client:sendPatch(set, unset, bag)
+  return self:send({ type = "patch", set = set or {}, unset = unset or {}, bag = bag })
 end
 
 -- the `saved` messages since the last call, oldest first
@@ -177,6 +180,8 @@ function Client:_handle(msg)
     for path, v in pairs(msg.set) do self.story[path] = v end
     for _, path in ipairs(msg.unset) do self.story[path] = nil end
     self.storyApplied, self.storyRev = msg.applied, msg.rev
+  elseif t == "gifts" then
+    for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
   elseif t == "saved" then
     if msg.ok then self.savedAt = self.clock() end
     self.saves[#self.saves + 1] = msg

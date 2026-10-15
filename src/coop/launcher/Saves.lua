@@ -84,7 +84,9 @@ function Saves:items()
     for _, slot in ipairs(self:details().slots) do
       -- a campaign's slot is entered from its campaign, not here
       if not slot.campaign then add({ id = "play", slot = slot.id, label = L("PLAY →") }) end
-      add({ id = "export", slot = slot.id, label = L("EXPORT"), enabled = slot.exists })
+      -- a campaign's world (its 40-row bag) never goes to a cartridge save (#16, A6.8)
+      add({ id = "export", slot = slot.id, label = L("EXPORT"),
+            enabled = slot.exists and not slot.campaign })
       add({ id = "delete", slot = slot.id, label = L("DELETE") })
     end
     add({ id = "new", label = L("+ NEW SAVE") })

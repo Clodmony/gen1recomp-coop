@@ -9,7 +9,8 @@
 --   every frame: w:update({ save = save, busy = why or nil, map = "PALLET_TOWN",
 --                           still = true,  -- not between two cells
 --                           reload = function(map) … end,
---                           refresh = function(map) … end })
+--                           refresh = function(map) … end,
+--                           gifted = function(gift, where) … end })  -- optional
 --   w:flush(save)   -- START > SAVE: the scene so far goes out now
 --
 -- Rules:
@@ -35,8 +36,17 @@
 --     map, a pulled flag the map is stamped from owes it a reload, and a
 --     Victory Road switch cleared by a partner waits while this window
 --     still stands on that floor.
+--   * Story items (#16, design A6, Items.lua): the bag and money are noted
+--     at every rest point; a patch that sets story entries carries the
+--     bag's change since the last rest point (and whether money went down),
+--     so the host can share it.  The items the host owes this player
+--     (client.gifts) land at a rest point, each once: the save keeps the
+--     last one taken (`coopGifts`), so a gift heard again after a rejoin
+--     is skipped unless the world it landed in was never saved.  A gift
+--     taken is not this window's own change.
 
 local Ownership = require("src.coop.campaign.Ownership")
+local Items = require("src.coop.campaign.Items")
 
 local Window = {}
 Window.__index = Window
@@ -52,6 +62,9 @@ function Window.new(client)
     unconfirmed = {}, -- seq -> { path = true } for patches not yet applied
     patches = 0, taken = 0, reloads = 0, -- counters for the log and the tests
     owed = nil,      -- { map, reload } a reload or refresh owed to that map
+    bag = nil,       -- the bag at the last rest point (Items.bag)
+    money = nil,     -- the money then
+    gifts = 0,       -- gifts landed (a counter for the log and the tests)
   }, Window)
 end
 
@@ -82,12 +95,29 @@ function Window:_confirm()
   end
 end
 
+-- the bag and money as they stand: the next change is measured from here
+function Window:_note(save)
+  self.bag = Items.bag(save)
+  self.money = save.money
+end
+
+-- the bag's change since the last rest point, or nil (#16)
+function Window:_bagChange(save)
+  if not self.bag then return nil end
+  local gained, lost = Items.delta(self.bag, Items.bag(save))
+  if next(gained) == nil and next(lost) == nil then return nil end
+  local spent = type(save.money) == "number" and type(self.money) == "number"
+    and save.money < self.money
+  return { gained = gained, lost = lost, spent = spent }
+end
+
 -- this window's change since the last patch goes out; returns its seq
 function Window:_send(save)
   local cur = Ownership.view(save)
   local set, unset, n = Ownership.diff(self.sent, cur)
   if n == 0 then return nil end
-  local seq = self.client:sendPatch(set, unset)
+  local bag = next(set) ~= nil and self:_bagChange(save) or nil
+  local seq = self.client:sendPatch(set, unset, bag)
   if not seq then return nil end
   local paths = {}
   for path in pairs(set) do paths[path] = true end
@@ -173,6 +203,27 @@ function Window:_take(f)
   end
 end
 
+-- the items the host owes this player, each once (#16, design A6.2, A6.6)
+function Window:_gifts(f)
+  local list = self.client.gifts
+  if type(list) ~= "table" or #list == 0 then return end
+  local save = f.save
+  for _, g in ipairs(list) do
+    if g.seq > (save.coopGifts or 0) then
+      local where
+      if g.qty > 0 then
+        where = Items.give(save, g.item, g.qty, g.once)
+      else
+        where = Items.take(save, g.item, -g.qty) > 0 and "taken" or nil
+      end
+      save.coopGifts = g.seq
+      self.gifts = self.gifts + 1
+      if f.gifted then f.gifted(g, where) end
+    end
+  end
+  self.client.gifts = {}
+end
+
 function Window:update(f)
   if not self:_ready() or type(f.save) ~= "table" then return end
   self:_confirm()
@@ -188,6 +239,8 @@ function Window:update(f)
     self:_send(f.save)
     self:_take(f)
   end
+  self:_gifts(f)
+  self:_note(f.save)
   self:_settle(f)
 end
 
@@ -200,7 +253,9 @@ end
 function Window:flush(save)
   if not self:_ready() or not self.sent or type(save) ~= "table" then return nil end
   self:_confirm()
-  return self:_send(save)
+  local seq = self:_send(save)
+  self:_note(save)
+  return seq
 end
 
 return Window

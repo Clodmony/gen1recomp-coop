@@ -57,7 +57,7 @@ checks what the host sends.
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
 | `world` | `seq`, `save` (the game's save text, at most 1.5 MiB), `checkpoint` (a real SAVE asking the host to save the campaign), `kind` (`menu`, `box`, `hall`, `link`, `quick`; optional) |
-| `patch` | `seq`, `set` (story path to value: a boolean or a whole number 0 to 255), `unset` (paths): this window's change to the shared story since its last patch, at most 8192 entries each |
+| `patch` | `seq`, `set` (story path to value: a boolean or a whole number 0 to 255), `unset` (paths): this window's change to the shared story since its last patch, at most 8192 entries each, `bag` (optional, #16: `gained` and `lost`, item id to a count 1 to 999, and `spent`, the money went down; the window's bag change in the same rest-to-rest change) |
 
 | Host to client | Fields |
 |---|---|
@@ -67,6 +67,7 @@ checks what the host sends.
 | `world` | once after `welcome`: `fresh` (the campaign has no world for this player), `save` (their world) |
 | `saved` | `ok`, `by` (who saved), `you` (this player asked), `reason` (a refusal: `battle_in_progress`, `bad_world`, `save_failed`), `kind` |
 | `story` | `rev`, `base` (the whole story, replacing the window's), `set`, `unset` (what changed since the last `story` to this player), `applied` (the last of this player's patches the host applied) |
+| `gifts` | `list` (#16): items the campaign owes this player, oldest first, each `seq`, `item`, `qty` (below 0 takes), `once` (not given to a player who holds one), `from` (the partner's name), `race` (a take-back); at most 256 a message |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
@@ -102,6 +103,10 @@ Rules (design A1):
   its path and the value fits (`Ownership.lua`); others are skipped, and
   the patch still counts as applied. The world a player gets has the story
   laid over it. See [world.md](world.md).
+- **Story items** (#16). A `patch` that sets story entries carries its
+  window's bag change; the host shares it or takes it back as
+  [items.md](items.md) says. Each link hears each owed gift once; a new
+  link hears them all again, and the window applies each `seq` once.
 - **Trusted windows** (D72). The host checks only the step length, up to
   two cells on one map (a ledge hop). A map change or a jump has to come
   with `warp`, which is taken as it is. A refused step is `bad_step`.
