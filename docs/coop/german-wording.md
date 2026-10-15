@@ -731,6 +731,13 @@ characters, a menu row fewer.
 | %s handed over %s. | %s hat %s abgegeben. | |
 | No room for %s! | Kein Platz: %s! | |
 | Got %s. | %s erhalten. | |
+| JOIN %s | %s HELFEN | |
+| Joining %s... | Zu %s... | |
+| The battle is full. | Der Kampf ist voll. | |
+| The battle is over. | Der Kampf ist vorbei. | |
+| Could not join the battle. | Beitritt zum Kampf ging nicht. | |
+| Only %s can / run from this / battle! | Nur %s kann / aus diesem Kampf / fliehen! | |
+| %s caught / %s! | %s hat / %s gefangen! | |
 
 #### battle
 

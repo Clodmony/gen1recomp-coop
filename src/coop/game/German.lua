@@ -413,6 +413,14 @@ P["%s went to the PC."] = "%s liegt jetzt im PC."
 P["%s handed over %s."] = "%s hat %s abgegeben."
 P["No room for %s!"] = "Kein Platz: %s!"
 P["Got %s."] = "%s erhalten."
+-- co-op battles (#18)
+P["JOIN %s"] = "%s HELFEN"
+P["Joining %s..."] = "Zu %s..."
+P["The battle is full."] = "Der Kampf ist voll."
+P["The battle is over."] = "Der Kampf ist vorbei."
+P["Could not join the battle."] = "Beitritt zum Kampf ging nicht."
+P["Only %s can\nrun from this\nbattle!"] = "Nur %s kann\naus diesem Kampf\nfliehen!"
+P["%s caught\n%s!"] = "%s hat\n%s gefangen!"
 
 -- battle
 P["FOE"] = "GEGNER"

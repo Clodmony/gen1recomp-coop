@@ -12,9 +12,9 @@
 --     CANCEL.
 --
 -- The box also shows when the campaign was last saved and that it saves
--- itself (#13).  Fight offers, JOIN/REJOIN, BATTLE and TRADE rows, "in a
--- battle" and "in the opening" come with #34 (battles, friend battles, new
--- players).
+-- itself (#13).  JOIN <NAME> joins a partner's battle (#18).  Fight
+-- offers, REJOIN, BATTLE and TRADE rows, "in a battle" and "in the
+-- opening" come with #34 (battles, friend battles, new players).
 
 local Font = require("src.render.Font")
 local Menu = require("src.ui.Menu")
@@ -86,6 +86,8 @@ function CoopMenu.new(game, opts)
   local items = {}
   local function again() game.stack:push(CoopMenu.new(game, opts)) end
 
+  -- JOIN <NAME>: a partner's battle (#18, design A8.3)
+  require("src.coop.game.Battles").joinRows(game, items)
   if not hasTownMap(game) then
     items[#items + 1] = { label = Strings("TOWN MAP"), onSelect = function()
       again()
