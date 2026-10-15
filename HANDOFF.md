@@ -65,7 +65,8 @@ Last updated 2026-10-15 (after merging #42-#49).
 ## Worktrees and background processes
 
 - Main checkout on `gen1recomp-coop` (leave it; it is behind origin until
-  pulled). One Superset worktree on `coop/group5a-story-items` (merged).
+  pulled). One Superset worktree on `coop/group5a-story-items` (merged; its
+  branch is deleted on GitHub; remove it, see Cleanup).
   No background processes.
 
 ## Still open
@@ -76,10 +77,14 @@ Last updated 2026-10-15 (after merging #42-#49).
 
 ## Cleanup the owner may approve
 
-- Done 2026-10-15: old scratch, the merged local branches
-  `coop/10-session-core`, `coop/25-german`, `coop/group1-cleanup`,
-  `coop/group2-first-playable`.
-- Asked at the end of the session (see the answers in the next note, or
-  ask again): close the finished milestones (Groups 1, 2a, 3, 4, 5, 5a),
-  delete the merged branches (local and on GitHub), remove the merged
-  worktree, delete scratch `g2a/` and `coop/workflow-groups`.
+- Done 2026-10-15 (owner approved): old scratch and `g2a/`; the merged
+  local branches `coop/10-session-core`, `coop/25-german`,
+  `coop/group1-cleanup`, `coop/group2-first-playable`; the finished
+  milestones (Groups 1, 2a, 3, 4, 5, 5a) closed; every merged branch
+  deleted on GitHub.
+- Approved, for the next session (or Superset): remove the merged worktree
+  on `coop/group5a-story-items` (it ran this session, so it could not
+  remove itself) and its local branch.
+- Kept by the owner's choice: the other merged local branches
+  (`coop/group2a-*`, `coop/group3-*`, `coop/group4-*`, `coop/group5-*`,
+  `coop/workflow-groups`); the main checkout is not pulled.
