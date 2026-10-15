@@ -1429,8 +1429,10 @@ end
 -- unfocused, so reset input on either transition rather than trust it.
 function love.focus(f)
   SwitchDiagnostics.onFocus(f)
-  -- co-op (#13): a hosting app put away saves its campaign
+  -- co-op (#13, #20): a hosting app put away saves its campaign; a joining
+  -- one back after a long pause dials afresh
   if not f then require("src.coop.session.Session").pause() end
+  if f then require("src.coop.session.Session").resume() end
   if editorMode or TouchEditor then return end
   if Studio then
     if Studio.focus then Studio.focus(f) end
@@ -1447,8 +1449,10 @@ end
 
 -- v is true when the window becomes visible again, false on minimize.
 function love.visible(v)
-  -- co-op (#13): a hosting app put away saves its campaign
+  -- co-op (#13, #20): a hosting app put away saves its campaign; a joining
+  -- one back after a long pause dials afresh
   if not v then require("src.coop.session.Session").pause() end
+  if v then require("src.coop.session.Session").resume() end
   if editorMode or TouchEditor then return end
   if Studio then
     if Studio.visible then Studio.visible(v) end
