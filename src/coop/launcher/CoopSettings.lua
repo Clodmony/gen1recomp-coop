@@ -61,10 +61,12 @@ function CoopSettings.load(fs)
                     title = type(last.title) == "string" and last.title:sub(1, 40) or nil }
     end
   end
+  local function slotId(v) return type(v) == "string" and v:match("^slot%d+$") and v or nil end
   for id, s in pairs(type(data.slots) == "table" and data.slots or {}) do
+    -- slot2: a split-screen device's second seat plays in a slot of its own (#11)
     if Protocol.campaignId(id) and type(s) == "table" and Protocol.gameId(s.version)
-        and type(s.slot) == "string" and s.slot:match("^slot%d+$") then
-      self.slots[id] = { version = s.version, slot = s.slot }
+        and (slotId(s.slot) or slotId(s.slot2)) then
+      self.slots[id] = { version = s.version, slot = slotId(s.slot), slot2 = slotId(s.slot2) }
     end
   end
   for n, d in ipairs(type(data.seats) == "table" and data.seats or {}) do
@@ -116,10 +118,14 @@ end
 
 -- Make the campaign's own save slot active for `version` (created and named
 -- after the campaign the first time) and remember the slot that was active
--- before.  `saves` is SaveData's slot calls; returns the slot id.
-function CoopSettings:enterSlot(saves, version, campaignId, title)
+-- before.  `saves` is SaveData's slot calls; returns the slot id.  Seat 2
+-- (split-screen, #11) has a slot of its own in the same campaign, made
+-- active in its own game's SaveData.
+function CoopSettings:enterSlot(saves, version, campaignId, title, seat)
+  local key = seat == 2 and "slot2" or "slot"
   local entry = self.slots[campaignId]
-  local slot = entry and entry.version == version and entry.slot or nil
+  if entry and entry.version ~= version then entry = nil end
+  local slot = entry and entry[key] or nil
   if slot then
     local exists = false
     for _, s in ipairs(saves.listSlots(version) or {}) do
@@ -134,7 +140,9 @@ function CoopSettings:enterSlot(saves, version, campaignId, title)
     slot = saves.createSlot(version)
     if not slot then return nil end
     pcall(saves.renameSlot, version, slot, title)
-    self.slots[campaignId] = { version = version, slot = slot }
+    entry = entry or { version = version }
+    entry[key] = slot
+    self.slots[campaignId] = entry
   end
   saves.setActiveSlot(version, slot)
   self:save()
