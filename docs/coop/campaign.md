@@ -57,7 +57,41 @@ player is connected is the session's business and is not stored.
   nothing matches, it gets the next serial.
 - Twins with one fingerprint keep two uids. A uid that appears twice in one
   world stays with the first Pokémon only.
-- #17 refines the matching (an unchanged row first, the window's hint).
+- Matching (#17, A7.3): a row without a uid takes a uid of the player's last
+  world with its fingerprint that no row carries. It takes the one whose row
+  is unchanged first, then the one that stood on its place, then any.
+- The host sends back the uids it gave (`uids`: box, slot, uid, fingerprint).
+  The window stamps each one on the row that still stands there with that
+  fingerprint, so its rows carry them from then on.
+
+**Holdings** (#17, design A7.2, A7.4, A7.5, decision G25):
+- A window sends its player's holdings at its rest points
+  (`src/coop/campaign/Window.lua`, `holdings`). That is its world without
+  the PC, and the PC when it changed or with the first copy on a link. The
+  host keeps it as it keeps a saved world, without saving the campaign; its
+  own cadence saves it (A3.9). So a heal, a gift, a catch, a deposit or a
+  withdrawal reaches the host without a SAVE, and a rejoin opens it.
+- It goes out when the team, current box, Pokédex, bag or money changed.
+  The window looks on the first rest frame after the player was held, and
+  every `HOLDINGS_EVERY` (60) rest frames after that: a poisoned team loses
+  HP while walking. It looks at the PC only on that first frame, since the
+  PC changes only while the player is held (a PC, a catch).
+- The first rest point only notes the holdings: the window opened what the
+  host has. START > SAVE sends the world whole, so nothing goes again.
+- A battle the world opens sends the holdings first.
+- The window is the only writer of its player's holdings: battle results
+  and catches are written in the windows (G24). So the host takes every
+  copy in the link's order and keeps no revision (A7.2's refusal has
+  nothing to guard here).
+- Not covered: a player who never saved and whose holdings never changed
+  has no world on the host, as before.
+- Checked live (#17: US Red, two ENet processes, offscreen). A driver
+  lowered RED's lead's HP while RED stood on the map. Without a SAVE, the
+  host's copy of RED's world then had that HP, and RED's row carried the
+  uid the host gave it. After a battle, the RATTATA GREEN caught for RED
+  was in the host's copy of RED's team, with a uid RED's row carried. One
+  run whose driver waited a fixed 200 frames missed the HP change; polling
+  found it arrive.
 
 **Commits** (design A3.3): `campaign:commit(id, apply)` with a stable id
 such as `gift:BICYCLE` or `victory:<encounter>`. A repeated id returns false
@@ -177,6 +211,12 @@ ROM-free, in `tests/coop/`:
   - migrations step by step;
   - the journal: lines, PCs left out, torn lines, other campaigns;
   - the cadence: first save, 30 s, a battle's end.
+- `holdings_test.lua` (#17): uid matching (twins, an unchanged row, the
+  row's place); holdings at rest points (held windows, the PC only when
+  changed, a redial sending the PC again, a SAVE not sent twice, a rejoin
+  opening the kept world); the uids reaching the window; a catch for the
+  named player; room and a refused ball; the Pokédex; a gift with six in
+  the party.
 - `campaign_session_test.lua`: host and clients over loopback.
   - a new player's fresh start;
   - a world kept and journaled;

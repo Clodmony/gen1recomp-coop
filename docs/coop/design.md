@@ -480,6 +480,12 @@ In place (#16, [items.md](items.md), G22).
 
 ### A7. Pokémon, party, PC, Pokédex and captures
 
+In place (#17, [campaign.md](campaign.md), [battles.md](battles.md), G25),
+with these adaptations: A7.2 keeps no holdings revision, since the window
+is the only writer of its player's holdings; A7.3's hint is the row's
+place; A7.6's room follows this engine's box overflow. A7.8 and A7.10 came
+with #18.
+
 1. **carry** Team of at most six and a PC of twelve boxes of twenty per player,
    stored as `{uid, mon, box}`; a combined roster exists only inside a battle
    (brief, D6, D29).
@@ -523,8 +529,8 @@ In place (#16, [items.md](items.md), G22).
 
 In place (#18, [battles.md](battles.md), G24): every rule below but their
 menu side, which is #19's presentation (making and showing suggestions,
-A9.3 and A9.4; A8.11's marks in the move list), and the catch's name list
-(A7.6, #17): a catch goes to the thrower.
+A9.3 and A9.4; A8.11's marks in the move list). The catch's name list
+(A7.6) came with #17.
 
 1. **carry** A player starts a battle alone; the other may explore or start a
    separate battle; no player or Pokémon is in two battles at once (brief,
@@ -1249,3 +1255,20 @@ sibling's D-numbers.
   a desync is detected, not repaired; a window has to run its copy for its
   player's Pokémon to get their results (a player away from the battle is
   #20). Details: [battles.md](battles.md).
+- **G25. A window's holdings travel at its rest points; the window is their
+  only writer** (#17, 2026-10-15, proposed). A7.2 has the host refuse a
+  copy older than its own latest change (a catch, battle results). Under
+  G24 neither happens on the host: every copy plays the catch and the
+  battle's results, and the copy of the player the catch is for stores it
+  in that player's world (a copy out of sight plays on, A11.3, so a named
+  player who left still gets it). So the window sends its holdings (its
+  world without the PC, the PC when it changed or first on a link) at rest
+  points, and the host takes each copy in the link's order with no
+  revision. The host stamps uids and sends back the ones it gave, so a
+  window's rows carry them; matching prefers an unchanged row, then the
+  row's place, which the host already knows (A7.3's hint). A catch's room
+  is said with each team (`room`): a party under six, or any box with
+  space, since this engine fills the next box (`Boxes.deposit`). Costs: a
+  window encodes its PC after each held scene (about 2 ms for a full PC on
+  a desktop); a world reaches the host each time the holdings change, not
+  only on SAVE. Details: [campaign.md](campaign.md).
