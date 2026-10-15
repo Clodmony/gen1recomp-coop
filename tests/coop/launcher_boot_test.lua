@@ -62,19 +62,34 @@ end
 
 -- every string the launcher draws in one frame
 local function drawnText()
-  local saved, out = Launcher._text, {}
-  Launcher._text = function(self, text, col, row)
-    out[#out + 1] = text
-    return saved(self, text, col, row)
-  end
   love.draw()
-  Launcher._text = saved
-  return out
+  return Launcher.current and Launcher.current.page and Launcher.current.page:texts() or {}
 end
 
 local function showsCredit()
   local joined = table.concat(drawnText(), " "):gsub("%s", "")
   return joined:find(Menu.CREDIT:gsub("%s", ""), 1, true) ~= nil
+end
+
+-- the window position of the page target for the model row `id` (`game`
+-- for a cartridge), or of the target with `key`
+local function target(l, id, game)
+  local page = l:_page()
+  local model = require("src.coop.launcher.Screens").model(l.menu)
+  for _, n in ipairs(page:targets()) do
+    local act = n.act or {}
+    local row = act.kind == "row" and model:items()[act.index]
+    if (row and row.id == id and (game == nil or row.game == game)) or n.key == id then
+      local scale, ox, oy = l:_layout()
+      return ox + (n.x + n.w / 2) * scale, oy + (n.y + n.h / 2) * scale
+    end
+  end
+  error("no target " .. tostring(id))
+end
+
+local function click(l, id, game, button)
+  local x, y = target(l, id, game)
+  love.mousepressed(x, y, button or 1, false)
 end
 
 -- 1. fresh start: the fork's launcher, credit on screen
@@ -85,34 +100,45 @@ do
   local l = Launcher.current
   check(l ~= nil, "a fresh start opens the fork's launcher")
   if not l then T.finish() end
-  eq(l.menu.screen, "title", "on its title screen")
-  check(showsCredit(), "the title screen shows the credit line")
-  -- past every game row to CREDITS
-  for _ = 1, #require("src.coop.launcher.Menu").GAMES do love.keypressed("down") end
+  eq(l.menu.screen, "play", "on PLAY")
+  check(showsCredit(), "PLAY shows the credit line")
+  eq(l.ui.focus, "row:1", "the focus starts on the first cartridge")
+  love.keypressed("up")
+  check(tostring(l.ui.focus):find("^tab:"), "up from the cartridges reaches the tabs")
+  for _ = 1, 6 do love.keypressed("right") end
+  love.keypressed("left")
+  eq(l.ui.focus, "tab:help", "the arrows walk the tabs")
   love.keypressed("return")
-  eq(l.menu.screen, "credits", "keyboard reaches CREDITS")
-  check(showsCredit(), "the credits screen shows the credit line")
+  eq(l.menu.screen, "help", "the keyboard opens HELP")
+  check(showsCredit(), "HELP shows the credit line")
   love.keypressed("x")
-  love.gamepadpressed({ isGamepad = function() return true end }, "dpup")
-  love.gamepadpressed({ isGamepad = function() return true end }, "dpup")
-  love.gamepadpressed({ isGamepad = function() return true end }, "dpup")
-  love.gamepadpressed({ isGamepad = function() return true end }, "a")
-  eq(l.menu.screen, "import", "a pad picks Red, which has no ROM yet")
+  eq(l.menu.screen, "play", "X goes back to PLAY")
+  local pad = { isGamepad = function() return true end }
+  love.gamepadpressed(pad, "dpright")
+  love.gamepadpressed(pad, "a")
+  eq(l.menu.version, "blue", "a pad picks Blue")
+  local x, y = target(l, "import")
+  love.mousemoved(x, y, 0, 0, false)
+  love.keypressed("return")
+  eq(l.menu.screen, "import", "IMPORT ROM opens the import screen")
+  check(showsCredit(), "which shows the credit line")
   love.textinput("/no/such/rom.gb")
   eq(l.menu.path, "/no/such/rom.gb", "the path is typed")
   love.keypressed("return")
   check(l.menu.notice ~= nil and l.menu.notice:find("Could not open", 1, true) ~= nil,
     "a missing file is reported")
+  check(showsCredit(), "the message keeps the credit line on screen")
   love.keypressed("return")
   love.keypressed("escape")
-  eq(l.menu.screen, "title", "Escape goes back to the title")
+  eq(l.menu.screen, "play", "Escape goes back to PLAY")
   noLauncherModules("after using the launcher")
 end
 
 -- 2. the key that opens the path field is not typed into it
 do
   local l = Launcher.current
-  l.menu.cursor = 2
+  local x, y = target(l, "import")
+  love.mousemoved(x, y, 0, 0, false)
   love.keypressed("z")
   love.textinput("z")
   eq(l.menu.screen, "import", "Z opens Blue's import screen")
@@ -123,18 +149,23 @@ do
   love.keypressed("escape")
 end
 
--- 2b. mouse and file drop
+-- 2b. mouse, wheel and file drop
 do
   local l = Launcher.current
-  local scale, ox, oy = l:_layout()
-  -- the row of the second item (BLUE): text row 4, in Game Boy pixels
-  local x, y = ox + 40 * scale, oy + (4 * 8 + 4) * scale
+  local x, y = target(l, "cart", "yellow")
   love.mousemoved(x, y, 0, 0, false)
-  eq(l.menu.cursor, 2, "hovering a row moves the cursor to it")
+  eq(l.menu:items()[l.menu.cursor].game, "yellow", "hovering a cartridge moves the cursor to it")
   love.mousepressed(x, y, 1, false)
-  eq(l.menu.screen, "import", "clicking BLUE opens its import screen")
+  eq(l.menu.version, "yellow", "clicking it picks it")
+  click(l, "import")
+  eq(l.menu.screen, "import", "clicking IMPORT ROM opens the import screen")
   love.mousepressed(x, y, 2, false)
-  eq(l.menu.screen, "title", "a right click goes back")
+  eq(l.menu.screen, "play", "a right click goes back")
+  click(l, "tab:help")
+  eq(l.menu.screen, "help", "clicking a tab opens it")
+  love.wheelmoved(0, -1)
+  check(l.ui.scroll >= 0, "the wheel scrolls a page (no further than its end)")
+  click(l, "tab:play")
   local junk = {
     open = function() return true end, close = function() end,
     getSize = function() return 4 end, read = function() return "junk" end,
@@ -153,9 +184,9 @@ do
   ready.red = true
   local l = Launcher.current
   l.readyCache = {}
-  l.menu.cursor = 1
-  love.keypressed("return")
-  eq(l.menu.screen, "game", "an imported Red opens its game screen")
+  click(l, "cart", "red")
+  click(l, "solo")
+  eq(l.menu.screen, "solo", "PLAY SOLO on an imported Red opens the solo sheet")
   love.keypressed("return")
   eq(l.booted, "red", "NEW GAME boots Red")
   eq(Launcher.current, nil, "the launcher is gone")
@@ -186,7 +217,7 @@ do
   frames(2)
   local l = Launcher.current
   check(l ~= nil, "a restart opens the fork's launcher")
-  eq(l and l.menu.cursor, 3, "on the game it came from")
+  eq(l and l.menu.version, "yellow", "on the game it came from")
   noLauncherModules("after a restart")
 end
 
@@ -200,7 +231,7 @@ do
   frames(2)
   local l = Launcher.current
   check(l ~= nil, "a shortcut to a game with no ROM opens the fork's launcher")
-  eq(l and l.menu.cursor, 2, "on Blue")
+  eq(l and l.menu.version, "blue", "on Blue")
   noLauncherModules("on a shortcut")
 end
 

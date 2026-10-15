@@ -10,6 +10,7 @@
 --   Campaigns.list("red")        -- latest hosted first
 --   Campaigns.rename(c.id, "KANTO")
 --   Campaigns.delete(c.id)       -- keeps coop/campaigns/<id>.json.bak
+--   Campaigns.restore(c.id)      -- the card back from its backup (#38)
 
 local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
@@ -146,6 +147,22 @@ function Campaigns.delete(id)
   if not f.write(backup, text) then return nil end
   f.remove(path(id))
   return backup
+end
+
+-- co-op (#38): the card back from the backup delete kept; the backup is
+-- removed once the card is written.  Returns the card, or nil.
+function Campaigns.restore(id)
+  if not Protocol.campaignId(id) then return nil end
+  local f = fs()
+  local backup = path(id) .. ".bak"
+  local text = f.getInfo(backup) and f.read(backup)
+  if type(text) ~= "string" or #text > Campaigns.MAX_FILE then return nil end
+  local ok, data = pcall(Json.decode, text)
+  local c = ok and clean(data) or nil
+  if not c or c.id ~= id or f.getInfo(path(id)) then return nil end
+  if not f.write(path(id), text) then return nil end
+  f.remove(backup)
+  return Campaigns.get(id)
 end
 
 return Campaigns

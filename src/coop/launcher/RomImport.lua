@@ -69,11 +69,12 @@ end
 -- Check bytes from a drop or a path.  Returns version, romBytes, label, sha1
 -- or nil and a message for the player.
 function RomImport.identify(data, displayName)
-  if type(data) ~= "string" then return nil, "The file could not be read." end
+  local L = require("src.coop.launcher.Text").get
+  if type(data) ~= "string" then return nil, L("The file could not be read.") end
   local RomArchive = require("src.import.RomArchive")
   if RomArchive.kind(data) then
     if #data > RomArchive.MAX_ARCHIVE_BYTES then
-      return nil, "That archive is too big to hold one Game Boy ROM."
+      return nil, L("That archive is too big to hold one Game Boy ROM.")
     end
     local bytes, entry = RomArchive.unwrap(data, displayName, {
       prefer = function(candidate) return isGen1(GameVersion.forSha1(sha1(candidate))) end,
@@ -83,19 +84,18 @@ function RomImport.identify(data, displayName)
     displayName = displayName and (displayName .. " / " .. entry) or entry
   end
   if #data ~= GB_ROM_BYTES then
-    return nil, ("Expected a 1 MiB Game Boy ROM; this file is %.2f MiB.")
-      :format(#data / 1024 / 1024)
+    return nil, L("Expected a 1 MiB Game Boy ROM; this file is %.2f MiB.",
+      #data / 1024 / 1024)
   end
   local hash = sha1(data)
   local version = GameVersion.forSha1(hash)
   if not version then
-    return nil, "Unknown ROM. This needs a clean US Pokemon Red, Blue or "
-      .. "Yellow dump, or a German Rote or Blaue Edition (SHA-1 " .. hash .. ")."
+    return nil, L("Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote or Blaue Edition (SHA-1 %s).",
+      hash)
   end
   if not isGen1(version) then
-    return nil, GameVersion.info(version).displayName
-      .. " is not playable here: this launcher plays Red, Blue and Yellow"
-      .. " (and German Red and Blue)."
+    return nil, L("%s is not playable here: this launcher plays Red, Blue and Yellow (and German Red and Blue).",
+      GameVersion.info(version).displayName)
   end
   return version, data, displayName, hash
 end
