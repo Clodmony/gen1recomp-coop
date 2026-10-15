@@ -17,7 +17,8 @@
 --   * plays in a save slot of its own, the campaign's slot for seat 2
 --     (CoopSettings:enterSlot, design A3.14), filled from the host's file;
 --   * writes a session log of its own (SessionLog, "-seat2");
---   * runs silent: the window has one mix, player 1's (decision G23).
+--   * plays its sound effects in the window's one mix, beside player 1's;
+--     the music is player 1's alone (decision G23, #51).
 -- Its game starts at the title like player 1's; CONTINUE enters its world.
 
 local Worlds = require("src.coop.split.Worlds")
@@ -106,7 +107,7 @@ function Split.start(game, opts)
   Seats.setMode("couch")
   local address, dial = dialFor(home)
   local sp = {
-    game1 = game, seats = Seats, world = Worlds.new("seat2", { silent = true }),
+    game1 = game, seats = Seats, world = Worlds.new("seat2", { sounds = true }),
     home = Worlds.home(), status = "dialling", reason = nil,
     version = home.cartridge.game, settingsFile = settings and settings.fs,
     name = opts.name or (settings and settings.name2) or Split.NAME,
@@ -114,6 +115,7 @@ function Split.start(game, opts)
   }
   Split.current, Split.pending = sp, nil
   Worlds.run(sp.world, function()
+    Split.musicOff()
     local S2 = require("src.coop.session.Session")
     sp.session = S2.startDial({
       address = address, dial = dial, seat = 2, name = sp.name,
@@ -126,6 +128,15 @@ function Split.start(game, opts)
   Split._grow(game)
   say("seat 2 dials %s", tostring(address))
   return sp
+end
+
+-- Seat 2's music stays off (G23): its Music, a module of its own world,
+-- starts no song, as without love.audio, so player 1's song plays on and
+-- seat 2's jingle waits keep the timing a silent game has.  Its sound
+-- effects still pause no song of player 1's: a fanfare ducks the Music of
+-- its own world.  (Inside seat 2's world.)
+function Split.musicOff()
+  require("src.core.Music").play = function() end
 end
 
 -- every frame of player 1's game: start a requested split-screen

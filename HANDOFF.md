@@ -6,18 +6,17 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-15 (after Group 6, #11, PR #50).
+Last updated 2026-10-15 (after Group 6, #51, PR #52 stacked on #50).
 
 ## Repository state
 
 - Default branch `gen1recomp-coop`; `main` = upstream main. Groups 1 to 5a
   are merged (#42-#49, 2026-10-15).
-- Milestones: Group 6 (#11) is done by #50, open until the owner merges.
-  Group 6 also holds #51 (player 2's sound effects, the owner's choice on
-  G23). Group 2 still has #12 and #15 (owner-side checks); Groups 7, 7a, 8,
-  9, 10 are open.
+- Milestones: Group 6 is done by #50 (#11) and #52 (#51), open until the
+  owner merges. Group 2 still has #12 and #15 (owner-side checks); Groups
+  7, 7a, 8, 9, 10 are open.
 
-## Open pull request (draft)
+## Open pull requests (draft)
 
 - **#50** `coop/group6-split-screen` into `gen1recomp-coop`: closes #11,
   local split-screen. `src/coop/split/` (Worlds, Layout, Split), docs
@@ -38,17 +37,31 @@ Last updated 2026-10-15 (after Group 6, #11, PR #50).
   - **Owner (2026-10-15): merge after their own check with two real pads**
     from the launcher in a real window. Once they say so, merge locally as
     Claude (`git merge --no-ff`), push, run `tools/verify.sh`.
+- **#52** `coop/group6-split-sounds` into `gen1recomp-coop`, **stacked on
+  #50** (branched from it; merge #50 first, then #52 shows only its own
+  commit): closes #51, player 2's sound effects in the window's one mix.
+  - Player 2's world runs with `love.sound` and a guarded `love.audio`
+    (`Worlds.guardAudio`: no stop/pause of every source, no `set*`), still
+    without `love.thread`; `Split.musicOff` keeps player 2's music off.
+  - No upstream file touched. Docs: split.md, G23 in design.md.
+  - Live (US Red, offscreen, mix written to a WAV by OpenAL Soft's wave
+    driver): player 2's START sounds alone in the mix with player 1's
+    music at 0, on top of the song at 7; player 1's song played on.
+  - **Owner (2026-10-15): merge #50 first, then #52**, both after their
+    check with two real pads (now also listening for player 2's sounds).
+    Merge each locally as Claude (`git merge --no-ff`), push, run
+    `tools/verify.sh` after each.
+  - Verify: 36/37 (only the javac tier fails locally; no luacheck locally).
 
 ## Next candidates
+
+- **Owner (2026-10-15): the next session takes Group 7** (battles).
 
 - **Group 7 (#18, #19, #20, #34)**, battles: co-op battles against the game
   (rules), then their presentation with the cartridge's menus. Split-screen
   already gives each seat its own battle screen (G2); #19 feeds both.
 - **Group 7a (#17)** party and PC at rest points (design A7).
 - Group 2 still has #12 and #15 (owner-side checks).
-- **#51** (Group 6): player 2's sound effects in the shared mix. First
-  steps: `ChipAudio`'s thread channels are process-global; route player 2's
-  `Sound` calls to player 1's audio path (music stays player 1's).
 - Player 2 names themself with #22 (owner, 2026-10-15; comment on #22).
 
 ## Live-run recipe
@@ -84,6 +97,11 @@ Last updated 2026-10-15 (after Group 6, #11, PR #50).
   - `Split.current.game` is seat 2's game; run code inside its world with
     `Worlds.run(Split.current.world, fn)` (never across a yield).
   - To drive the launcher, write `relaunch_to_launcher.txt` first.
+  - To check the mix without speakers: `ALSOFT_CONF` pointing at a file
+    with `[general] drivers=wave` and `[wave] file=<scratch>/mix.wav`; the
+    WAV is 32-bit float (WAVE_FORMAT_EXTENSIBLE), real time, so wait in
+    real time (`love.timer.getTime()`), not in frames (offscreen runs
+    uncapped).
 - **Cells used for #16:**
   - Viridian Forest ANTIDOTE: stand at (25,12) facing up.
   - Viridian Forest POTION: (11,29) facing right.
@@ -93,10 +111,10 @@ Last updated 2026-10-15 (after Group 6, #11, PR #50).
 ## Worktrees and background processes
 
 - Main checkout on `gen1recomp-coop` (leave it; it is behind origin until
-  pulled). The Superset worktree that held `coop/group5a-story-items` now
-  holds `coop/group6-split-screen` (pushed, clean); the merged local branch
-  `coop/group5a-story-items` is deleted. No background processes. Group 6's
-  scratch is deleted.
+  pulled). The Superset worktree that held `coop/group6-split-screen` now
+  holds `coop/group6-split-sounds` (pushed, clean); `coop/group6-split-screen`
+  stays as a local branch too. No background processes. #51's scratch is
+  deleted.
 
 ## Still open
 
@@ -113,7 +131,8 @@ Last updated 2026-10-15 (after Group 6, #11, PR #50).
   deleted on GitHub.
 - Done 2026-10-15: the local branch `coop/group5a-story-items`; its
   worktree carried on as Group 6's.
-- Once #50 is merged: this worktree and `coop/group6-split-screen`.
+- Once #50 and #52 are merged: this worktree and the branches
+  `coop/group6-split-screen` and `coop/group6-split-sounds`.
 - Kept by the owner's choice: the other merged local branches
   (`coop/group2a-*`, `coop/group3-*`, `coop/group4-*`, `coop/group5-*`,
   `coop/workflow-groups`); the main checkout is not pulled.

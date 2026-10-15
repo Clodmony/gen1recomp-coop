@@ -4,11 +4,13 @@
 --   * the input routing: each event goes to the seat whose device sent it;
 --   * two worlds in one process (src/coop/split/Worlds.lua): each with its
 --     own game modules, the shared ones one per process, a silent world
---     without love.audio / love.thread;
+--     without love.audio / love.thread, a world with sounds (#51) in the
+--     process's one mix without a say over the device;
 --   * the whole path: this device hosts, Split starts seat 2 in its own
 --     world, seat 2 dials the loopback hub as seat 2, enters a save slot
 --     of its own and plays a fixture overworld of its own; pad A walks
 --     player 1, pad B player 2, through the window's (wrapped) events;
+--   * seat 2's sound effects in the window's mix, its music off (#51);
 --   * seat 2's slot in CoopSettings, its log file, the --coop-split entry.
 --   luajit tests/coop/split_screen_test.lua
 
@@ -42,6 +44,54 @@ love.joystick = {
   getJoystickCount = function() return #connected end,
   getJoysticks = function() return connected end,
 }
+
+-- a fake love.audio: the window's one mix, which records every source made,
+-- every source playing and every device-wide call (#51)
+local function fakeMix()
+  local mix = { made = {}, stopAll = 0, pauseAll = 0, volume = 1, routing = nil }
+  local function source(what, kind)
+    local s = { what = what, kind = kind, playing = false, pitch = 1 }
+    function s:play() self.playing = true return true end
+    function s:stop() self.playing = false end
+    function s:pause() self.playing = false end
+    function s:isPlaying() return self.playing end
+    function s:setVolume(v) self.volume = v end
+    function s:setPitch(p) self.pitch = p end
+    function s:getPitch() return self.pitch end
+    function s:getDuration() return 0.5 end
+    function s:setLooping(l) self.looping = l end
+    function s:setFilter() end
+    mix.made[what] = s
+    mix.last = s
+    return s
+  end
+  local function each(fn, ...)
+    for i = 1, select("#", ...) do fn((select(i, ...))) end
+  end
+  mix.audio = {
+    newSource = function(what, kind) return source(what, kind) end,
+    newQueueableSource = function() return source("queue", "queue") end,
+    play = function(...) each(function(s) s:play() end, ...) end,
+    stop = function(...)
+      if select("#", ...) == 0 then
+        mix.stopAll = mix.stopAll + 1
+        for _, s in pairs(mix.made) do s:stop() end
+      end
+      each(function(s) s:stop() end, ...)
+    end,
+    pause = function(...)
+      if select("#", ...) == 0 then
+        mix.pauseAll = mix.pauseAll + 1
+        for _, s in pairs(mix.made) do s:pause() end
+      end
+      each(function(s) s:pause() end, ...)
+    end,
+    setVolume = function(v) mix.volume = v end,
+    getVolume = function() return mix.volume end,
+    setMixWithSystem = function(on) mix.routing = on return true end,
+  }
+  return mix
+end
 
 local function memoryFs()
   local files = {}
@@ -143,6 +193,41 @@ do
         "after the way back home")
   Worlds.reset()
   check(require("src.core.Input") == homeInput, "a reset keeps home's modules")
+  love.audio, love.thread = audio, thread
+end
+
+-- a world whose sounds join the process's one mix (#51): sources of its own,
+-- no worker thread, and no say over the device
+do
+  local mix = fakeMix()
+  local audio, thread, sound = love.audio, love.thread, love.sound
+  love.audio, love.thread = mix.audio, {}
+  local w = Worlds.new("probe", { sounds = true })
+  local seen = Worlds.run(w, function()
+    local s = love.audio.newSource("probe.wav", "static")
+    love.audio.play(s)
+    local all = { thread = love.thread, sound = love.sound, source = s,
+                  playing = s:isPlaying() }
+    love.audio.stop()
+    love.audio.pause()
+    love.audio.setVolume(0)
+    love.audio.setMixWithSystem(false)
+    all.still = s:isPlaying()
+    love.audio.stop(s)
+    all.stopped = not s:isPlaying()
+    return all
+  end)
+  check(seen.thread == nil, "a world with sounds runs without love.thread (the workers' channels are seat 1's)")
+  check(seen.sound == sound, "it has love.sound")
+  check(mix.made["probe.wav"] == seen.source and seen.playing,
+        "its sources are made and played in the process's mix")
+  check(seen.still and mix.stopAll == 0 and mix.pauseAll == 0,
+        "stopping or pausing every source is kept away from the other world's sounds")
+  eq(mix.volume, 1, "the mix's volume is not the world's to set")
+  eq(mix.routing, nil, "nor its routing with the system's audio")
+  check(seen.stopped, "a source of its own still stops")
+  check(love.audio == mix.audio and love.thread ~= nil, "outside the world, love.audio and love.thread are the real ones")
+  Worlds.reset()
   love.audio, love.thread = audio, thread
 end
 
@@ -248,6 +333,9 @@ do
   end
 
   Seats.reset()
+  -- the window's one mix (#51)
+  local mix, audio0 = fakeMix(), love.audio
+  love.audio = mix.audio
   local game1 = fixtureGame("HOST")
   local s = Session.startHost({
     campaign = { id = CID, title = "Fix world" },
@@ -340,6 +428,33 @@ do
   for _, p in ipairs(s.host.players) do if p.name == "BLUE" then p2 = p end end
   eq(p2 and (p2.x .. "," .. p2.y), c2, "the host sees player 2 where seat 2's game put them")
 
+  -- sounds (#51): player 2's sound effects join the window's one mix, its
+  -- music stays off, player 1's song plays on
+  local Music1 = require("src.core.Music")
+  game1.data.audio = { songs = { Music_Fix1 = { file = "song1.ogg" } } }
+  Music1.play(game1.data, "Music_Fix1")
+  local song1 = mix.made["song1.ogg"]
+  check(song1 and song1.playing, "player 1's song plays")
+  local heard = Worlds.run(sp.world, function()
+    local data = booted.data
+    data.audio = { sfx = { SFX_FIX = { file = "sfx2.wav" } },
+                   songs = { Music_Fix2 = { file = "song2.ogg" } } }
+    local Sound, Music = require("src.core.Sound"), require("src.core.Music")
+    local src = Sound.play(data, "SFX_FIX")
+    Music.play(data, "Music_Fix2")
+    Music.playOnce(data, "Music_Fix2")
+    return { src = src, wait = Sound.waitFrames(src, 0), song = Music.current(),
+             sound = Sound, music = Music }
+  end)
+  check(heard.src ~= nil and heard.src == mix.made["sfx2.wav"] and heard.src.playing,
+        "player 2's sound effect plays in the window's mix")
+  eq(heard.wait, 32, "player 2's sound wait takes the sound's real length")
+  check(heard.sound ~= require("src.core.Sound") and heard.music ~= Music1,
+        "seat 2 has a Sound and a Music of its own")
+  eq(heard.song, nil, "player 2's music stays off")
+  check(mix.made["song2.ogg"] == nil, "and makes no source")
+  check(song1.playing and Music1.current() == "Music_Fix1", "player 1's song plays on")
+
   -- stopping: seat 2 leaves, its world goes, the handlers come back
   local wrapped = love.gamepadpressed
   Split.stop()
@@ -351,6 +466,7 @@ do
   check(left and left.connected == false, "seat 2 said goodbye to the host")
   eq(Seats.mode, "solo", "player 1's seats are back to solo")
   check(Worlds.homeWorld == nil, "the second world is gone")
+  love.audio = audio0
 end
 
 T.finish()

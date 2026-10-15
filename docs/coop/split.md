@@ -39,12 +39,25 @@ function, finds that world's modules.
 - **Shared** (one per process): `src.import.*` (the cartridge cache
   mounts), `src.core.GameVersion`, `src.core.Logger`, `src.link.Json`,
   `src.coop.split.*`, `tests.*`.
-- **Silent.** Player 2's world runs without `love.audio`, `love.sound` and
-  `love.thread`. The window has one mix, player 1's (decision G23). The
+- **No workers.** Player 2's world runs without `love.thread`. The
   background workers' channels are process-global, so a second world's
   workers would take the first one's results. Every upstream module has a
-  path without them, the one the headless tests run. A sound wait in player
-  2's game takes its silent timing.
+  path without them, the one the headless tests run: player 2's chip sound
+  effects render on the main thread when they first play (12 of them took
+  53 ms together in the live run, 17 ms at most), and its sources are
+  cached from then on.
+- **One mix** (decision G23, #51). The window plays player 1's music and
+  both players' sound effects. Player 2's world makes sources of its own
+  through a guarded `love.audio` (`Worlds.guardAudio`, world option
+  `sounds`): `stop`, `pause` and `play` act only on the sources they are
+  given, and every `set*` (the master volume, the listener, the mix with
+  the system's audio) is dropped, so player 2 cannot silence or retune
+  player 1. Player 2's sound waits take the real lengths of its sounds.
+- **Music off for player 2.** `Split.musicOff` makes player 2's `Music`
+  (its own world's module) start no song, as without `love.audio`. Player
+  1's song plays on, and a jingle player 2 waits for (`Music.playOnce`)
+  takes its silent timing. A fanfare of player 2 ducks the `Music` of its
+  own world only, so player 1's song does not pause under it.
 
 ## Stepping, drawing and input
 
@@ -95,7 +108,11 @@ back.
   routing and the worlds. It also runs the whole path with two fixture
   overworlds: this device hosts, player 2 joins as seat 2 in its own world,
   pad A walks player 1 and pad B player 2, and stopping says goodbye.
-  `tests/coop/launcher_coop_test.lua` covers the two rows.
+  `tests/coop/launcher_coop_test.lua` covers the two rows. Sounds (#51):
+  a world with sounds makes its sources in the process's mix and cannot
+  stop, pause or set the whole device; in the whole path, player 2's sound
+  effect plays in the window's mix with its real wait, player 2's music
+  makes no source, and player 1's song plays on.
 - Live (US Red, offscreen, 2026-10-15), with two fake pads of one model
   claimed in `coop/launcher.json` and `love.joystick.getJoysticks`
   replaced by the driver:
@@ -109,14 +126,24 @@ back.
     `relaunch_to_launcher.txt` (`return { tab = "red" }`) into the save
     folder first. The driver then runs on the launcher, and again in the
     game once it boots.
-- Not run: real pads, a real window (its resize), audio, and a pair that
-  joined a remote host.
+- Live sounds (US Red, offscreen, 2026-10-15, #51), the development entry
+  (`--coop-host --coop-split=BLUE`) with OpenAL Soft writing the mix to a
+  WAV file instead of a device (`ALSOFT_CONF` with `drivers=wave` and
+  `[wave] file=...`): both players to the overworld, player 1's Pallet
+  Town song playing; with player 1's music at level 0 the file is silent
+  except player 2 opening and closing their START menu; at level 7 player
+  2's sound sits on top of the song, which plays on. Player 2's music
+  stayed off.
+- Not run: real pads, a real window (its resize), listening on speakers,
+  and a pair that joined a remote host.
 
 ## Not yet
 
 - Player 2's trainer name is `PLAYER2` until a host knows them (the
   development entry takes a name); player 2 names themself with #22
   (owner, 2026-10-15).
-- Player 2's game is silent (G23); its sound effects are #51.
+- Player 2's world does not get the device events of mobile platforms
+  (`love.handlers.audiosuspend`/`audioreset` reach player 1's modules
+  only); split-screen is not run on a phone.
 - Co-op battles (#18, #19) will feed each half's own menus (G2).
 - Phone halves (design A15.3) are #7.
