@@ -13,7 +13,7 @@ local M = {}
 -- importers, src/mods the mod screens: not a played German game)
 M.DIRS = {
   "src/battle", "src/ui", "src/world", "src/script", "src/inventory",
-  "src/pokemon", "src/link", "src/coop/game", "src/coop/battle",
+  "src/pokemon", "src/link", "src/coop/game", "src/coop/battle", "src/coop/friends",
 }
 M.FILES = { "src/core/Game.lua", "src/online/Connect.lua" }
 -- Gen 2 and Gen 3 modules, and screens a cartridge game never reaches

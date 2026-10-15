@@ -2661,6 +2661,13 @@ function OverworldState:interact()
   local p = self.player
   local fx, fy = p:facingCell()
 
+  -- co-op (#23): A on a partner opens BATTLE / TRADE / CANCEL
+  -- (src/coop/game/Friends.lua); a solo game returns at once
+  if require("src.coop.game.Friends").talk(Game, self, fx, fy) then
+    interacted(self, fx, fy, "partner")
+    return
+  end
+
   local npc = self:npcAtCell(fx, fy)
   if not npc and self.map:isCounterCell(fx, fy) then
     -- talk across counters (mart clerks, nurses); uses the tileset's

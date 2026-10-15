@@ -395,7 +395,7 @@ function Presence.drawUI()
 end
 
 -- the partners as the CO-OP menu and the arrow see them: { id, name,
--- place, connected, map, x, y, battle, opening, hidden } in session order,
+-- place, connected, map, x, y, battle, opening, meeting, hidden } in session order,
 -- this player left out; hidden: not shown on the map (an arrow, a TOWN MAP
 -- mark) since one of the two plays the opening (#22)
 function Presence.partners()
@@ -407,6 +407,7 @@ function Presence.partners()
       out[#out + 1] = { id = p.id, name = p.name, place = place, connected = p.connected,
                         map = p.map, x = p.x, y = p.y, actor = Presence.actors[p.id],
                         battle = p.battle, opening = p.opening,
+                        meeting = p.meeting, -- #23: a friend battle or trade
                         hidden = alone or p.opening == true }
     end
   end
