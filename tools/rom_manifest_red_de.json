@@ -10090,13 +10090,8 @@
       "StartMenuOptionText",
       "ContinueText",
       "NewGameText",
-      "CableClubOptionsText",
       "SaveScreenInfoText",
-      "TextSpeedOptionText",
-      "BattleAnimationOptionText",
-      "BattleStyleOptionText",
       "OptionMenuCancelText",
-      "NowSavingString",
       "BoxNoText",
       "PokemonMenuEntries",
       "PlayersPCMenuEntries",
@@ -10138,7 +10133,12 @@
       "PleaseWaitString",
       "ListMenuCancelText",
       "TrainerCharText",
-      "EnemyText"
+      "EnemyText",
+      "CableClubOptionsText",
+      "TextSpeedOptionText",
+      "BattleAnimationOptionText",
+      "BattleStyleOptionText",
+      "NowSavingString"
     ]
   },
   "fontCharmap": [

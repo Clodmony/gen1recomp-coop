@@ -1,7 +1,7 @@
--- German Red and Blue (#25), ROM-free: their own game ids, caches and
--- saves; manifests derived from the US ones; the German layouts the
--- extractor reads (names, trade nicknames, credits, metric Pokédex) on a
--- synthetic ROM; and the session refusing to mix languages.
+-- German Red, Blue and Yellow (#25, #40), ROM-free: their own game ids,
+-- caches and saves; manifests derived from the US ones; the German layouts
+-- the extractor reads (names, trade nicknames, credits, metric Pokédex) on
+-- a synthetic ROM; and the session refusing to mix languages.
 --   luajit tests/coop/german_test.lua
 
 package.path = "./?.lua;./?/init.lua;" .. package.path
@@ -13,12 +13,16 @@ local GameVersion = require("src.core.GameVersion")
 
 local RED_DE_SHA1 = "87d523fe1a0c548db7c5477b451ddec1eb083c06"
 local BLUE_DE_SHA1 = "20e72dc6f41493eee1fdd0cef54214e6c3389688"
+local YELLOW_DE_SHA1 = "42f3714eec6eca25200d42461ff08d57c98f6d1d"
 
 -- game ids ------------------------------------------------------------------
 eq(GameVersion.forSha1(RED_DE_SHA1), "red_de", "the Rote Edition dump is red_de")
 eq(GameVersion.forSha1(BLUE_DE_SHA1), "blue_de", "the Blaue Edition dump is blue_de")
 eq(GameVersion.base("red_de"), "red", "red_de plays as Red")
 eq(GameVersion.base("blue_de"), "blue", "blue_de plays as Blue")
+eq(GameVersion.forSha1(YELLOW_DE_SHA1), "yellow_de", "the Gelbe Edition dump is yellow_de (#40)")
+eq(GameVersion.base("yellow_de"), "yellow", "yellow_de plays as Yellow")
+eq(GameVersion.language("yellow_de"), "de", "yellow_de is German")
 eq(GameVersion.base("red"), "red", "a US game is its own base")
 eq(GameVersion.language("red_de"), "de", "red_de is German")
 eq(GameVersion.language("blue"), "en", "blue is English")
@@ -26,7 +30,7 @@ check(GameVersion.isGerman("blue_de") and not GameVersion.isGerman("red"),
   "isGerman tells them apart")
 do
   local prefixes, suffixes = {}, {}
-  for _, id in ipairs({ "red", "blue", "yellow", "red_de", "blue_de" }) do
+  for _, id in ipairs({ "red", "blue", "yellow", "red_de", "blue_de", "yellow_de" }) do
     local prefix, suffix = GameVersion.cachePrefix(id), GameVersion.saveSuffix(id)
     check(not prefixes[prefix], id .. " has a cache folder of its own")
     check(not suffixes[suffix], id .. " has save files of its own")
@@ -40,12 +44,17 @@ do
   GameVersion.set("red_de")
   check(not GameVersion.isBlue() and not GameVersion.isYellow(),
     "Rote Edition runs Red's")
+  GameVersion.set("yellow_de")
+  check(GameVersion.isYellow() and not GameVersion.isBlue(), "Gelbe Edition runs Yellow's")
   GameVersion.set(previous)
 end
 local inOrder = {}
 for _, id in ipairs(GameVersion.ORDER) do inOrder[id] = true end
-check(not inOrder.red_de and not inOrder.blue_de,
-  "both stay out of upstream's ORDER, so a Gen 1 mod token means the US games")
+check(not inOrder.red_de and not inOrder.blue_de and not inOrder.yellow_de,
+  "all three stay out of upstream's ORDER, so a Gen 1 mod token means the US games")
+local Games = require("src.coop.launcher.Games")
+eq(Games.label("yellow_de"), "GELB", "the launcher lists GELB")
+eq(Games.language("yellow_de"), "de", "..as a German cartridge")
 
 -- manifests -----------------------------------------------------------------
 local Json = require("src.link.Json")
@@ -59,15 +68,18 @@ local CARTRIDGE_WORDS = {
   "DefaultNamesPlayerList", "DefaultNamesRivalList", "TradeMons",
   "CreditsOrder", "CreditsTextPointers", "CreditsMons",
 }
-for _, pair in ipairs({ { "red_de", "red" }, { "blue_de", "blue" } }) do
+for _, pair in ipairs({ { "red_de", "red" }, { "blue_de", "blue" }, { "yellow_de", "yellow" } }) do
   local id, base = pair[1], pair[2]
   local de = manifest(GameVersion.info(id).manifest)
   local us = manifest(GameVersion.info(base).manifest)
   eq(de.romSha1, GameVersion.info(id).sha1, id .. " manifest names its dump")
   eq(de.language, "de", id .. " manifest is marked German")
+  -- the US Yellow surfing title's four pieces are one screen in German (below)
+  local whole = { SurfingMinigame_BeachIntroTilemap = true, SurfingMinigame_TitleTilemap = true,
+                  SurfingMinigame_ToSurfRadTilemap = true, SurfingMinigame_UseControlPadTilemap = true }
   local missing = {}
   for name in pairs(us.symbols) do
-    if not de.symbols[name] then missing[#missing + 1] = name end
+    if not de.symbols[name] and not (base == "yellow" and whole[name]) then missing[#missing + 1] = name end
   end
   eq(#missing, 0, id .. " manifest resolves every symbol of " .. base .. "'s")
   for _, name in ipairs(CARTRIDGE_WORDS) do
@@ -84,7 +96,35 @@ for _, pair in ipairs({ { "red_de", "red" }, { "blue_de", "blue" } }) do
   end
   check(placed, id .. " manifest locates every menu word label")
   check(us.field.words == nil, base .. "'s manifest has no such list")
-  eq(de.field.credits.theEnd.column, 7, id .. " ends its credits at column 7")
+  local listed = {}
+  for _, entry in ipairs(words or {}) do listed[type(entry) == "table" and entry[1] or entry] = true end
+  if base == "yellow" then
+    -- Yellow's options screen and Bill's PC name their strings differently
+    check(listed.AllOptionsText and listed["OptionsMenu_TextSpeed.Fast"] and listed.TradeCenterText,
+      id .. " lists Yellow's own option and link menu labels")
+    check(not listed.TextSpeedOptionText and not listed.NowSavingString,
+      id .. " lists none of Red's labels Yellow has not")
+    -- pokeyellow-de has no MewBaseStats label: the generator places Mew as
+    -- the US manifest does
+    local stats = de.symbols.BaseStats
+    eq(de.symbols.MewBaseStats[1], stats[1], id .. " puts Mew's stats in BaseStats' bank")
+    eq(de.symbols.MewBaseStats[2], stats[2] + 150 * 28, id .. " ..at the 151st entry")
+    -- the German cartridge keeps the surfing title screen whole, and its
+    -- nine tile under a label of its own
+    check(de.symbols.SurfingMinigameIntroScreenTilemap ~= nil, id .. " names the whole surfing title screen")
+    local pieces = 0
+    for name in pairs(whole) do if de.symbols[name] then pieces = pieces + 1 end end
+    eq(pieces, 0, id .. " lists none of the US title's four pieces")
+    check(de.symbols.NineTile ~= nil, id .. " names the title's nine tile")
+    eq(table.concat(de.field.title.copyPrefix, ","), "0,1,2,3,4", id .. " spells ©1995-2000 from five tiles")
+    eq(de.field.title.nine.width, 16, id .. " ..and a two-tile year ending")
+    eq(de.field.title.gameFreakX, 80, id .. " ..with GAME FREAK inc. at column 10")
+    check(de.field.credits.theEnd == nil, id .. " draws the credits' end as US Yellow does (none)")
+    eq(de.field.title.layout, "yellow_pikachu", id .. " keeps Yellow's title layout")
+  else
+    check(listed.TextSpeedOptionText and listed.NowSavingString, id .. " lists Red's option and save labels")
+    eq(de.field.credits.theEnd.column, 7, id .. " ends its credits at column 7")
+  end
   eq(de.charmap["192"], "Ä", id .. " charmap has the German letters")
   eq(de.charmap["190"], "ß", id .. " charmap has ß")
   -- no English words from pret's source stand in for the cartridge's

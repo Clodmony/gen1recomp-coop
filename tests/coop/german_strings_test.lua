@@ -93,6 +93,35 @@ do
   eq(cat["CO-OP"], German.PROJECT["CO-OP"], "the project's wording fills the rest")
 end
 
+-- Yellow's own rows (#40) -------------------------------------------------
+do
+  local data = synthetic()
+  data.field.words.BillsPCMenuText = "TK <PK><MN>\nPT <PK><MN>\nFR <PK><MN>\nCHG BX\nPRNT BX\nBYE!"
+  data.field.words.PokedexMenuItemsText = "DT\nCRY\nAR\nPRT\nQT"
+  data.field.words.AllOptionsText = "TXT SPD\nBTL ANIM\nBTL STL\nSND\nPRNT"
+  data.field.words["OptionsMenu_TextSpeed.Fast"] = "[ FST ]"
+  data.field.words["OptionsMenu_BattleStyle.Set"] = "[ ST ]"
+  data.text._SavingText = "Saving...{DONE}"
+  local yellow = German.catalog(data, "yellow")
+  eq(yellow["SEE YA!"], "BYE!", "Bill's PC's last row is the sixth in Yellow")
+  eq(yellow["PRINT BOX"], "PRNT BX", "..its PRINT BOX the fifth, from the cartridge")
+  eq(yellow["pokedex|QUIT"], "QT", "the Pokédex side panel's QUIT is its fifth row")
+  eq(yellow["PRNT"], "PRT", "..PRNT its fourth")
+  eq(yellow["TEXT SPEED"], "TXT SPD", "the option names come from Yellow's AllOptionsText")
+  eq(yellow["BATTLE STYLE"], "BTL STL", "..each its own row")
+  eq(yellow["FAST"], "FST", "an option value is the word inside Yellow's brackets")
+  eq(yellow["SET"], "ST", "..for each value label")
+  eq(yellow["Now saving..."], "Saving...", "Yellow's saving line is a text label")
+  check(yellow["MEDIUM"] == nil, "a value label the data lacks has no entry")
+  local red = German.catalog(data, "red")
+  eq(red["SEE YA!"], "PRNT BX", "the same data read as Red takes the fifth row")
+  eq(red["PRINT BOX"], German.PROJECT["PRINT BOX"], "Red has no PRINT BOX row: the project's wording")
+  eq(red["pokedex|QUIT"], "PRT", "..and the fourth Pokédex row")
+  check(red["TEXT SPEED"] == nil, "Red's option names come from another label")
+  check(red["Now saving..."] == nil, "..and its saving line from a word")
+  eq(German.catalog(data)["SEE YA!"], red["SEE YA!"], "no base given means the current game's")
+end
+
 -- texts -------------------------------------------------------------------
 do
   local data = synthetic()
@@ -167,6 +196,10 @@ do
   eq(German.layoutFor("savePanel").labelX, 4, "the SAVE panel's labels at column 4")
   GameVersion.set("red")
   check(German.layoutFor("battleMenu") == nil, "no German layout in an English game")
+  GameVersion.set("yellow_de")
+  eq(German.layoutFor("battleMenu").boxX, 6, "Gelbe Edition draws the battle menu as Rote does")
+  eq(German.layoutFor("cableClubCancel").fillX, 11, "..but its Cable Club blanks the US run")
+  eq(German.layoutFor("cableClubCancel").boxW, 14, "..beside the 12-column German box")
   GameVersion.set(previous)
 end
 
@@ -226,7 +259,8 @@ do
     f:close()
     return assert(Json.decode(raw))
   end
-  for _, id in ipairs({ "red_de", "blue_de" }) do
+  for _, id in ipairs({ "red_de", "blue_de", "yellow_de" }) do
+    local base = GameVersion.base(id)
     local m = manifest(GameVersion.info(id).manifest)
     local words = {}
     for _, entry in ipairs(m.field.words or {}) do
@@ -236,7 +270,8 @@ do
     for _, label in ipairs(m.text.labels) do labels[label] = true end
     local missing = {}
     local function wordLabels(entry)
-      if type(entry) == "function" then return end
+      entry = German.variant(entry, base)
+      if entry == nil or type(entry) == "function" then return end
       if entry.join then
         for _, part in ipairs(entry.join) do wordLabels(part) end
         return
@@ -246,7 +281,7 @@ do
     end
     for _, entry in pairs(German.WORDS) do wordLabels(entry) end
     for _, entry in pairs(German.TEXTS) do
-      for _, item in ipairs(entry) do
+      for _, item in ipairs(German.variant(entry, base) or {}) do
         if item:sub(1, 1) == "_" and not labels[item] then missing[#missing + 1] = item end
       end
     end

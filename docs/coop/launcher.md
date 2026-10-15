@@ -23,7 +23,8 @@ the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC
 language, under every page and every message.
 
 - **PLAY**: the hero ("One story. Two journeys."), the cartridges RED, BLUE,
-  YELLOW, ROT and BLAU (Rote and Blaue Edition, [german.md](german.md)), each
+  YELLOW, ROT, BLAU and GELB (Rote, Blaue and Gelbe Edition,
+  [german.md](german.md)), each
   READY or IMPORT ROM; what fits today (the same cartridge on both sides);
   PLAY SOLO; HOST A CAMPAIGN, JOIN A FRIEND, and COUCH CO-OP marked PLANNED
   and not offered until #4 and #11 work; IMPORT ROM for a cartridge with no
@@ -34,7 +35,8 @@ language, under every page and every message.
   with #6.
 - **Import**: drop the ROM file on the window, or type or paste (Ctrl+V) its
   path and press Enter. The ROM is checked by SHA-1 (clean US dumps and the
-  German Rote and Blaue Edition, `.zip`/`.7z` where the platform opens them);
+  German Rote, Blaue and Gelbe Edition, `.zip`/`.7z` where the platform opens
+  them);
   a Gold or FireRed ROM is refused, since this launcher plays Gen 1. A dropped
   ROM is routed to its game whatever page is showing. A scripted import
   (`POKEPORT_IMPORT_ONLY`) that fails prints the error and exits with 1.

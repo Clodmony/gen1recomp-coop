@@ -1704,14 +1704,9 @@ function RomExtractor:extractYellowTitleArt()
   end
 end
 
-function RomExtractor:extractSurfingPikachuTitleArt()
-  -- engine/minigame/surfing_pikachu.asm
-  -- DrawSurfingPikachuMinigameIntroBackground: compose the 160x144
-  -- "Pikachu's Beach" title from SurfingMinigame_* tilemaps over
-  -- SurfingPikachu1Graphics3 tiles (mirrors tools/build_rom_data.py).
-  if not self.symbols["SurfingPikachu1Graphics3"] then return end
-  if not self.symbols["SurfingMinigame_BeachIntroTilemap"] then return end
-
+-- The US intro screen from its four pieces: 360 tile ids, false where the
+-- screen stays blank (the US tilemap's $ff cells and the box's inside).
+function RomExtractor:composeSurfingPikachuTitle()
   local beachIntro = self:symbol("SurfingMinigame_BeachIntroTilemap")
   local useCtrlPad = self:symbol("SurfingMinigame_UseControlPadTilemap")
   local toSurfRad = self:symbol("SurfingMinigame_ToSurfRadTilemap")
@@ -1748,6 +1743,31 @@ function RomExtractor:extractSurfingPikachuTitleArt()
   for i = 1, #toSurfRadBytes do
     screen[9 * 20 + 4 + i] = toSurfRadBytes[i]
   end
+  for i = 1, #screen do
+    if screen[i] == 0xff then screen[i] = false end
+  end
+  return screen
+end
+
+function RomExtractor:extractSurfingPikachuTitleArt()
+  -- engine/minigame/surfing_pikachu.asm
+  -- DrawSurfingPikachuMinigameIntroBackground: compose the 160x144
+  -- "Pikachu's Beach" title from SurfingMinigame_* tilemaps over
+  -- SurfingPikachu1Graphics3 tiles (mirrors tools/build_rom_data.py).
+  if not self.symbols["SurfingPikachu1Graphics3"] then return end
+  -- co-op (#40): the German cartridge keeps the whole screen as one tilemap
+  -- (SurfingMinigameIntroScreenTilemap), read as it is; the US one holds
+  -- the beach, the two lines and the title apart, composed below
+  local wholeScreen = self.symbols["SurfingMinigameIntroScreenTilemap"]
+  if not wholeScreen and not self.symbols["SurfingMinigame_BeachIntroTilemap"] then return end
+
+  local screen = {}
+  if wholeScreen then
+    local whole = self:symbol("SurfingMinigameIntroScreenTilemap")
+    screen = self.rom:bytes(whole.bank, whole.address, 20 * 18)
+  else
+    screen = self:composeSurfingPikachuTitle()
+  end
 
   local gfx3 = self:symbol("SurfingPikachu1Graphics3")
   local rawGfx3 = self.rom:bytes(gfx3.bank, gfx3.address, 144 * 16)
@@ -1764,7 +1784,7 @@ function RomExtractor:extractSurfingPikachuTitleArt()
     for c = 0, 19 do
       local tileId = screen[r * 20 + c + 1]
       local tileImg = blank
-      if tileId ~= 0xff then
+      if tileId then -- co-op (#40): false is a blank cell of the composed US screen
         local idx = tileId >= 0x80 and (tileId - 0x80 + 1) or (128 + tileId + 1)
         if idx >= 1 and idx <= 144 then tileImg = tiles[idx] end
       end
@@ -2060,7 +2080,13 @@ function RomExtractor:extractField()
   do
     local gf = self.symbols["GameFreakLogoGraphics"]
     local tb = self.symbols["TextBoxGraphics"]
-    if gf and tb and tb[2] == gf[2] + 9 * 16 + 16 then
+    local nine = self.symbols["NineTile"] -- co-op (#40): named where the distance rule fails
+    if nine then
+      -- as many tiles as the manifest's title.nine is wide (Gelbe Edition: two)
+      local title = self.manifest.field and self.manifest.field.title
+      local width = title and type(title.nine) == "table" and title.nine.width or 8
+      self:raw2bpp("NineTile", width, 8, "title/nine.png")
+    elseif gf and tb and tb[2] == gf[2] + 9 * 16 + 16 then
       local raw = self.rom:bytes(gf[1], gf[2] + 9 * 16, 16)
       self:save(ImageWriter.decode2bpp(raw, 8, 8, false), "title/nine.png")
     end

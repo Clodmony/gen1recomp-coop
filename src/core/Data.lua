@@ -159,7 +159,7 @@ function Data:seedDefaults(version)
   -- only the un-overridden default flips, so a total conversion that set
   -- field.boot.screens.splash keeps its choice on any version.
   if boot.screens.splash == BOOT_DEFAULTS.screens.splash
-     and version == "yellow" then
+     and require("src.core.GameVersion").base(version) == "yellow" then -- co-op (#40): Gelbe Edition too
     boot.screens.splash = "YellowIntro"
   end
   -- the naming screen presets the importer already extracts but nothing

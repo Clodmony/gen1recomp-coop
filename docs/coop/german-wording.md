@@ -1,6 +1,6 @@
 # German wording for the owner to check
 
-The German cartridges (Rote and Blaue Edition, #25) bring almost all of their
+The German cartridges (Rote, Blaue and Gelbe Edition, #25, #40) bring almost all of their
 text with them: dialogue, names, items, moves and menus come from the
 cartridge ([german.md](german.md)). This list holds the German the project
 writes itself, for the owner to check. Write the better German in the last
@@ -164,7 +164,7 @@ The credit line of upstream's licence is not translated.
 | %s · NOT IMPORTED | %s · NICHT IMPORTIERT | |
 | Drop the ROM file on this window, or type its path and press ENTER. | Zieh die ROM-Datei auf dieses Fenster oder tippe ihren Pfad und drücke ENTER. | |
 | Importing a ROM on this device comes later. | ROMs auf diesem Gerät zu importieren kommt später. | |
-| Clean dumps of Pokemon Red, Blue and Yellow (US) and of the German Rote and Blaue Edition; .zip and .7z where the system opens them. | Saubere Dumps von POKéMON Rot, Blau und Gelb (US) und der deutschen Roten und Blauen Edition; .zip und .7z, wo das System sie öffnet. | |
+| Clean dumps of Pokemon Red, Blue and Yellow (US) and of the German Rote, Blaue and Gelbe Edition; .zip and .7z where the system opens them. | Saubere Dumps von POKéMON Rot, Blau und Gelb (US) und der deutschen Roten, Blauen und Gelben Edition; .zip und .7z, wo das System sie öffnet. | |
 | Importing %s | %s wird importiert | |
 | Preparing | Vorbereitung | |
 | Could not open %s | %s ließ sich nicht öffnen | |
@@ -173,8 +173,8 @@ The credit line of upstream's licence is not translated.
 | The file could not be read. | Die Datei ließ sich nicht lesen. | |
 | That archive is too big to hold one Game Boy ROM. | Das Archiv ist zu groß für ein einzelnes Game-Boy-ROM. | |
 | Expected a 1 MiB Game Boy ROM; this file is %.2f MiB. | Erwartet wird ein Game-Boy-ROM mit 1 MiB; diese Datei hat %.2f MiB. | |
-| Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote or Blaue Edition (SHA-1 %s). | Unbekanntes ROM. Nötig ist ein sauberer Dump von POKéMON Rot, Blau oder Gelb (US) oder der Roten oder Blauen Edition (SHA-1 %s). | |
-| %s is not playable here: this launcher plays Red, Blue and Yellow (and German Red and Blue). | %s läuft hier nicht: Dieser Launcher spielt Rot, Blau und Gelb (und die deutschen Rot und Blau). | |
+| Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote, Blaue or Gelbe Edition (SHA-1 %s). | Unbekanntes ROM. Nötig ist ein sauberer Dump von POKéMON Rot, Blau oder Gelb (US) oder der Roten, Blauen oder Gelben Edition (SHA-1 %s). | |
+| %s is not playable here: this launcher plays Red, Blue and Yellow, in English or German. | %s läuft hier nicht: Dieser Launcher spielt Rot, Blau und Gelb, auf Englisch oder Deutsch. | |
 
 ### Campaigns
 
@@ -367,8 +367,8 @@ listed so the owner sees which lines are the cartridge's.
 | BADGES | SaveScreenInfoText, row 2 |
 | BAIT | SafariZoneBattleMenuText, row 1, word 2 |
 | BALLx | SafariZoneBattleMenuText, row 1, word 1 |
-| BATTLE ANIMATION | BattleAnimationOptionText, row 1 |
-| BATTLE STYLE | BattleStyleOptionText, row 1 |
+| BATTLE ANIMATION | BattleAnimationOptionText, row 1; Yellow: AllOptionsText, row 2 |
+| BATTLE STYLE | BattleStyleOptionText, row 1; Yellow: AllOptionsText, row 3 |
 | BILL'S PC | BillsPCText, row 1 |
 | BOX No. | BoxNoText, row 1 |
 | BOX No.%d | BoxNoText, row 1 |
@@ -390,7 +390,7 @@ listed so the owner sees which lines are the cartridge's.
 | EVADE | StatModTextStrings, row 6 |
 | EXP POINTS | StatusScreenExpText, row 1 |
 | Enemy %s | EnemyText, row 1 |
-| FAST | TextSpeedOptionText, row 2, word 1 |
+| FAST | TextSpeedOptionText, row 2, word 1; Yellow: OptionsMenu_TextSpeed.Fast, word 2 |
 | FIGHT | BattleMenuText, row 1, word 1 |
 | FLASH | the import's own data (an item, a move, a preset name) |
 | FLY | the import's own data (an item, a move, a preset name) |
@@ -401,7 +401,7 @@ listed so the owner sees which lines are the cartridge's.
 | LEVEL UP | StatusScreenExpText, row 2 |
 | LEVEL/ | HoFMonInfoText, row 1 |
 | LOG OFF | PlayersPCMenuEntries, row 4 |
-| MEDIUM | TextSpeedOptionText, row 2, word 2 |
+| MEDIUM | TextSpeedOptionText, row 2, word 2; Yellow: OptionsMenu_TextSpeed.Mid, word 2 |
 | MONEY | MoneyText, row 1 |
 | MONEY/¥%d | TrainerInfo_NameMoneyTimeText, row 2 |
 | NAME/%s | TrainerInfo_NameMoneyTimeText, row 1 |
@@ -409,9 +409,9 @@ listed so the owner sees which lines are the cartridge's.
 | NEW NAME | the import's own data (an item, a move, a preset name) |
 | NICKNAME? | NicknameTextString, row 1 |
 | NO | TwoOptionMenuStrings.YesNoMenu, row 2 |
-| Now saving... | NowSavingString, row 1 |
-| OFF | BattleAnimationOptionText, row 2, word 2 |
-| ON | BattleAnimationOptionText, row 2, word 1 |
+| Now saving... | NowSavingString, row 1; Yellow: no such row |
+| OFF | BattleAnimationOptionText, row 2, word 2; Yellow: OptionsMenu_BattleAnimations.Off, word 2 |
+| ON | BattleAnimationOptionText, row 2, word 1; Yellow: OptionsMenu_BattleAnimations.On, word 2 |
 | OPTION | StartMenuOptionText, row 1 |
 | OT/ | TypesIDNoOTText, row 4 |
 | OT/%s | TypesIDNoOTText, row 4 |
@@ -422,18 +422,20 @@ listed so the owner sees which lines are the cartridge's.
 | POKéDEX | StartMenuPokedexText, row 1 |
 | POKéDEX. | the import's own data (an item, a move, a preset name) |
 | POKéMON | StartMenuPokemonText, row 1 |
+| PRINT BOX | Yellow: BillsPCMenuText, row 5 |
+| PRNT | Yellow: PokedexMenuItemsText, row 4 |
 | PROF.OAK's PC | OaksPCText, row 1 |
 | RELEASE <PK><MN> | BillsPCMenuText, row 3 |
 | RIVAL's NAME? | RivalsTextString, row 1 + NameTextString, row 1 |
 | RUN | BattleMenuText, row 2, word 2 |
 | SAVE | StartMenuSaveText, row 1 |
-| SEE YA! | BillsPCMenuText, row 5 |
+| SEE YA! | BillsPCMenuText, row 5; Yellow: BillsPCMenuText, row 6 |
 | SEEN | PokedexSeenText, row 1 |
 | SEEN %3d  OWN %3d | PokedexSeenText, row 1 + PokedexOwnText, row 1 |
 | SELL | BuySellQuitText, row 2 |
-| SET | BattleStyleOptionText, row 2, word 2 |
-| SHIFT | BattleStyleOptionText, row 2, word 1 |
-| SLOW | TextSpeedOptionText, row 2, word 3 |
+| SET | BattleStyleOptionText, row 2, word 2; Yellow: OptionsMenu_BattleStyle.Set, word 2 |
+| SHIFT | BattleStyleOptionText, row 2, word 1; Yellow: OptionsMenu_BattleStyle.Shift, word 2 |
+| SLOW | TextSpeedOptionText, row 2, word 3; Yellow: OptionsMenu_TextSpeed.Slow, word 2 |
 | SOFTBOILED | the import's own data (an item, a move, a preset name) |
 | SOMEONE'S PC | SomeonesPCText, row 1 |
 | SPECIAL | StatModTextStrings, row 4 |
@@ -444,7 +446,7 @@ listed so the owner sees which lines are the cartridge's.
 | SURF | the import's own data (an item, a move, a preset name) |
 | SWITCH | PokemonMenuEntries, row 2 |
 | TELEPORT | the import's own data (an item, a move, a preset name) |
-| TEXT SPEED | TextSpeedOptionText, row 1 |
+| TEXT SPEED | TextSpeedOptionText, row 1; Yellow: AllOptionsText, row 1 |
 | THROW ROCK | SafariZoneBattleMenuText, row 2, word 1 |
 | TIME | SaveScreenInfoText, row 4 |
 | TIME/  %d:%02d | TrainerInfo_NameMoneyTimeText, row 3 |
@@ -467,7 +469,7 @@ listed so the owner sees which lines are the cartridge's.
 | completed your | DiplomaCongrats, row 4 |
 | diploma certifies | DiplomaCongrats, row 2 |
 | disabled! | DisabledText, row 1 |
-| pokedex\|QUIT | PokedexMenuItemsText, row 4 |
+| pokedex\|QUIT | PokedexMenuItemsText, row 4; Yellow: PokedexMenuItemsText, row 5 |
 | shop\|QUIT | BuySellQuitText, row 3 |
 | status\|ATTACK | PrintStatsBox.StatsText, row 1 |
 | status\|DEFENSE | PrintStatsBox.StatsText, row 2 |
@@ -542,6 +544,7 @@ listed so the owner sees which lines are the cartridge's.
 | Nope! ITEMFINDER / isn't responding. | _ItemfinderFoundNothingText |
 | Nope! There's / only trash here. / Hey! The electric / locks were reset! | _VermilionGymTrashFailText |
 | Not enough / coins! | _NotEnoughCoinsSlotMachineText |
+| Now saving... | Yellow: _SavingText |
 | OAK: %s! / This isn't the / time to use that! | _ItemUseNotTimeText |
 | OK. We'll need / your POKéMON. | _NeedYourPokemonText |
 | Once released, / %s is / gone forever. OK? | _OnceReleasedText |
@@ -557,7 +560,7 @@ listed so the owner sees which lines are the cartridge's.
 | That's right! I / remember now! His / name is {RIVAL}! | _HisNameIsText |
 | That's too impor- / tant to toss! | _TooImportantToTossText |
 | The 2nd electric / lock opened! / The motorized door / opened! | _VermilionGymTrashSuccessText3 |
-| The link was / broken. | _LinkCanceledText |
+| The link was / broken. | _LinkCanceledText; Yellow: _ColosseumCanceledText |
 | There's no more / room for POKéMON! / %s was / sent to POKéMON / BOX %s on PC! | _SentToBoxText |
 | There's no will / to fight! | _NoWillText |
 | This is my grand- / son. He's been / your rival since / you were a baby. / ...Erm, what is / his name again? | _IntroduceRivalText |
