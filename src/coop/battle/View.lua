@@ -18,7 +18,8 @@
 --   * "<NAME> joined the battle!" when a team comes in (A9.11);
 --   * after the battle is decided, every line moves on by itself, so the
 --     battle closes after its last line without a press (A9.6);
---   * a ball asks whom the catch is for, each player once (A7.6, A9.1).
+--   * a ball asks whom the catch is for, each player with room once (A7.6,
+--     A9.1).
 
 local Font = require("src.render.Font")
 local Strings = require("src.core.Strings")
@@ -237,19 +238,17 @@ function View.openRoster(b, opts)
   return menu
 end
 
--- the name list a ball asks: whom the catch is for (A7.6)
+-- the name list a ball asks: whom the catch is for, each player in the
+-- battle with room once (A7.6); a lone one is named without a list
 function View.askCatcher(b, ball, done)
   local c = b.coop
   local items = {}
-  local seen = {}
-  for _, mon in ipairs(c.roster) do
-    local pid = c.owners[mon]
-    if not seen[pid] then
-      seen[pid] = true
-      items[#items + 1] = { label = View.name(b, pid), onSelect = function() done(pid) end }
-    end
+  local with = Replica().withRoom(b)
+  for _, pid in ipairs(with) do
+    items[#items + 1] = { label = View.name(b, pid), onSelect = function() done(pid) end }
   end
-  if #items <= 1 then return done(c.me) end
+  if #items == 0 then return done(c.me) end
+  if #items == 1 then return done(with[1]) end
   local Menu = require("src.ui.Menu")
   local m = Menu.new(b.game, items, { tx = 0, ty = 0, tw = 12, th = #items * 2 + 2,
                                       onCancel = function() end })

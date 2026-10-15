@@ -153,9 +153,11 @@ values takes the first player's. The worlds then lose those entries.
 
 ## Not covered yet
 
-- Party and PC changes at rest points, and the party sent before a battle
-  the world asks for: #17.
-- A battle the host runs for a player holding them: #18.
+- Party and PC changes at rest points, and the holdings sent before a
+  battle the world opens: done in #17 ([campaign.md](campaign.md),
+  *Holdings*).
+- A battle the host runs for a player holding them: done in #18
+  ([battles.md](battles.md)).
 - Story items reaching every player, and the gift race: done in #16,
   [items.md](items.md).
 - A new player's private opening: #22. Today a new player's window takes

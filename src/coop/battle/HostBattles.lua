@@ -117,9 +117,19 @@ local function push(host, b, input)
   host.dirty = true
 end
 
-local function joinInput(p, team, otId, expAll)
+-- room: a catch fits in the player's team or PC (#17; nil from a window
+-- that did not say counts as room)
+local function joinInput(p, team, otId, expAll, room)
   return { kind = "join", player = p.id, name = p.name, team = team,
-           otId = otId, expAll = expAll == true }
+           otId = otId, expAll = expAll == true, room = room ~= false }
+end
+
+-- whether a catch fits with this participant, by their team's join input
+local function hasRoom(b, pid)
+  for _, input in ipairs(b.inputs) do
+    if input.kind == "join" and input.player == pid then return input.room ~= false end
+  end
+  return false
 end
 
 -- A battle the player's world opened (design A8.2): the opening and the
@@ -135,7 +145,7 @@ function HostBattles.open(host, p, msg)
     ask = nil, suggestions = {}, ended = nil,
   }
   host.battles[b.id] = b
-  push(host, b, joinInput(p, msg.team, msg.otId, msg.expAll))
+  push(host, b, joinInput(p, msg.team, msg.otId, msg.expAll, msg.room))
   host:_log("battle_open", { battle = b.id, seed = b.seed, kind = b.open.kind,
                              map = b.open.map, foe = b.open.foe,
                              trainer = b.open.trainer, team = #msg.team }, p)
@@ -168,7 +178,7 @@ local function applyJoins(host, b)
       local team = {}
       for i = 1, math.min(room, #q.team) do team[i] = q.team[i] end
       b.players[#b.players + 1] = { id = p.id, present = p.connected == true }
-      push(host, b, joinInput(p, team, q.otId, q.expAll))
+      push(host, b, joinInput(p, team, q.otId, q.expAll, q.room))
       host:_log("battle_join", { battle = b.id, rev = #b.inputs, team = #team,
                                  sat_out = #q.team - #team }, p)
     end
@@ -189,7 +199,8 @@ function HostBattles.join(host, p, msg)
   if rosterSize(b) >= Protocol.MAX_ROSTER then return nil, "roster_full" end
   host.joinOrder = (host.joinOrder or 0) + 1
   host.joins[p.id] = { battle = b.id, team = msg.team, otId = msg.otId,
-                       expAll = msg.expAll, seq = msg.seq, order = host.joinOrder }
+                       expAll = msg.expAll, room = msg.room, seq = msg.seq,
+                       order = host.joinOrder }
   host.dirty = true
   host:_log("battle_join_queued", { battle = b.id, team = #msg.team }, p)
   if atSafePoint(b) then applyJoins(host, b) end
@@ -235,8 +246,10 @@ function HostBattles.cmd(host, p, msg)
   if (c.kind == "move" or c.kind == "mimic") and not (c.slot or c.index) then return nil, "bad_cmd" end
   if (c.kind == "item" or c.kind == "ball") and not c.item then return nil, "bad_cmd" end
   if c.kind == "choice" and c.yes == nil then return nil, "bad_cmd" end
-  -- a catch is for a player in the battle (design A7.6)
-  if c.target and not participant(b, c.target) then return nil, "bad_cmd" end
+  -- a catch is for a player in the battle with room for it (design A7.6)
+  if c.target and not (participant(b, c.target) and hasRoom(b, c.target)) then
+    return nil, "bad_cmd"
+  end
   -- RUN flees for the player whose world started the fight; the others
   -- leave the battle instead (design A9.5, A11.1)
   if c.kind == "run" and p.id ~= b.open.by then return nil, "run_initiator" end
