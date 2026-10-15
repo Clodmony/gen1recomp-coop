@@ -68,6 +68,9 @@ Host.__index = Host
 -- a refused link is dropped this long after its `rejected`, so the reason
 -- reaches the client first (design A1.6); the same grace on shutdown
 Host.GRACE = 1.0
+-- on shutdown the host closes once every client has left, or after this
+-- grace (design A11.11, #20)
+Host.END_GRACE = 2.0
 Host.MAX_PLAYERS = 8
 
 -- per link: decoded per frame at most; arriving per second on average, with
@@ -748,7 +751,7 @@ function Host:shutdown(reason)
   end
   self:_shareOwnLog(true) -- the host's last lines go out before `ended`
   self.status = "ending"
-  self.endAt = self.clock() + Host.GRACE
+  self.endAt = self.clock() + Host.END_GRACE
   for _, link in ipairs(self.links) do
     self:_send(link, { type = "ended", reason = reason or "host_quit" })
   end
