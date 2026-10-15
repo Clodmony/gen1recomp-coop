@@ -788,6 +788,14 @@ accepted both as built (2026-10-15).
 
 ### A12. Friend battles and trades
 
+In place for the Cable Club (#60, [cable.md](cable.md), G32): its trades,
+the continue position and the Colosseum (A12.7 to A12.9), with these
+adaptations: the room is chosen at the receptionist's link menu and a
+cable joins only players of the same room (no "first other free
+player"); the 30 s and 60 s waits run from the first offer and from both
+offers; a world in a Cable Club room opens before the nurse of the
+center its town leads into, where upstream puts its added rooms' saves.
+
 1. **carry** Talking to the partner opens BATTLE / TRADE / CANCEL; the CO-OP menu also
    lists BATTLE and TRADE with each free partner's name (D100).
 2. **carry** An invitation needs the recipient's YES, shown only at a rest point, back
@@ -872,9 +880,10 @@ accepted both as built (2026-10-15).
 In place (#15, [presence.md](presence.md)), with what a session without
 battles supports; the battle parts since #34 ([battles.md](battles.md)):
 the "!" where a battle started, a joiner from elsewhere not drawn, JOIN and
-REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle. Left: who
-is not drawn in the opening or the Cable Club, the BATTLE and TRADE rows
-and "in the opening" (#22, #23); the last save is in since #13.
+REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle. Partners
+in a Cable Club room are not drawn since #60 ([cable.md](cable.md)). Left:
+who is not drawn in the opening, the BATTLE and TRADE rows and "in the
+opening" (#22, #23); the last save is in since #13.
 
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
@@ -1040,7 +1049,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A9 Co-op battles: presentation and menus | #19 |
 | A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes, the League run and the Hall of Fame #55 |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
-| A12 Friend battles and trades | #23 |
+| A12 Friend battles and trades | #23; the Cable Club #60 ([cable.md](cable.md)) |
 | A13 Red + Blue mixing, Yellow | #9 |
 | A14 Presence, finding the partner, CO-OP menu, run button | #15 ([presence.md](presence.md)); the battle, opening, friend battle and campaign file parts #34 |
 | A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
@@ -1319,3 +1328,27 @@ sibling's D-numbers.
   the starter he counters (the first finisher's); Red and Blue's later
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
+- **G32. The Cable Club's rooms are its link screens; the session is the
+  cable** (#60, 2026-10-16, proposed). Upstream's Gen 1 Cable Club has no
+  rooms to walk into: the receptionist saves and opens a LAN link menu
+  that pairs two games over a cable of its own, then runs the cartridge's
+  trade screen or link battle. In a co-op world she opens the cartridge's
+  own link menu instead (TRADE CENTER, COLOSSEUM, CANCEL), the room chosen
+  goes to the host, and upstream's same screens run over the session
+  (`LinkState.newFromSession`), each link message passed to the mate by
+  the host. So "in a room" is being at that menu's choice, and A12.7's
+  partners adapt: an offer either side made, then the room's players in id
+  order two by two, kept while both stay; a third player waits without a
+  cable; rooms never mix, so "the first other free player" has no
+  counterpart. A trade is the host's: it holds each yes until both said
+  it, swaps the two rows once in the stored worlds (uids kept, commit
+  `cable:<pair>:<n>`) and saves, and only then hands each window the
+  other's yes with the uid it receives; the window plays the movie and
+  any trade evolution on its own copy, and its own save follows. A round
+  with no second offer within 30 s of the first, or no answer within 60 s
+  of both, goes back to the lists. The Colosseum is upstream's link
+  battle from the lead's seed, nothing of it kept. The rooms' maps are
+  never entered, so A12.8 only meets a cartridge's save made in one: it
+  opens before the nurse of the center its last outdoor map leads into,
+  as upstream relocates the saves of its added rooms. Protocol 11.
+  Details: [cable.md](cable.md).
