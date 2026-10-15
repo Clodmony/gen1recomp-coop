@@ -219,6 +219,7 @@ end
 -- migrations, step by step ---------------------------------------------------
 do
   local saved = CampaignFile.VERSION
+  local m1, m2 = CampaignFile.MIGRATIONS[1], CampaignFile.MIGRATIONS[2]
   local steps = {}
   CampaignFile.VERSION = 3
   CampaignFile.MIGRATIONS[1] = function(d) steps[#steps + 1] = 1; d.campaign.title = "STEP1"; return d end
@@ -230,7 +231,7 @@ do
   eq(table.concat(steps, ","), "1,2", "an old file is migrated one version at a time")
   eq(m and m.title, "STEP1+2", "each step sees the last one's result")
   CampaignFile.VERSION = saved
-  CampaignFile.MIGRATIONS[1], CampaignFile.MIGRATIONS[2] = nil, nil
+  CampaignFile.MIGRATIONS[1], CampaignFile.MIGRATIONS[2] = m1, m2
 end
 
 -- the journal ---------------------------------------------------------------

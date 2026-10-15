@@ -27,6 +27,13 @@
 -- (design A3.7, A3.10): everyone hears `saved`.  The host saves by itself
 -- as Store.lua says, and when a player leaves and on shutdown.
 --
+-- The shared world (#14, design A5): the campaign's story (the entries
+-- Ownership.lua gives the campaign) comes from the windows' `patch`es,
+-- merged entry by entry; each player is sent the story whole after their
+-- world, then what changed since, with the last of their patches applied
+-- (A5.2, A5.3).  A player's world is kept without the story and sent with
+-- it laid over (A5.19).  Opening a campaign drops the walk flags (A5.13).
+--
 -- Per-link limits (#32): each frame the host decodes at most FRAME_BUDGET of
 -- one link's messages (the rest waits for the next frame), so one link cannot
 -- take the frame from the others; a link that sends more than its allowance
@@ -44,6 +51,7 @@ local Random = require("src.coop.session.Random")
 local SessionLog = require("src.coop.session.SessionLog")
 local Campaign = require("src.coop.campaign.Campaign")
 local World = require("src.coop.campaign.World")
+local Ownership = require("src.coop.campaign.Ownership")
 
 local Host = {}
 Host.__index = Host
@@ -105,6 +113,9 @@ function Host.new(opts)
     game = self.cartridge.game, sha1 = self.cartridge.sha1,
   })
   self.store = opts.store
+  -- walk flags the cartridge clears as the player walks out are nobody's
+  -- once the campaign is opened again (design A5.13)
+  self.state:dropWalkFlags()
   -- the campaign's players are known players too
   local known = {}
   for _, k in ipairs(type(opts.players) == "table" and opts.players or {}) do known[#known + 1] = k end
@@ -276,15 +287,57 @@ function Host:_autosave(reason)
   return ok
 end
 
--- a player's world from the campaign, after the welcome
+-- a player's world from the campaign, after the welcome: their own keys
+-- with the story over them, as a Continue opens it (design A5.19)
 function Host:_sendWorld(link, p)
-  local entry = self.state:player(p.id)
+  local save = self.state:worldFor(p.id)
   local msg = { type = "world", fresh = true }
-  if entry and entry.world then
+  if save then
     msg.fresh = false
-    msg.save = World.encode(entry.world)
+    msg.save = World.encode(save)
   end
   self:_send(link, msg)
+end
+
+-- The story as this link last heard it, brought up to date (design A5.2):
+-- the whole story first, then what changed, with the last of the player's
+-- patches applied (A5.3).  Nothing is sent when nothing moved.
+function Host:_sendStory(link, p)
+  local story = self.state.story
+  local applied = p.patchSeq or 0
+  local msg
+  if not link.story then
+    local set = {}
+    for path, v in pairs(story) do set[path] = v end
+    msg = { type = "story", rev = self.state.revision, base = true, set = set, unset = {},
+            applied = applied }
+    link.story = {}
+  else
+    if link.storyRev == self.state.revision and link.applied == applied then return end
+    local set, unset, n = Ownership.diff(link.story, story)
+    link.storyRev = self.state.revision
+    if n == 0 and link.applied == applied then return end
+    msg = { type = "story", rev = self.state.revision, base = false, set = set, unset = unset,
+            applied = applied }
+  end
+  for path, v in pairs(msg.set) do link.story[path] = v end
+  for _, path in ipairs(msg.unset) do link.story[path] = nil end
+  link.storyRev, link.applied = self.state.revision, applied
+  self:_send(link, msg)
+end
+
+-- A window's change to the shared story (design A5.2): applied entry by
+-- entry; entries the campaign does not own are skipped (Ownership.lua)
+function Host:_patch(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+  local n = self.state:patch(p.id, msg.set, msg.unset)
+  p.patchSeq = msg.seq
+  local asked = #msg.unset
+  for _ in pairs(msg.set) do asked = asked + 1 end
+  self:_log("patch", { seq = msg.seq, entries = asked, changed = n,
+                       revision = self.state.revision }, p)
 end
 
 -- A window's world: its game saved.  With checkpoint, a real SAVE asks for
@@ -500,7 +553,7 @@ function Host:_shareOwnLog(now)
 end
 
 local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
-                   log = Host._logBatch, world = Host._world }
+                   log = Host._logBatch, world = Host._world, patch = Host._patch }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -519,8 +572,8 @@ function Host:_receive(link, raw)
     self:_log("dropped", { why = why }, link.player)
     return
   end
-  -- a log batch and a world are logged by their handlers, as a summary
-  if msg.type ~= "log" and msg.type ~= "world" then self:_log("message", msg, link.player) end
+  -- a log batch, a world and a patch are logged by their handlers, as a summary
+  if msg.type ~= "log" and msg.type ~= "world" and msg.type ~= "patch" then self:_log("message", msg, link.player) end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
   return HANDLERS[msg.type](self, link, msg)
 end
@@ -592,6 +645,12 @@ function Host:update()
     end
   end
   self.links = keep
+  if self.status == "running" then
+    for _, link in ipairs(self.links) do
+      local p = link.player
+      if p and p.link == link and not link.conn.closed then self:_sendStory(link, p) end
+    end
+  end
   if self.status == "running" and self.store then
     local busy = self:busy()
     if busy ~= self.wasBusy then self.dirty = true end

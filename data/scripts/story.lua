@@ -339,6 +339,11 @@ M.VERMILION_CITY = {
     game.save.pikachuMapScriptActive = nil
     local puz = game.save.trashPuzzle or {}
     game.save.trashPuzzle = puz
+    -- co-op (#14): a partner in the city or its gym keeps the campaign's
+    -- locks (src/coop/game/SharedWorld.lua)
+    if puz.first and require("src.coop.game.SharedWorld").keepsVermilionLocks(game) then
+      return
+    end
     puz.first = love.math.random(0, 7) * 2
   end,
   -- VermilionCityDefaultScript's per-frame SSAnneTicketCheckCoords check:

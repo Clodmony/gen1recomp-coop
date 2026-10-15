@@ -25,8 +25,10 @@ game saved. The session that carries it is in [session.md](session.md).
 **Campaign section:**
 - id, title, cartridge (game and SHA-1), created;
 - a revision that moves with every change;
-- the shared story (`story.flags`, `story.badges`), which stays empty until
-  the world patches of #14 fill it (G20);
+- the shared story (`story`): the campaign's entries of every world (flags,
+  hidden objects, beaten trainers, item balls, badges, Vermilion's locks)
+  as a flat map of paths, filled by the windows' patches (#14,
+  [world.md](world.md), G21);
 - the unique-encounter registry (`encounters`, id to `{ state, battle }`,
   for #21);
 - the set of applied commit ids.
@@ -35,8 +37,9 @@ game saved. The session that carries it is in [session.md](session.md).
 - id, name, game, the in-game trainer id;
 - the serial of the last uid handed out;
 - their **world**: the save table their game wrote, without the device's
-  options. It holds the team, the PC (twelve boxes of twenty) and current
-  box, bag, money, map, cell, facing and the rest.
+  options and without the story's entries. It holds the team, the PC
+  (twelve boxes of twenty) and current box, bag, money, map, cell, facing
+  and the rest. A world sent to the player has the story laid over it.
 
 The battle a player is in and their return point come with #18. Whether a
 player is connected is the session's business and is not stored.
@@ -62,7 +65,8 @@ and changes nothing. Gifts (#16) and victories (#18, #21) use it.
 `coop/campaigns/<game>/<id>.campaign` in the save folder, beside the
 campaign's card (`coop/campaigns/<id>.json`, #12). It is JSON:
 
-- `format` (`"gen1recomp-coop campaign"`) and `version` (1);
+- `format` (`"gen1recomp-coop campaign"`) and `version` (2; version 1,
+  from before the shared world, is migrated: [world.md](world.md));
 - `saved` (unix time);
 - `campaign`, the campaign section;
 - `players`, a list with one entry per player: their `world` (the game's

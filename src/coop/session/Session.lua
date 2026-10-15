@@ -34,6 +34,11 @@
 -- world from the campaign (worldReady, takeWorld); each time the game
 -- saves, its world goes to the host (sendWorld), a real SAVE asking the
 -- host to save the campaign; saveRefusal says when the host would refuse.
+--
+-- The shared world (#14): once joined with a game running, the session's
+-- window (src/coop/campaign/Window.lua) sends this player's share of the
+-- story and takes the partners' at each rest point
+-- (src/coop/game/SharedWorld.lua).  A new link gets a new window.
 
 local Transport = require("src.coop.session.Transport")
 local Protocol = require("src.coop.session.Protocol")
@@ -47,6 +52,7 @@ local Campaign = require("src.coop.campaign.Campaign")
 local CampaignFile = require("src.coop.campaign.CampaignFile")
 local Store = require("src.coop.campaign.Store")
 local World = require("src.coop.campaign.World")
+local Window = require("src.coop.campaign.Window")
 
 local Session = { current = nil }
 Session.__index = Session
@@ -446,9 +452,11 @@ function Session:update(dt, game)
   self.seenRejections = #c.rejections
   if self.host then self:_watchRoster() end
   if c.status == "joined" then
+    if not (self.window and self.window.client == c) then self.window = Window.new(c) end
     if game then
       self.inGame = true
       self:_report(game)
+      require("src.coop.game.SharedWorld").step(self.window, game)
     end
     self:_narrate()
   end
