@@ -741,6 +741,11 @@ characters, a menu row fewer.
 | decides | wählt | |
 | %s suggests | %s rät zu | |
 | IN A BATTLE | IM KAMPF | |
+| Lost the host: reconnecting... | Host weg: verbinde neu... | |
+| Back in the session. | Wieder in der Sitzung. | |
+| The host closed the session. | Der Host hat die Sitzung beendet. | |
+| The host turned this game away. | Der Host hat dieses Spiel abgewiesen. | |
+| The connection to the host was lost. | Die Verbindung zum Host ist weg. | |
 | Leave the battle? / Your team stays. | Kampf verlassen? / Dein Team bleibt. | |
 | %s is away. / TAKE OVER? | %s ist weg. / ÜBERNEHMEN? | |
 | FOR %s | FÜR %s | |

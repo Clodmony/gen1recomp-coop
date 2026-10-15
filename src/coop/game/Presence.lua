@@ -263,8 +263,38 @@ function Presence.clear(game)
 end
 
 -- one logic frame (Game:step)
+-- what the session's link says over the world (#20, design A11.9, A11.11)
+local function linkNotes()
+  local S = package.loaded["src.coop.session.Session"]
+  local cur = S and S.current
+  if not (cur and cur.linkNote) then return cur end
+  local n = cur.linkNote
+  cur.linkNote = nil
+  if n == "lost" then
+    Notices.push(Strings("Lost the host: reconnecting..."))
+  elseif n == "back" then
+    Notices.push(Strings("Back in the session."))
+  elseif n == "ended" then
+    Notices.clear()
+    if cur.status == "ended" then
+      Notices.push(Strings("The host closed the session."))
+    elseif cur.status == "refused" then
+      Notices.push(Strings("The host turned this game away."))
+    else
+      Notices.push(Strings("The connection to the host was lost."))
+    end
+  end
+  return cur
+end
+
 function Presence.step(game)
+  local cur = linkNotes()
   local s = Presence.session()
+  if not s and cur and (cur.endShowUntil or cur.status == "reconnecting") then
+    -- the link is down: the notices still show over the world
+    Notices.step()
+    return
+  end
   if not s then
     if Presence.state or Presence.tinted then
       Presence.clear(game)

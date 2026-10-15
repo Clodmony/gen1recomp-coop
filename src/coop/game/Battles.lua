@@ -43,7 +43,8 @@ local Strings = require("src.core.Strings")
 local Replica = require("src.coop.battle.Replica")
 local View = require("src.coop.battle.View")
 
-local Battles = { away = {}, held = nil }
+-- live: every copy this window runs (on screen or away), by battle id
+local Battles = { away = {}, held = nil, live = {} }
 
 Battles.WAIT = 10 -- seconds the opener waits for the host before fighting alone
 
@@ -109,6 +110,7 @@ local function onEnd(game, joiner)
     if c.client then c.client:dropBattle(c.id) end
     local wasAway = Battles.away[c.id] ~= nil
     Battles.away[c.id] = nil
+    Battles.live[c.id] = nil
     if wasAway or c.forced and not c.real.stack:top() then
       require("src.coop.game.Notices").push(View.endLine(b, result))
     end
@@ -141,6 +143,7 @@ local function bind(game, battle, rec, p)
   battle.draw = nil
   Replica.make(battle, rec, { client = p.client, id = rec.id, me = p.me, real = game,
                               live = p.live, onEnd = onEnd(game, false), onLeave = onLeave })
+  Battles.live[rec.id] = battle
   if p.entered then battle:enter() end
 end
 
@@ -224,8 +227,17 @@ end
 function Battles.step(game)
   local s = session()
   if not s then return end
+  -- a link that came back (#20, A11.9): every copy follows the new one; a
+  -- command sent on the old link may be lost, so the question is asked and
+  -- answered again (the host refuses one it already took as stale)
+  for _, b in pairs(Battles.live) do
+    local c = b.coop
+    if c.client ~= s.client then
+      c.client = s.client
+      c.sent, c.reported, c.picking, c.suggested = nil, nil, nil, nil
+    end
+  end
   for id, b in pairs(Battles.away) do
-    if b.coop.client ~= s.client then b.coop.client = s.client end
     Replica.runAway(b)
     if b.coop.done then Battles.away[id] = nil end
   end
@@ -245,7 +257,7 @@ end
 -- queued join, not one they opened that is still being bound), and it has
 -- inputs to play
 function Battles.rebuildable(client, rec)
-  if Battles.waitingFor(rec.id) then return false end
+  if Battles.waitingFor(rec.id) or Battles.live[rec.id] then return false end
   if rec.open.by == client.player and not rec.ended then
     -- the opener's own record is bound by its pending battle; one with no
     -- pending battle came back after a drop
@@ -277,6 +289,7 @@ function Battles.rebuild(game, client, rec)
   rec.bound = true
   local b = Replica.build(game, rec, { client = client, id = rec.id, me = client.player,
                                        real = game, onEnd = onEnd(game, true), onLeave = onLeave })
+  Battles.live[rec.id] = b
   if rec.ended or away then
     b.coop.away = true
     Battles.away[rec.id] = b
@@ -370,6 +383,7 @@ function JoinWait:update()
   local b = Replica.build(game, rec, { client = client, id = self.id, me = client.player,
                                        real = game, live = self.live, onEnd = onEnd(game, true),
                                        onLeave = onLeave })
+  Battles.live[self.id] = b
   rec.bound = true
   Replica.catchUp(b, rec)
   close()
