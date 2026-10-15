@@ -6,7 +6,24 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (after Group 8's #22: PR #58 open; owner's answers recorded).
+Last updated 2026-10-16 (Group 11 in progress: six parallel agents).
+
+## Group 11 in progress (owner, 2026-10-16)
+
+The owner asked for a group built at once by parallel agents. Milestone
+**Group 11: Story and versions, in parallel**: #57 (starts), #59 (rival
+scenes, split from #55), #55 (League run, Hall of Fame continue), #23
+(friend battles, direct trades, #34's rows), #60 (Cable Club, split from
+#23), #9 (Red and Blue mixing); #34 moved there too. One agent per issue,
+each in a scratch worktree `~/dev-scratch/gen1recomp-coop/wt/<name>`
+(`starts`, `rival`, `league`, `friends`, `cable`, `versions`) on branch
+`coop/g11-<name>`, stacked on `coop/group8-opening` (#58). Shared brief:
+`~/dev-scratch/gen1recomp-coop/g11/BRIEF.md` (decisions G28 to G33, ports
+25110 to 25169). The orchestrating session merges the branches into one
+group branch, runs `tools/verify.sh` and opens one draft PR (owner's
+choice). If this session ended before that: check each branch's commits
+(`git log coop/group8-opening..coop/g11-<name>`) and integrate from there.
+
 
 ## Repository state
 
@@ -40,7 +57,7 @@ Last updated 2026-10-16 (after Group 8's #22: PR #58 open; owner's answers recor
 
 ## Next candidates
 
-- **#57 is next** (owner, 2026-10-16): start in Pallet Town, bring a
+- **#57** (in Group 11 now; owner, 2026-10-16): start in Pallet Town, bring a
   single-player save, the launcher's "how to start". Branch
   `coop/group8-starts` from `gen1recomp-coop` once #58 is merged (or
   stacked on `coop/group8-opening` if it is not). First steps: a canned post-opening story per
