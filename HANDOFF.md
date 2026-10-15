@@ -81,6 +81,16 @@ good (#9's answer); a gift lost on a reset is accepted and documented
 3. "Every connected player inducted" literal (includes players in the opening/elsewhere) [rec] / only players who entered the League this run.
 4. A gift landed after the last holdings is lost on a reset: accept and document [rec] / follow-up: host re-sends owed gifts after a restart.
 
+## Playtest (prepared 2026-10-16, owner and session together)
+
+`~/dev-scratch/gen1recomp-coop/playtest/`: `play.sh a` (host) and
+`play.sh b` (guest) start the `coop/group11` worktree with private save
+folders (`XDG_DATA_HOME`); A has US Red, B US Red and Blue, each with four
+solo saves to BRING A SAVE (LEAGUE, TRADE, RIVAL, WILD; built by
+`prep.lua`). `CHECKLIST.md` lists the scenarios; the session reads
+`a/`/`b/` `console.log` and `love/gen1recomp-coop/coop/logs/`. Delete the
+folder once #61 is merged (it holds extracted cartridge data).
+
 ## Next candidates
 
 - Group 12 (#62, #63, #64) once #61 is merged.
