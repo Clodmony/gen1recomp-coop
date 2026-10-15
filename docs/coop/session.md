@@ -254,8 +254,12 @@ running from the launcher into the game:
   keeps running and sends nothing meanwhile; the shared world's window and
   the battle copies follow the new link; the first position after counts
   as a warp. A game back from a pause (focus or visibility lost) longer than
-  3 s closes its link and dials at once (A11.10); a hosting game put away
-  saves its campaign (#13).
+  3 s closes its link and dials at once (A11.10), but only when it stopped
+  running meanwhile (less than a frame a second, an app put away): a
+  desktop window that only lost focus keeps updating its link and keeps it
+  (found in the owner's playtest, 2026-10-16, where every switch between
+  two windows redialled and ended a trade in progress); a hosting game put
+  away saves its campaign (#13).
 - A session that ends under the game (the host stopped it, the link stayed
   lost for two minutes) shows why over the world for 3 s (A11.11), then
   main.lua goes back to the launcher; leaving on purpose (the game window

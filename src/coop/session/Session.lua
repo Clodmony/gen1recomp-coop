@@ -45,7 +45,9 @@
 -- REDIAL_FOR seconds ("reconnecting"); the world keeps running and sends
 -- nothing until the host has the player back, and the first position after
 -- that counts as a warp.  A game back from a pause longer than RESUME_AFTER
--- seconds closes its link and dials at once.  A session that ends under a
+-- seconds that stopped running meanwhile (an app put away) closes its link
+-- and dials at once; a window that only lost focus kept running and keeps
+-- its link.  A session that ends under a
 -- running game shows why over the world for END_SHOW seconds before the
 -- launcher.  `linkNote` tells the game what to say ("lost", "back",
 -- "ended"; src/coop/game/Presence.lua).
@@ -320,19 +322,24 @@ end
 -- notes when (design A11.10)
 function Session.pause()
   local s = Session.current
-  if s and not s.pausedAt then s.pausedAt = s.clock() end
+  if s and not s.pausedAt then s.pausedAt, s.pausedFrames = s.clock(), s.frames end
   if s and s.host then return s.host:pause() end
   return false
 end
 
 -- the app is back: a joining game paused longer than RESUME_AFTER seconds
--- closes its link and dials at once, its link likely gone stale (A11.10)
+-- that ran less than a frame a second meanwhile closes its link and dials
+-- at once, its link likely gone stale (A11.10); a desktop window that only
+-- lost focus kept updating its link and keeps it
 function Session.resume()
   local s = Session.current
   if not (s and s.pausedAt) then return end
   local away = s.clock() - s.pausedAt
-  s.pausedAt = nil
-  if s.kind == "join" and s.inGame and away > Session.RESUME_AFTER
+  -- a window that kept updating meanwhile (a desktop window that only lost
+  -- focus) kept its link alive: at least one frame a second ran
+  local ran = s.frames - (s.pausedFrames or s.frames)
+  s.pausedAt, s.pausedFrames = nil, nil
+  if s.kind == "join" and s.inGame and away > Session.RESUME_AFTER and ran < away
      and s.client and s.client.status == "joined" then
     s.client.conn:close()
     s.redialNow = true

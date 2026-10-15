@@ -101,6 +101,21 @@ Session.current = nil
 frame(2, {})
 eq(dials, before, "a short pause keeps its link")
 
+-- a desktop window that lost focus keeps running: its link was kept alive
+-- all along, so coming back after more than 3 s does not dial afresh
+-- (found in the owner's playtest, two windows on one machine)
+Session.current = guest
+Session.pause()
+Session.current = nil
+before = dials
+frame(60 * (Session.RESUME_AFTER + 1), {})
+Session.current = guest
+Session.resume()
+Session.current = nil
+frame(2, {})
+eq(dials, before, "a window that kept running while unfocused keeps its link")
+eq(guest.status, "joined", "and stays joined")
+
 -- a host gone for good: two minutes, then the end over the world, then the launcher
 local hostWas = hostSession.hub.dial
 hostSession.hub.dial = function()
