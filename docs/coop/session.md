@@ -40,13 +40,14 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 10 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 11 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
 added co-op battles, #18: [battles.md](battles.md); 8 added holdings and
 uids, #17: [campaign.md](campaign.md); 9 added unique encounters, #21:
-[battles.md](battles.md); 10 added the opening, #22: [opening.md](opening.md)). Every message is a JSON object with a `type`. Every field from the
+[battles.md](battles.md); 10 added the opening, #22: [opening.md](opening.md);
+11 added rival scenes, #59: [battles.md](battles.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -63,12 +64,13 @@ checks what the host sends.
 | `patch` | `seq`, `set` (story path to value: a boolean or a whole number 0 to 255), `unset` (paths): this window's change to the shared story since its last patch, at most 8192 entries each, `bag` (optional, #16: `gained` and `lost`, item id to a count 1 to 999, and `spent`, the money went down; the window's bag change in the same rest-to-rest change) |
 | `battle_open`, `battle_join`, `battle_cmd`, `battle_suggest`, `battle_at` | co-op battles (#18): [battles.md](battles.md) |
 | `opening` | `seq`, `done` (the window plays the opening, or finished it), `rival` (optional: the rival's name given in Oak's speech), `chose` (optional, with `done`: the starter it took) (#22): [opening.md](opening.md) |
+| `scene` | `seq`, `map`, `key`, `on`: a claim of a rival scene on that map (on), refused `scene_taken` while another player drives it, or its release (#59): [battles.md](battles.md) |
 
 | Host to client | Fields |
 |---|---|
 | `probe` | the lobby view (`kind`, `protocol`, `build`, `campaign`, `title`, `game`, `sha1`, `host`, `players` with `name`, `game`, `connected`), `refused` (empty, `protocol_mismatch` or `content_mismatch`), `you` (the player this device or name would get back) and `port` |
 | `welcome` | `protocol`, `player`, `campaign`, `last_seq` |
-| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map), `saved_ago` (seconds since the campaign was saved, -1 never), `busy` (why a save would be refused now, or empty); since #22 each player's `opening`, and the campaign's `rival` and `chose` ([opening.md](opening.md)) |
+| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map), `saved_ago` (seconds since the campaign was saved, -1 never), `busy` (why a save would be refused now, or empty); since #22 each player's `opening`, and the campaign's `rival` and `chose` ([opening.md](opening.md)); since #59 `scenes`, the rival scenes being played (`map`, `key`, `by`) ([battles.md](battles.md)) |
 | `world` | once after `welcome`: `fresh` (the campaign has no world for this player), `save` (their world) |
 | `saved` | `ok`, `by` (who saved), `you` (this player asked), `reason` (a refusal: `battle_in_progress`, `bad_world`, `save_failed`), `kind` |
 | `story` | `rev`, `base` (the whole story, replacing the window's), `set`, `unset` (what changed since the last `story` to this player), `applied` (the last of this player's patches the host applied) |

@@ -7,7 +7,8 @@ cartridge's own battle screen and menus (#19, area A9); leaving it, coming
 back and taking over for a player who dropped (#20, area A11); what the
 world shows of partners in a battle (#34, area A14); and the unique
 encounters, trainers and static Pokémon met once per campaign (#21, area
-A10, decision G26).
+A10, decision G26); and the rival's scenes, one driver a map (#59, A10.5,
+decision G29).
 
 ## How a co-op battle runs (G24)
 
@@ -59,8 +60,10 @@ The battle only moves when the command comes back as an input.
   a fight held while away; battles built again after coming back; the end
   of a battle in the window.
 - `src/coop/game/Presence.lua`: partners in a battle in the world (#34).
+- `src/coop/game/Scenes.lua` and `src/coop/session/HostScenes.lua`: the
+  rival's scenes, the window's side and the host's (#59).
 - `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7
-  (8 adds `room`, #17; 9 adds `encounter`, #21).
+  (8 adds `room`, #17; 9 adds `encounter`, #21; 11 adds `scene`, #59).
 
 Upstream files, with marked hooks:
 
@@ -73,6 +76,8 @@ Upstream files, with marked hooks:
   a method of its own (`sendOutReplacement`), so a co-op battle sends out the
   owner's pick; and a battle may award experience its own way (`expAward`,
   `expTrainerId`).
+- `src/script/ScriptRunner.lua`: `run` tells `Scenes.started` of each
+  script it starts, so a rival scene is claimed (#59).
 - `src/coop/game/CoopMenu.lua` (the fork's own): the JOIN rows.
 
 ## The copy in a window
@@ -250,9 +255,54 @@ sprite) is none.
   beaten (`EVENT_BEAT_CHAMPION_RIVAL`, a campaign flag), so it stays the
   campaign's.
 
-Rival scenes, the team's League run and the Hall of Fame's continue
-(A10.5 to A10.7) are #55. A rival on a map object is already one
-encounter, so two windows starting the scene at once fight it together.
+The team's League run and the Hall of Fame's continue (A10.6, A10.7) are
+#55; the rival's scenes (A10.5) follow.
+
+## Rival scenes (#59)
+
+The rival meets the player in scenes after the opening: Route 22 (twice),
+Cerulean's Nugget Bridge, the S.S. Anne 2F, Pokémon Tower 2F and Silph
+Co. 7F. Each is played by **one driver a map** (A10.5, decision G29):
+
+- **Which scripts are scenes.** The engine keeps no map-script bytes
+  (G21), so a scene is a script the script runner starts on one of those
+  maps whose rows fight the rival (`rival_battle` with his class for that
+  scene), while the scene's flag (`EVENT_BEAT_..._RIVAL`) is not set. That
+  catches each way a scene starts: the map script's ambush when the player
+  steps on its cells, and talking to the rival where he waits (Cerulean,
+  the tower). The scene ends when that script ends (`Scenes.LIST`,
+  `Scenes.of`; a marked hook in `ScriptRunner:run`). The Champion's room is
+  not on the list: it has no lock. The list is Red and Blue's; Yellow's
+  Jessie and James scenes and its rival maps are #9's (an entry may name
+  another battle verb).
+- **The driver.** The window whose world started a scene claims its map on
+  the host (`scene`, on). The first claim of a map drives, and every
+  player's `state` names it (`scenes`: map, key, driver). A second claim
+  of that map is refused `scene_taken`; that window plays its scene on, and
+  its battle joins the driver's as one unique encounter: the rival is his
+  map object (`trainer:<MAP>_obj_<n>`, #21), so two windows starting at
+  once fight him together. A window on a link that came back claims a
+  scene it still plays again.
+- **The end.** The driver's window lets go at its first rest point after
+  the scene, in the same frame as and after its patch, so the partners hear
+  the scene's result (the rival's flag, his object hidden) before the
+  release. It lets go at once when the player leaves the map (a whiteout
+  after a loss). The host lets go when the driver's move names another
+  map, or the driver drops or leaves (`HostScenes.lua`). A scene that did
+  not finish sent nothing, so whoever meets the rival next meets him from
+  the start.
+- **A partner on that map** waits from its next rest point (standing
+  between two cells, not in a battle or a menu), frozen under "<NAME> is
+  facing the rival here. Wait, or join the battle...". A joins the
+  driver's battle once it runs (the JOIN of the CO-OP menu); START or
+  SELECT opens the CO-OP menu. The frozen world counts as resting
+  (`SharedWorld.busy`), so it takes the story as it comes. The box goes on
+  a rest frame once the claim has gone: by then the window has taken the
+  result the release came behind, so the scene's step lands at once and
+  the rival does not start again. A player in the opening is never held.
+- **Costs.** The claims live in host memory only. A partner anywhere on a
+  large map (Cerulean City) waits, as the design says, even far from the
+  rival.
 
 ## Leaving, coming back, taking over (#20)
 
@@ -320,7 +370,7 @@ nobody is left.
 - in a co-op battle SELECT opens nothing: the battle screen is on top and
   its SELECT swaps moves as in the cartridge (A14.9).
 
-## Protocol 7 (8, 9)
+## Protocol 7 (8, 9, 11)
 
 | Client to host | Fields |
 |---|---|
@@ -332,11 +382,12 @@ nobody is left.
 | `battle_leave` | `seq`, `battle`: LEAVE BATTLE, or call off a queued join (#20) |
 | `battle_rejoin` | `seq`, `battle`: REJOIN (#20) |
 | `battle_takeover` | `seq`, `battle`, `owner`: stand in for a dropped owner (#20) |
+| `scene` | `seq`, `map`, `key` (the scene, `Scenes.LIST`), `on` (true: a claim, refused `scene_taken` while another player drives that map; false: past it) (11, #59) |
 
 | Host to client | Fields |
 |---|---|
 | `battle` | `id`, `rev`, `seed`, `from`, `inputs` (from `from` on, at most 256 a message), `players` (`id`, `present`, `left`), the `open`ing with the first inputs (and `by`, who opened it), `ask`, `by` (who decides) and `owner` (whose Pokémon it is about), `offer` (a dropped owner the present players may take over for), `standins` (`owner`, `by`), `suggestions` (`by`, `cmd`), `ended` |
-| `state` | each player's `battle` (the one they fight in), and `battles`: `id`, `by`, `kind`, `foe`, `players`, `joinable`, `encounter` (9) |
+| `state` | each player's `battle` (the one they fight in), and `battles`: `id`, `by`, `kind`, `foe`, `players`, `joinable`, `encounter` (9); `scenes`: `map`, `key`, `by` (the driver) (11, #59) |
 
 A command is `kind` (`move`, `struggle`, `fight`, `switch`, `item`,
 `ball`, `run` answer the menu; `replace`, `learn`, `mimic`, `choice` the
@@ -418,6 +469,37 @@ players, split-screen, and a trainer that uses items; for #21, a static
 Pokémon with the cartridge, a scripted fight (a gym leader), a walk-in
 through a trainer's sight during a partner's walk-up, and a full fight.
 
+Rival scenes (#59, same setup, US Red; each player given a MEWTWO and
+the Pokédex flag by the drivers, which also answered the move questions):
+
+- Route 22's first fight: RED stepped onto (29,4) and the host named RED
+  the driver of `route22_1`; GREEN, standing on Route 22, was frozen under
+  "RED is facing the / rival here. Wait, / or join the / battle..." and its
+  window kept resting. The battle was the rival's map object
+  (`trainer:ROUTE_22_obj_1`). A in GREEN's box joined it; it was won with
+  both teams; GREEN stood under the box again until RED's walk-out ended;
+  then the host had the rival's flag in the story, released the claim
+  (`done`), and GREEN's box went with the flag already in GREEN's world.
+- Cerulean's Nugget Bridge: GREEN stepped onto (20,6) and drove
+  (`cerulean`); RED, elsewhere in Cerulean City, was frozen under "GREEN
+  is facing / the rival here. / Wait, or join the / battle...". GREEN's
+  process then quit without a bye mid-scene: the host let go when the ENet
+  link timed out (6.2 s later, `left`), RED's box went, the story had no
+  rival flag, and RED stepping onto (20,6) met the rival from the start,
+  drove the scene (its own claim), won and released it.
+- Two at once: RED and GREEN stepped onto Route 22's two trigger cells at
+  the same moment. RED's claim came first; GREEN's was refused
+  `scene_taken` and GREEN's scene played on: its battle was RED's (one
+  battle on the host, both teams in it), both worlds ended with the
+  rival's flag, and the claim was released after the scene.
+- The host's session logs of both runs showed no `battle_desync`.
+
+Not run for #59: the S.S. Anne, Pokémon Tower and Silph Co. scenes and
+Route 22's second fight with the cartridge (the ROM-free test starts each
+from its map script), a loss in a scene, a partner joining from the
+CO-OP menu instead of the box, a driver whose link comes back mid-scene,
+split-screen, and real pads.
+
 ## Tests
 
 ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
@@ -435,6 +517,19 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   counting as won without a fight or prize; talking to a static object;
   a walk-in into a full fight ending without one.
 
+- `tests/coop/scenes_test.lua` (#59): the host's claims over loopback:
+  the first claim drives and `state` names it, a second claim of the map
+  refused `scene_taken`, another map's own driver, a release only by the
+  driver, the result patch heard before the release, a map change, a
+  dropped link and a bye letting go, the protocol's check.
+- `tests/coop/scenes_game_test.lua` (#59): the cartridge's six scenes as
+  the hand-ported map scripts start them (and none once beaten, none in
+  the Champion's room); the fixture overworld: RED's world claiming its
+  scene (again on a new link), BLUE's claim refused, BLUE's battle against
+  the same rival joining RED's, the result before the release; RED frozen
+  while BLUE drives, resting, joining BLUE's fight with A, BLUE's result
+  in RED's world before the box goes; a claim on another map; BLUE
+  changing map or dropping letting RED go.
 - `tests/coop/holdings_test.lua` (#17): a catch for the named player, the
   name list offering only players with room, the host's refusal, a ball
   kept when nobody has room, and the Pokédex of both players.

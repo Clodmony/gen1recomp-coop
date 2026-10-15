@@ -672,8 +672,12 @@ cartridge's bag stays, refusing the rest; accepted by the owner,
 
 A10.1 to A10.4 and A10.8 are in place (#21, [battles.md](battles.md), G26),
 with these adaptations: an encounter is named by its map object, and the
-League's rooms are never kept done until A10.6. A10.5 to A10.7 are #55
-(owner, 2026-10-15).
+League's rooms are never kept done until A10.6. A10.6 and A10.7 are #55
+(owner, 2026-10-15). A10.5 is in place (#59, split from #55 by the owner
+on 2026-10-16; [battles.md](battles.md), G29 proposed), with this
+adaptation: with no map-script bytes (G21) a scene is a script the runner
+starts on a scene's map that fights the rival while his flag is unset,
+and it ends when that script ends.
 
 1. **carry** A unique encounter (or any carrying victory flags) has at most one active
    instance; beating it marks it done for everybody; losing or fleeing releases
@@ -1038,7 +1042,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
 | A8 Co-op battles: rules | #18 ([battles.md](battles.md)) |
 | A9 Co-op battles: presentation and menus | #19 |
-| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes, the League run and the Hall of Fame #55 |
+| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes #59 ([battles.md](battles.md)); the League run and the Hall of Fame #55 |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
 | A12 Friend battles and trades | #23 |
 | A13 Red + Blue mixing, Yellow | #9 |
@@ -1319,3 +1323,25 @@ sibling's D-numbers.
   the starter he counters (the first finisher's); Red and Blue's later
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
+- **G29. A rival scene is the script that fights him** (#59, 2026-10-16,
+  proposed). A10.5 starts a scene when the window's map-script byte
+  enters the scene's states. The engine keeps no such bytes (G21): each
+  scene is a hand-ported script (the map's ambush on its cells, or the
+  rival's talk script). So a scene is a script the script runner starts on
+  one of the scene maps whose rows fight the rival with that scene's class
+  (`rival_battle`), while the scene's `EVENT_BEAT_..._RIVAL` flag is unset;
+  it ends when that script ends (`src/coop/game/Scenes.lua`, one marked
+  hook in `ScriptRunner:run`, no edit to the map scripts). The window
+  claims the map (`scene`) on the frame after the script starts, and lets
+  go at its first rest point after it, after the scene's patch, or at once
+  on leaving the map; the host also lets go when the driver's move names
+  another map, or the driver drops or leaves. A refused claim plays on and
+  its battle joins the driver's, the rival being his map object (G26). A
+  partner on the map waits from its next rest point under a box that
+  counts as resting; A in it joins the driver's battle; it goes on a rest
+  frame after the claim, so the result has landed. The list is Red and
+  Blue's (Route 22 twice, Cerulean, S.S. Anne 2F, Pokémon Tower 2F, Silph
+  Co. 7F); the Champion's room is not on it, and Yellow re-lists with #9.
+  Costs: the claims live in host memory; a partner anywhere on a scene's
+  map waits, however far from the rival. Protocol 11. Details:
+  [battles.md](battles.md).
