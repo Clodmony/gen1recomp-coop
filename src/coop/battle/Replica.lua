@@ -728,6 +728,11 @@ function Replica.make(b, rec, opts)
     return BattleState.finish(s)
   end
   b.enter = function(s)
+    if s.coop.done then
+      -- a finished battle never comes back (its record is gone)
+      if s.game.stack:top() == s then s.game.stack:pop() end
+      return
+    end
     if s.coop.entered then
       -- caught up without a screen: only what the screen needs
       s.isOpaque = s:bgMode() ~= "world"
