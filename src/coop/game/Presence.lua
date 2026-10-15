@@ -14,6 +14,11 @@
 -- A partner's steps are eased over 16 frames when they walk or surf and 8
 -- when they run or ride (A14.5); each player wears their colour (Colors.lua)
 -- in every window, this player too.  Notices.lua says who joins and leaves.
+--
+-- Battles (#34, design A14.3, A14.4, A14.10): a partner in a battle their
+-- own world opened stands where it started under the "!" bubble; a partner
+-- who joined a battle elsewhere is not drawn; a battle this player is free
+-- to join is told in a notice.
 
 local Arrow = require("src.coop.game.Arrow")
 local Colors = require("src.coop.game.Colors")
@@ -189,8 +194,44 @@ local function tintOwn(ow, colors, group)
   end
 end
 
+-- the battle a player fights in, as `state` says: its summary, or nil
+local function battleOf(state, p)
+  if not p.battle then return nil end
+  for _, b in ipairs(state.battles or {}) do
+    if b.id == p.battle then return b end
+  end
+  return nil
+end
+Presence.battleOf = battleOf
+
+-- a partner's new battle this player is free to join (design A14.10)
+local function narrateBattles(self, state, me)
+  local now = {}
+  local busy = false
+  for _, b in ipairs(state.battles or {}) do
+    now[b.id] = true
+    for _, pid in ipairs(b.players) do if pid == me then busy = true end end
+  end
+  if self.battlesSeen then
+    local names = {}
+    for _, p in ipairs(state.players) do names[p.id] = p.name end
+    for _, b in ipairs(state.battles or {}) do
+      if not self.battlesSeen[b.id] and b.by ~= me and b.joinable and not busy then
+        local text = b.kind == "wild"
+          and Strings("%s is in a battle against wild %s. START > CO-OP to join.",
+                      names[b.by] or "?", b.foe or "?")
+          or Strings("%s is in a battle against %s. START > CO-OP to join.",
+                     names[b.by] or "?", b.foe or "?")
+        Notices.push(text)
+      end
+    end
+  end
+  self.battlesSeen = now
+end
+
 -- notices for partners who joined or left since the last state
 local function narrate(self, state, me)
+  narrateBattles(self, state, me)
   local now = {}
   for _, p in ipairs(state.players) do
     if p.id ~= me then now[p.id] = p.connected and p.name or false end
@@ -222,8 +263,38 @@ function Presence.clear(game)
 end
 
 -- one logic frame (Game:step)
+-- what the session's link says over the world (#20, design A11.9, A11.11)
+local function linkNotes()
+  local S = package.loaded["src.coop.session.Session"]
+  local cur = S and S.current
+  if not (cur and cur.linkNote) then return cur end
+  local n = cur.linkNote
+  cur.linkNote = nil
+  if n == "lost" then
+    Notices.push(Strings("Lost the host: reconnecting..."))
+  elseif n == "back" then
+    Notices.push(Strings("Back in the session."))
+  elseif n == "ended" then
+    Notices.clear()
+    if cur.status == "ended" then
+      Notices.push(Strings("The host closed the session."))
+    elseif cur.status == "refused" then
+      Notices.push(Strings("The host turned this game away."))
+    else
+      Notices.push(Strings("The connection to the host was lost."))
+    end
+  end
+  return cur
+end
+
 function Presence.step(game)
+  local cur = linkNotes()
   local s = Presence.session()
+  if not s and cur and (cur.endShowUntil or cur.status == "reconnecting") then
+    -- the link is down: the notices still show over the world
+    Notices.step()
+    return
+  end
   if not s then
     if Presence.state or Presence.tinted then
       Presence.clear(game)
@@ -254,10 +325,12 @@ function Presence.step(game)
         tintOwn(ow, colors, group)
         Presence.tinted = true
       end
-    elseif p.connected and p.map then
+    elseif p.connected and p.map and not (p.battle and (battleOf(state, p) or {}).by ~= p.id) then
+      -- (a partner who joined a battle elsewhere is not drawn, A14.4)
       local a = Presence.actors[p.id] or Actor.new(p.id)
       keep[p.id] = a
       a.colors, a.colorGroup = Colors.palette(place)
+      a.inBattle = p.battle ~= nil -- the "!" where their battle started (A14.3)
       if ow then a:report(p, offsetOf) end
     end
   end
@@ -276,6 +349,27 @@ end
 function Presence.drawWorld(game, ow)
   if not Presence.state then return end
   Arrow.draw(game, ow, Presence.partners(), Presence.frame)
+  for _, a in pairs(Presence.actors) do
+    if a.inBattle and a.visible then Presence.drawBubble(game, ow, a) end
+  end
+end
+
+-- the cartridge's "!" bubble over a partner in a battle (design A14.3)
+function Presence.drawBubble(game, ow, a)
+  local bubble = game.data and game.data.field and game.data.field.emotionBubbles
+  local rect = bubble and bubble.bubbles and bubble.bubbles[1]
+  if not (bubble and bubble.path and rect) then return end
+  local ok, img = pcall(function()
+    Presence.bubbleImg = Presence.bubbleImg
+      or love.graphics.newImage(require("src.render.Assets").resolve(bubble.path))
+    return Presence.bubbleImg
+  end)
+  if not (ok and img) then return end
+  Presence.bubbleQuad = Presence.bubbleQuad
+    or love.graphics.newQuad(rect.x, rect.y, rect.w, rect.h, img:getDimensions())
+  local cam = ow.camera or { x = 0, y = 0 }
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.draw(img, Presence.bubbleQuad, a.px - cam.x, a.py - cam.y - 20)
 end
 
 -- the overworld's UI pass (OverworldState:drawUI): the notices
@@ -292,7 +386,8 @@ function Presence.partners()
   for place, p in ipairs(state and state.players or {}) do
     if p.id ~= Presence.me then
       out[#out + 1] = { id = p.id, name = p.name, place = place, connected = p.connected,
-                        map = p.map, x = p.x, y = p.y, actor = Presence.actors[p.id] }
+                        map = p.map, x = p.x, y = p.y, actor = Presence.actors[p.id],
+                        battle = p.battle }
     end
   end
   return out

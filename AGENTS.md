@@ -36,6 +36,8 @@ Read before working:
 - [docs/coop/presence.md](docs/coop/presence.md): what a session shows in
   the game (partners, arrow, CO-OP menu, notices, run) and its hooks in
   upstream files.
+- [docs/coop/battles.md](docs/coop/battles.md): co-op battles (lockstep
+  copies in every window, the host's record, joining, the rules).
 - [docs/coop/split.md](docs/coop/split.md): split-screen, two players on one
   device (two worlds in one process, the views, input routing, seat 2).
 

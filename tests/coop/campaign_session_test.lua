@@ -102,7 +102,7 @@ eq(red.state.saved_ago, 0, "the state says it was saved just now")
 eq(red.savedAt, 5, "the window knows when")
 
 -- a save while a battle runs is refused and writes nothing --------------------------
-host.battles.b1 = true
+host.battles.b1 = { open = { by = "p0", kind = "wild" }, players = {}, inputs = {}, suggestions = {} }
 pump(host, { red, blue })
 eq(blue.state.busy, "battle_in_progress", "the state says a save would be refused")
 local diskBefore = fs.files[main]
@@ -127,7 +127,7 @@ pump(host, { red, blue })
 eq(blue:takeSaves()[1].reason, "battle_in_progress", "a pending join refuses a save too")
 host.joins.j1 = nil
 -- no autosave while a battle runs, one when it ends
-host.battles.b2 = true
+host.battles.b2 = { open = { by = "p0", kind = "wild" }, players = {}, inputs = {}, suggestions = {} }
 red:sendWorld(World.encode(F.save("RED", { money = 99 })), false)
 clock = 200
 pump(host, { red, blue })
@@ -201,7 +201,7 @@ do
   local c1 = client(h2.hubs[1], "RED", { [CID] = redId }, "d1")
   c1:join()
   pump(h2, { c1 })
-  h2.battles.x = true
+  h2.battles.b3 = { open = { by = "p0", kind = "wild" }, players = {}, inputs = {}, suggestions = {} }
   c1:sendWorld(World.encode(F.save("RED", { money = 3 })), false)
   pump(h2, { c1 })
   h2:shutdown("host_quit")

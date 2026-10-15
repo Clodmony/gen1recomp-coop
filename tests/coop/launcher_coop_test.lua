@@ -403,9 +403,14 @@ do
   eq(out and out.notice, "The session is closed.", "saying the session closed")
   check(m.session == nil and Session.current ~= m.session, "the session is gone")
   local result
+  local t = 0
+  guest.clock = function() return t end
   for _ = 1, 4 do result = guest:update(1 / 60, {}) or result end
   eq(guest.status, "ended", "the partner is told")
-  eq(result, "launcher", "the partner's game goes back to the launcher")
+  eq(result, nil, "the partner's game first shows why over the world (#20, A11.11)")
+  t = t + Session.END_SHOW
+  result = guest:update(1 / 60, {})
+  eq(result, "launcher", "then goes back to the launcher")
   local note = Session.takeReturn()
   eq(note and note.notice, "The host closed the session.", "with the host's reason")
   eq(Session.takeReturn(), nil, "the note is read once")
