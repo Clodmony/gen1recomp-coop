@@ -19,8 +19,9 @@ local Protocol = {}
 -- (`travel` on moves and players, #15).  4: campaign files (#13): a
 -- window's `world` and save requests, the host's `world` and `saved`, and
 -- the last save and the save gate in `state`.  5: the shared world (#14):
--- a window's `patch` and the host's `story`.
-Protocol.VERSION = 5
+-- a window's `patch` and the host's `story`.  6: story items (#16): the
+-- bag change on a `patch` and the host's `gifts`.
+Protocol.VERSION = 6
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -64,6 +65,11 @@ Protocol.SAVE_KINDS = { menu = true, box = true, hall = true, link = true, quick
 -- a boolean or a small whole number
 Protocol.MAX_STORY = 8192
 Protocol.MAX_PATH = 96
+
+-- story items (#16, design A6): an item id, how many of one item a gift or
+-- a bag change moves, and how many items one message names
+Protocol.MAX_QTY = 999
+Protocol.MAX_ITEMS = 256
 
 local FACINGS = { up = true, down = true, left = true, right = true }
 -- how a player moves: the sprite they wear and how fast their steps are
@@ -171,6 +177,7 @@ local function storyValue(v)
   return nil, "bad value"
 end
 Protocol.storyPath = storyPath
+Protocol.itemId = pattern("^[A-Z0-9_]+$", 40)
 
 -- a table whose every value passes fn; maps arrive as objects, an empty one
 -- as an empty array
@@ -325,6 +332,22 @@ local identity = {
 local storySet = mapOf(storyPath, storyValue, Protocol.MAX_STORY)
 local storyUnset = listOf(storyPath, Protocol.MAX_STORY)
 
+-- a bag's change (item -> how many, at least one), and a gift the host
+-- owes a player: qty < 0 takes (design A6.3, A6.7)
+local itemCount = mapOf(Protocol.itemId, int(1, Protocol.MAX_QTY), Protocol.MAX_ITEMS)
+local bagChange = record({ gained = itemCount, lost = itemCount }, { spent = bool })
+local gift = record({
+  seq = seq, item = Protocol.itemId, qty = function(v)
+    local n, why = int(-Protocol.MAX_QTY, Protocol.MAX_QTY)(v)
+    if n == 0 then return nil, "nothing" end
+    return n, why
+  end,
+}, { once = bool, from = name, race = bool })
+Protocol.gift = function(v)
+  local ok, out = pcall(gift, v)
+  return ok and out or nil
+end
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -350,7 +373,9 @@ Protocol.TO_HOST = {
   }), { kind = enum(Protocol.SAVE_KINDS) }),
   -- a window's change to the shared story since its last patch (#14,
   -- design A5.2): entries set (path -> value) and cleared
-  patch = record(withType("patch", { seq = seq, set = storySet, unset = storyUnset })),
+  -- bag (#16): the window's bag change in the same rest-to-rest change
+  patch = record(withType("patch", { seq = seq, set = storySet, unset = storyUnset }),
+                 { bag = bagChange }),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -393,6 +418,9 @@ Protocol.TO_CLIENT = {
     rev = int(0, Protocol.MAX_SEQ), base = bool, set = storySet, unset = storyUnset,
     applied = int(0, Protocol.MAX_SEQ),
   })),
+  -- items owed to this player (#16, design A6): sent once per link, in
+  -- order; the window applies each seq once
+  gifts = record(withType("gifts", { list = listOf(gift, Protocol.MAX_ITEMS) })),
 }
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))

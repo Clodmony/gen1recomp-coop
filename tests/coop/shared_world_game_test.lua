@@ -4,7 +4,10 @@
 -- loopback hub.  What holds the player keeps the window from sending or
 -- taking; a partner's hidden object leaves the live map at a rest point; the
 -- game's own flag reaches the partner; START > SAVE sends the scene so far;
--- Vermilion keeps its trash-can locks while a partner is there.
+-- Vermilion keeps its trash-can locks while a partner is there.  Story
+-- items (#16): a partner's item ball reaches the game's bag with a notice,
+-- the game's own reaches the partner, and the bag holds 40 rows while the
+-- session runs.
 --   luajit tests/coop/shared_world_game_test.lua
 
 package.path = "./?.lua;./?/init.lua;" .. package.path
@@ -152,6 +155,22 @@ step(4)
 eq(s.host.state.story["flags/EVENT_FIX_SAVED"], true, "a save sends it at once")
 stack:pop()
 
+-- story items (#16, design A6) ------------------------------------------------------------
+local Notices = require("src.coop.game.Notices")
+eq(Data.constants.bagSize, 40, "a running session's bag holds 40 rows (A6.8)")
+Notices.clear()
+local potions = Game.save.inventory.FIX_POTION or 0
+partner.save.itemsTaken = { FIX_ROUTE_obj_1 = true }
+partner.save.inventory.FIX_POTION = 2
+step(10)
+eq(Game.save.inventory.FIX_POTION, potions + 2, "BLUE's item ball reached the game's bag (A6.2)")
+local said = table.concat(Notices.texts(), "|")
+check(said:find("BLUE shared FIX POTION x2.", 1, true), "with a notice: " .. said)
+Game.save.flags.EVENT_FIX_GIFT = true
+Game.save.inventory.FIX_TM = 1
+step(10)
+eq(partner.save.inventory.FIX_TM, 1, "the game's own story item reached BLUE")
+
 -- Vermilion's first lock (A5.11) ---------------------------------------------------------
 local story = require("data.scripts.story")
 local onEnter = story.VERMILION_CITY.onEnter
@@ -178,5 +197,8 @@ eq(Game.save.trashPuzzle.first, 4, "a dropped partner does not count")
 love.math.random = realRandom
 check(rolls >= 2, "the cartridge's roll ran when nobody kept the lock")
 
+local before = Data.constants.bagSize
 s:leave()
+eq(before, 40, "the bag stayed at 40 rows through the session")
+eq(Data.constants.bagSize, 20, "and is back to the cartridge's 20 once it closed")
 T.finish()

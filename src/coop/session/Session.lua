@@ -455,6 +455,8 @@ function Session:update(dt, game)
     if not (self.window and self.window.client == c) then self.window = Window.new(c) end
     if game then
       self.inGame = true
+      -- a co-op bag holds 40 rows while the session's world is open (#16, A6.8)
+      require("src.coop.campaign.Items").openBag(game.data)
       self:_report(game)
       require("src.coop.game.SharedWorld").step(self.window, game)
     end
@@ -474,6 +476,7 @@ end
 -- close everything without a note
 function Session:_stop()
   if Session.current == self then Session.current = nil end
+  require("src.coop.campaign.Items").closeBag()
   local c = self.client
   self.client = nil
   if c then c:leave() end
