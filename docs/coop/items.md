@@ -115,9 +115,27 @@ gets empty lists.
 
 ## Checked
 
-ROM-free only so far. Not run live with a cartridge: an item ball, a
-person's present, the BICYCLE, Brock's TM, the gift race and a late joiner
-in two game processes.
+Run on Linux desktop (LÖVE 11.5) with US Red, as three game processes on one
+machine. Each process had its own save folder and a frame driver at
+`POKEPORT_SPEED=4`: host RED, guest BLUE, then GREEN joining late.
+
+- RED took Viridian Forest's ANTIDOTE ball. BLUE saw "RED shared
+  ANTIDOTE." and held one ANTIDOTE, with the ball taken in its world.
+- RED took Daisy's TOWN MAP (its `EVENT_GOT_POKEDEX` was set by the
+  driver). BLUE saw "RED shared TOWN MAP." and got the map and the flag.
+- Both held a BIKE VOUCHER, and RED traded its voucher at the Cerulean
+  bike shop. BLUE saw "RED shared BICYCLE." and "RED handed over BIKE
+  VOUCHER.": BLUE had the BICYCLE and no voucher.
+- The gift race: both took Viridian Forest's POTION in the same moment.
+  BLUE was owed RED's share and its own take-back, and each ended with one
+  POTION.
+- GREEN joined afterwards. It saw "Got BICYCLE." and "Got TOWN MAP.", and
+  held neither the ANTIDOTE, the POTION nor a voucher.
+- Every process ran with a 40-row bag. Nobody saved, so the host still
+  listed every owed item at the end, as intended.
+
+Not run live: a gift TM, a full bag's spill, a rejoin landing an unsaved
+gift again (ROM-free only).
 
 ## Tests
 
