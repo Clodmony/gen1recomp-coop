@@ -1,0 +1,339 @@
+# German wording for the owner to check
+
+The German cartridges (Rote and Blaue Edition, #25) bring almost all of their
+text with them: dialogue, names, items, moves and menus come from the
+cartridge ([german.md](german.md)). This list holds the German the project
+writes itself, for the owner to check. Write the better German in the last
+column and the next session puts it in.
+
+## The launcher (#41)
+
+The launcher shows these words when its LANGUAGE is DEUTSCH (decision G14 in
+[design.md](design.md)). They live in `src/coop/launcher/TextDe.lua`, keyed by
+the English, and the table below is made from that file
+(`luajit tools/launcher_strings.lua --markdown`); `tests/coop/launcher_ui_test.lua`
+fails when the two differ, when a launcher string has no German, or when a
+German page falls back to English.
+
+How they were chosen: the player is addressed with "du", as the cartridges
+do; the cartridge's own spelling is kept where it has the word (POKéMON,
+ROT, BLAU, ORDEN); a cartridge is a "Modul"; the game names on the cartridge
+tiles stay as each cartridge spells them (RED, ROT). `%s` and `%d` are filled
+in by the launcher (a game, a name, a number) in the same order as in
+English. Capitals are kept where the English is in capitals (buttons, labels).
+The credit line of upstream's licence is not translated.
+
+<!-- made by: luajit tools/launcher_strings.lua --markdown -->
+### Tabs, top bar, footer
+
+| English | German now | Better German |
+| --- | --- | --- |
+| PLAY | SPIELEN | |
+| CAMPAIGNS | KAMPAGNEN | |
+| CONTROLS | STEUERUNG | |
+| SETTINGS | OPTIONEN | |
+| HELP | HILFE | |
+| QUIT | BEENDEN | |
+| UNOFFICIAL FORK | INOFFIZIELLER FORK | |
+| ← BACK | ← ZURÜCK | |
+| OK | OK | |
+| ARROWS MOVE · ENTER OR Z CONFIRM · ESC OR X BACK | PFEILE WÄHLEN · ENTER ODER Z BESTÄTIGT · ESC ODER X ZURÜCK | |
+| D-PAD MOVE · A CONFIRM · B BACK | STEUERKREUZ WÄHLT · A BESTÄTIGT · B ZURÜCK | |
+| CLICK TO CHOOSE · RIGHT CLICK GOES BACK | KLICKEN WÄHLT · RECHTSKLICK GEHT ZURÜCK | |
+| TAP TO CHOOSE | TIPPEN WÄHLT | |
+
+### PLAY
+
+| English | German now | Better German |
+| --- | --- | --- |
+| YOUR ADVENTURE HUB | DEIN ABENTEUER-TREFFPUNKT | |
+| Local saves · Direct connections | Lokale Spielstände · Direkte Verbindungen | |
+| THE SAME STORY. YOUR OWN TEAM. | DIESELBE GESCHICHTE. DEIN EIGENES TEAM. | |
+| One story. | Eine Geschichte. | |
+| Two journeys. | Zwei Reisen. | |
+| A shared campaign, from the first step to the final badge. | Eine gemeinsame Kampagne, vom ersten Schritt bis zum letzten Orden. | |
+| YOUR TEAM | DEIN TEAM | |
+| THEIR TEAM | SEIN TEAM | |
+| YOUR CARTRIDGE | DEIN MODUL | |
+| %s · Verified imports | %s · Geprüfte Importe | |
+| English | Englisch | |
+| German | Deutsch | |
+| Ready | Bereit | |
+| Import ROM | ROM importieren | |
+| PLAY SOLO | ALLEIN SPIELEN | |
+| PLAY SOLO → | ALLEIN SPIELEN → | |
+| %s → %s · Matching cartridge required today | %s → %s · Vorerst nur mit demselben Modul | |
+| HOST A CAMPAIGN | KAMPAGNE HOSTEN | |
+| Your save. Friends can join anytime. | Dein Spielstand. Freunde kommen jederzeit dazu. | |
+| JOIN A FRIEND | BEI FREUNDEN MITSPIELEN | |
+| Nearby games or a direct address. | Spiele in der Nähe oder eine Adresse. | |
+| COUCH CO-OP | SOFA-KOOP | |
+| Two players. One screen. Comes later. | Zwei Spieler. Ein Bildschirm. Kommt später. | |
+| PLANNED | GEPLANT | |
+| IMPORT ROM | ROM IMPORTIEREN | |
+| %s has no imported cartridge on this device. | Für %s ist auf diesem Gerät kein Modul importiert. | |
+| LAST SESSION | LETZTE SITZUNG | |
+| HOST AGAIN | WIEDER HOSTEN | |
+| REJOIN | WIEDER BEITRETEN | |
+| %s · %s · Hosted on this device | %s · %s · Auf diesem Gerät gehostet | |
+| no players yet | noch keine Spieler | |
+| %s · Joined at %s | %s · Beigetreten bei %s | |
+| %s is ready to play. | %s ist bereit. | |
+
+### Solo
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Play %s solo | %s allein spielen | |
+| Your own save, apart from every campaign. | Dein eigener Spielstand, getrennt von jeder Kampagne. | |
+| CONTINUE | WEITER | |
+| NEW GAME | NEUES SPIEL | |
+| IMPORT AGAIN | NEU IMPORTIEREN | |
+| BACK | ZURÜCK | |
+| %s · BADGES %d · %s | %s · ORDEN %d · %s | |
+| A new save slot. The old save stays on disk. | Ein neuer Speicherplatz. Der alte Spielstand bleibt erhalten. | |
+| The game starts from its title screen. | Das Spiel beginnt mit seinem Titelbild. | |
+| Import this cartridge's ROM again. | Das ROM dieses Moduls neu importieren. | |
+
+### Controls
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Controls | Steuerung | |
+| The launcher answers keyboard, pad, mouse and touch the same way. | Der Launcher reagiert gleich auf Tastatur, Controller, Maus und Touch. | |
+| IN THE LAUNCHER | IM LAUNCHER | |
+| MOVE | WÄHLEN | |
+| Arrows or WASD · D-pad or stick | Pfeile oder WASD · Steuerkreuz oder Stick | |
+| CONFIRM | OK | |
+| Z, Enter or Space · A or START | Z, Enter oder Leertaste · A oder START | |
+| X, Esc or Backspace · B | X, Esc oder Rücktaste · B | |
+| MOUSE | MAUS | |
+| A click chooses, a right click goes back. | Ein Klick wählt, ein Rechtsklick geht zurück. | |
+| TOUCH | TOUCH | |
+| A tap chooses. | Tippen wählt. | |
+| PLAYER DEVICES | GERÄTE DER SPIELER | |
+| Couch co-op gives each player a controller of their own. It comes with a later version. | Beim Sofa-Koop hat jeder Spieler einen eigenen Controller. Das kommt mit einer späteren Version. | |
+| In a game, the game's own controls apply, as in solo play. | Im Spiel gilt die Steuerung des Spiels, wie beim Alleinspielen. | |
+
+### Settings
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Settings | Optionen | |
+| The launcher's own settings. A game's text follows its cartridge. | Die Optionen des Launchers. Der Text eines Spiels folgt seinem Modul. | |
+| LANGUAGE | SPRACHE | |
+| The language of the launcher. | Die Sprache des Launchers. | |
+| THEME | FARBEN | |
+| Light or dark colours for the launcher. | Helle oder dunkle Farben für den Launcher. | |
+| LIGHT | HELL | |
+| DARK | DUNKEL | |
+| Video, sound and game options are in each game's own OPTIONS menu. | Bild, Ton und Spieloptionen findest du im Menü OPTIONEN jedes Spiels. | |
+
+### Help
+
+| English | German now | Better German |
+| --- | --- | --- |
+| A little help before you go | Ein wenig Hilfe vor dem Start | |
+| Co-op connects directly to the hosting device. | Koop verbindet direkt mit dem Gerät des Hosts. | |
+| CONNECTING | VERBINDEN | |
+| At home | Zu Hause | |
+| Use Nearby or the host's home address. Both devices use the same network. | Nimm die Liste in der Nähe oder die Heimnetz-Adresse des Hosts. Beide Geräte sind im selben Netz. | |
+| Over the internet | Übers Internet | |
+| Use a VPN address, or forward UDP 24680 on the hosting network. | Nimm eine VPN-Adresse oder leite im Netz des Hosts UDP 24680 weiter. | |
+| Cartridges | Module | |
+| Both players need the same game, ROM and language. Red with Blue comes later. | Beide brauchen dasselbe Spiel, ROM und dieselbe Sprache. Rot mit Blau kommt später. | |
+| SESSION LOGS | SITZUNGSPROTOKOLLE | |
+| SHARE LOGS | PROTOKOLLE TEILEN | |
+| ON | AN | |
+| OFF | AUS | |
+| Shared logs go to the players of a session. They hold trainer names and addresses: never post them. | Geteilte Protokolle gehen an die Spieler einer Sitzung. Sie enthalten Trainernamen und Adressen: nie veröffentlichen. | |
+| OPEN LOGS FOLDER | PROTOKOLLORDNER ÖFFNEN | |
+| The logs are in %s | Die Protokolle liegen in %s | |
+| ABOUT | ÜBER | |
+| Co-op fork: github.com/Clodmony/gen1recomp-coop | Koop-Fork: github.com/Clodmony/gen1recomp-coop | |
+| The co-op fork is written by AI coding agents directed by the repository owner. | Der Koop-Fork wird von KI-Programmieragenten geschrieben, angeleitet vom Inhaber des Repositorys. | |
+| Plain Pixel font by Douglas Vautour, CC BY 4.0. | Schrift Plain Pixel von Douglas Vautour, CC BY 4.0. | |
+| Pokemon is a trademark of Nintendo, Creatures and GAME FREAK. This project is not affiliated with them. | POKéMON ist eine Marke von Nintendo, Creatures und GAME FREAK. Dieses Projekt steht in keiner Verbindung zu ihnen. | |
+
+### Import
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Bring your cartridge | Bring dein Modul mit | |
+| Import a verified ROM on this device. Nothing is uploaded. | Importiere ein geprüftes ROM auf diesem Gerät. Nichts wird hochgeladen. | |
+| %s · NOT IMPORTED | %s · NICHT IMPORTIERT | |
+| Drop the ROM file on this window, or type its path and press ENTER. | Zieh die ROM-Datei auf dieses Fenster oder tippe ihren Pfad und drücke ENTER. | |
+| Importing a ROM on this device comes later. | ROMs auf diesem Gerät zu importieren kommt später. | |
+| Clean dumps of Pokemon Red, Blue and Yellow (US) and of the German Rote and Blaue Edition; .zip and .7z where the system opens them. | Saubere Dumps von POKéMON Rot, Blau und Gelb (US) und der deutschen Roten und Blauen Edition; .zip und .7z, wo das System sie öffnet. | |
+| Importing %s | %s wird importiert | |
+| Preparing | Vorbereitung | |
+| Could not open %s | %s ließ sich nicht öffnen | |
+| Import failed: %s | Import fehlgeschlagen: %s | |
+| The dropped file could not be read. | Die Datei ließ sich nicht lesen. | |
+| The file could not be read. | Die Datei ließ sich nicht lesen. | |
+| That archive is too big to hold one Game Boy ROM. | Das Archiv ist zu groß für ein einzelnes Game-Boy-ROM. | |
+| Expected a 1 MiB Game Boy ROM; this file is %.2f MiB. | Erwartet wird ein Game-Boy-ROM mit 1 MiB; diese Datei hat %.2f MiB. | |
+| Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote or Blaue Edition (SHA-1 %s). | Unbekanntes ROM. Nötig ist ein sauberer Dump von POKéMON Rot, Blau oder Gelb (US) oder der Roten oder Blauen Edition (SHA-1 %s). | |
+| %s is not playable here: this launcher plays Red, Blue and Yellow (and German Red and Blue). | %s läuft hier nicht: Dieser Launcher spielt Rot, Blau und Gelb (und die deutschen Rot und Blau). | |
+
+### Campaigns
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Your campaigns | Deine Kampagnen | |
+| A separate adventure for each group. Solo saves stay separate. | Ein eigenes Abenteuer für jede Gruppe. Solo-Spielstände bleiben getrennt. | |
+| Choose your campaign | Wähle deine Kampagne | |
+| Host %s with a matching cartridge. Your friends can join later. | Hoste %s mit passendem Modul. Deine Freunde kommen später dazu. | |
+| HOST | HOSTEN | |
+| HOST → | HOSTEN → | |
+| RENAME | UMBENENNEN | |
+| DELETE | LÖSCHEN | |
+| %s · %s | %s · %s | |
+| Last hosted %s | Zuletzt gehostet %s | |
+| Never hosted | Noch nie gehostet | |
+| No campaigns on this device yet. | Noch keine Kampagnen auf diesem Gerät. | |
+| No campaigns for this cartridge yet. | Noch keine Kampagnen für dieses Modul. | |
+| Deleted %s. A backup is kept. | %s gelöscht. Eine Sicherung bleibt. | |
+| RESTORE BACKUP | SICHERUNG HOLEN | |
+| Restored %s. | %s ist wieder da. | |
+| The backup could not be restored. | Die Sicherung ließ sich nicht zurückholen. | |
+| The campaign could not be deleted. | Die Kampagne ließ sich nicht löschen. | |
+| 1 campaign on this device | 1 Kampagne auf diesem Gerät | |
+| %d campaigns on this device | %d Kampagnen auf diesem Gerät | |
+| NEW CAMPAIGN | NEUE KAMPAGNE | |
+| + NEW CAMPAIGN | + NEUE KAMPAGNE | |
+| Start a shared adventure | Starte ein gemeinsames Abenteuer | |
+| Name the campaign and the trainer you will play. | Benenne die Kampagne und deinen Trainer. | |
+| CAMPAIGN NAME | KAMPAGNENNAME | |
+| TRAINER NAME | TRAINERNAME | |
+| EDIT | ÄNDERN | |
+| CARTRIDGE | MODUL | |
+| A new campaign uses a save slot of its own. Your solo progress stays separate. | Eine neue Kampagne hat einen eigenen Speicherplatz. Dein Solo-Fortschritt bleibt getrennt. | |
+| Direct play · UDP 24680 | Direktes Spiel · UDP 24680 | |
+| CREATE AND HOST | ERSTELLEN UND HOSTEN | |
+| CREATE AND HOST → | ERSTELLEN UND HOSTEN → | |
+| %s CO-OP | %s KOOP | |
+| Delete this campaign? | Diese Kampagne löschen? | |
+| The campaign leaves the list. Its last state is kept as a backup you can restore. | Die Kampagne verschwindet aus der Liste. Ihr letzter Stand bleibt als Sicherung, die du zurückholen kannst. | |
+| CANCEL | ABBRECHEN | |
+| DELETE AND KEEP BACKUP | LÖSCHEN, SICHERUNG BEHALTEN | |
+
+### Hosting
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Hosting %s · %s · Direct connection | Du hostest %s · %s · Direkte Verbindung | |
+| PLAYERS · %d / %d | SPIELER · %d / %d | |
+| Host · this device | Host · dieses Gerät | |
+| Connected trainer | Verbundener Trainer | |
+| You can enter now. Friends can join later. | Du kannst jetzt los. Freunde kommen später dazu. | |
+| FRIENDS JOIN AT | FREUNDE TRETEN BEI UNTER | |
+| VPN | VPN | |
+| HOME NETWORK | HEIMNETZ | |
+| INTERNET | INTERNET | |
+| THIS DEVICE | DIESES GERÄT | |
+| NAME | NAME | |
+| %s · LAST USED | %s · ZULETZT GENUTZT | |
+| COPY | KOPIEREN | |
+| Copied %s. | %s kopiert. | |
+| Same network, VPN, or a forwarded game port. | Selbes Netz, VPN oder ein weitergeleiteter Spiel-Port. | |
+| The network port is busy: only this device can join. | Der Netzwerk-Port ist belegt: Nur dieses Gerät kann beitreten. | |
+| No network found: only this device can join. | Kein Netzwerk gefunden: Nur dieses Gerät kann beitreten. | |
+| STOP HOSTING | HOSTEN BEENDEN | |
+| ENTER THE WORLD | IN DIE WELT | |
+| ENTER THE WORLD → | IN DIE WELT → | |
+| Close this session? | Diese Sitzung beenden? | |
+| 1 friend will return to their launcher. The session cannot pass to another player. | 1 Freund kehrt zu seinem Launcher zurück. Die Sitzung kann nicht an einen anderen Spieler gehen. | |
+| %d friends will return to their launcher. The session cannot pass to another player. | %d Freunde kehren zu ihrem Launcher zurück. Die Sitzung kann nicht an einen anderen Spieler gehen. | |
+| CLOSE SESSION | SITZUNG BEENDEN | |
+| The session is closed. | Die Sitzung ist beendet. | |
+| The session stopped. | Die Sitzung wurde beendet. | |
+
+### Join
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Join a friend | Bei Freunden mitspielen | |
+| Find a nearby campaign or use the host's address. | Finde eine Kampagne in der Nähe oder nimm die Adresse des Hosts. | |
+| NEARBY | IN DER NÄHE | |
+| %s · %s · %s | %s · %s · %s | |
+| 1 player | 1 Spieler | |
+| %d players | %d Spieler | |
+| Your cartridge fits | Dein Modul passt | |
+| Joins with %s | Tritt mit %s bei | |
+| Needs %s | Braucht %s | |
+| CHECK | PRÜFEN | |
+| Nearby search is off on this device. | Die Suche in der Nähe ist auf diesem Gerät aus. | |
+| Searching the network... | Suche im Netzwerk... | |
+| RECENT ADDRESSES | LETZTE ADRESSEN | |
+| BY ADDRESS | PER ADRESSE | |
+| A host name or address, with an optional :port. The default port is 24680. | Ein Hostname oder eine Adresse, wahlweise mit :Port. Der Standard-Port ist 24680. | |
+| ENTER ADDRESS → | ADRESSE EINGEBEN → | |
+| HOST NAME OR ADDRESS | HOSTNAME ODER ADRESSE | |
+| Your cartridge: %s | Dein Modul: %s | |
+| %s plays %s. Import %s on PLAY to join. | %s spielt %s. Importiere %s unter SPIELEN, um beizutreten. | |
+| The host | Der Host | |
+
+### Connecting
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Calling the host | Der Host wird gerufen | |
+| Could not reach the host | Host nicht erreichbar | |
+| You found your friend | Freund gefunden | |
+| The cartridge does not fit | Das Modul passt nicht | |
+| The host said no | Der Host hat abgelehnt | |
+| The session ended | Die Sitzung ist vorbei | |
+| Host found | Host gefunden | |
+| Co-op protocol matches | Koop-Protokoll passt | |
+| Cartridge fits | Modul passt | |
+| Cartridge fits · %s / %s | Modul passt · %s / %s | |
+| Cartridge does not fit | Modul passt nicht | |
+| Calling the host... | Rufe den Host... | |
+| No answer yet. Trying again in %d s. | Noch keine Antwort. Neuer Versuch in %d s. | |
+| Gives up in %d:%02d | Gibt auf in %d:%02d | |
+| No host answered within a minute. | Innerhalb einer Minute hat kein Host geantwortet. | |
+| Joining... | Trete bei... | |
+| This device is %s in that campaign. | Dieses Gerät ist %s in dieser Kampagne. | |
+| TRY NOW | JETZT VERSUCHEN | |
+| TRY AGAIN | NOCHMAL VERSUCHEN | |
+| NEW NAME | NEUER NAME | |
+| JOIN AS %s | ALS %s BEITRETEN | |
+| USE %s | %s NEHMEN | |
+| The host plays %s in %s, this game is %s in %s. Both need the same language. | Der Host spielt %s auf %s, dieses Spiel ist %s auf %s. Beide brauchen dieselbe Sprache. | |
+| The host plays %s. This game is %s. | Der Host spielt %s. Dieses Spiel ist %s. | |
+| The host's %s ROM is another dump than this one. | Das %s-ROM des Hosts ist ein anderer Dump als dieses. | |
+| The host runs another version of this co-op game. Both need the same one. | Der Host hat eine andere Version dieses Koop-Spiels. Beide brauchen dieselbe. | |
+| The session is full. | Die Sitzung ist voll. | |
+| The host is closing the session. | Der Host beendet gerade die Sitzung. | |
+| The host dropped this game: it sent too much at once. | Der Host hat dieses Spiel getrennt: Es hat zu viel auf einmal gesendet. | |
+| The host turned this game away (%s). | Der Host hat dieses Spiel abgewiesen (%s). | |
+| The host closed the session. | Der Host hat die Sitzung beendet. | |
+| The link was lost (%s). | Die Verbindung ist abgerissen (%s). | |
+| You left the session. | Du hast die Sitzung verlassen. | |
+| You closed the session. | Du hast die Sitzung beendet. | |
+| The connection to the host was lost. | Die Verbindung zum Host ist abgerissen. | |
+| Is the VPN on, on both devices? | Ist das VPN auf beiden Geräten an? | |
+| Are both in the same VPN network? | Sind beide im selben VPN-Netz? | |
+| Is the host still hosting? | Hostet der Host noch? | |
+| Are both on the same Wi-Fi or network? | Sind beide im selben WLAN oder Netz? | |
+| Does the host's firewall let UDP %d in? | Lässt die Firewall des Hosts UDP %d herein? | |
+| Does the host's router forward UDP %d to the host? | Leitet der Router des Hosts UDP %d an den Host weiter? | |
+| Is the address the host's current one? | Ist das die aktuelle Adresse des Hosts? | |
+| Is a game on this device hosting? | Hostet ein Spiel auf diesem Gerät? | |
+| Is the address spelled right? | Ist die Adresse richtig geschrieben? | |
+
+### Text entry
+
+| English | German now | Better German |
+| --- | --- | --- |
+| Type on the keyboard, or pick the letters with a pad or a tap. START or END finishes. | Tippe auf der Tastatur oder wähle die Zeichen mit Controller oder Finger. START oder ENDE schließt ab. | |
+| SPACE | LEER | |
+| DEL | LÖSCH | |
+| END | ENDE | |
+<!-- end of the made part -->
+
+## The games (#25)
+
+The engine's own lines in a German game (menus, battle messages, co-op lines)
+come with the rest of #25 and will be listed here.

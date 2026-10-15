@@ -7,7 +7,7 @@
 > mode here, not upstream. The fork publishes no builds. Its changes are
 > written by an AI coding agent directed by the fork's owner (every commit
 > after upstream `f63f485c`); see [AGENTS.md](AGENTS.md). The game starts
-> from the fork's own launcher, not upstream's
+> from the fork's own launcher, in English or German, not upstream's
 > ([docs/coop/launcher.md](docs/coop/launcher.md)), which also imports the
 > German Rote and Blaue Edition ([docs/coop/german.md](docs/coop/german.md)).
 > Upstream's README follows unchanged.
