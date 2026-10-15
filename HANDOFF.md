@@ -6,47 +6,46 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-15 (Group 8's first issue, #21, PR #56).
+Last updated 2026-10-15 (after Group 8's first issue, #21: PR #56 merged).
 
 ## Repository state
 
-- Default branch `gen1recomp-coop`; `main` = upstream main. Groups 1 to 7a
-  are merged: #42-#50, #52, and #53 and #54 (merged 2026-10-15 at the
-  owner's word, locally as Claude; verify on the merged branch was 36/37,
-  only javac).
-- Milestones: Groups 7 and 7a have no open issues (close them at the
-  owner's OK). Group 8 is open: #21 is done by #56; #55 (split from #21),
-  #22, #23 and #34's rest remain. Group 2 still has #12 and #15
-  (owner-side checks); Groups 9 and 10 are open.
+- Default branch `gen1recomp-coop`; `main` = upstream main. Merged at the
+  owner's word on 2026-10-15, locally as Claude: #53, #54 and #56. Verify
+  on the merged branch: 36/37 tiers (only the Android importer tier: no
+  `javac` here).
+- Every merged branch is deleted, locally and on GitHub. Two stay
+  locally: `coop/group7a-party-pc` (checked out in the Superset worktree
+  `veiled-degree-…`) and that worktree's own branch `veiled-degree-…`.
+- Milestones: Groups 7 and 7a closed. Group 8 is open: #21 is closed;
+  #55 (split from #21 by the owner), #22, #23 and #34's rest remain.
+  Group 2 still has #12 and #15 (owner-side checks); Groups 9 and 10 are
+  open.
 
-## Open pull requests (draft)
+## Open pull requests
 
-- **#56** `coop/group8-story` into `gen1recomp-coop`: closes #21 (A10.1
-  to A10.4 and A10.8; the owner split A10.5 to A10.7 into #55).
-  - A unique encounter is its map object (`trainer:<MAP>_obj_<n>`,
-    `static:<MAP>_obj_<n>`, protocol 9). One running instance; a walk-in
-    joins it; a win or a catch is done for the campaign (`victory:`
-    commit, campaign `encounters`); a done one answers `beaten` and the
-    world counts it as won; a loss, flight, abandon or shutdown releases
-    it; the League's rooms are never kept done (until #55). The sight
-    gate: a trainer the host names as in a battle spots nobody.
-  - Decision **G26** (design.md §6) is proposed: the owner decides.
-  - Verify 36/37 (only javac). Live (US Red, two ENet processes): sight,
-    the sight gate, a walk-in by talking, a win for both, counts as won.
-    `docs/coop/battles.md` *Unique encounters* and *Checked*.
+None.
 
-## Next candidates
+## For the next session
+
+- **Decision G26 was accepted by the owner (2026-10-15)** after #56
+  merged: mark it accepted in `docs/coop/design.md` §6 (it still says
+  "proposed") on the next group branch.
+- **Next: #22, the private opening** (owner, 2026-10-15): branch
+  `coop/group8-opening` from `gen1recomp-coop`. First steps: design A4,
+  the issue's comment (split-screen's player 2 names themself the same
+  way), and #34's opening part ("in the opening" in the CO-OP box, nobody
+  drawn during the opening).
+
+## Next candidates after that
 
 - **#55** (rival scenes, the team's League run, the Hall of Fame
   continue): A10.5 needs a hook where each rival scene starts (no
   map-script bytes here, G21) and a host lock per map; A10.6 builds on
   `HostBattles.LEAGUE` and `Campaign.encounters`/`commits` (forget the
   League's at the run's clear); A10.7 needs a restart hook.
-- **#22** the private opening (first steps: design A4, the comment about
-  split-screen's player 2 naming themself).
 - **#23** friend battles and trades (a traded Pokémon keeps or gets its
-  uid: `Campaign:_stampUids`).
-- #34's opening and friend-battle parts go with #22 and #23.
+  uid: `Campaign:_stampUids`); #34's friend-battle part with it.
 - Group 2 still has #12 and #15 (owner-side checks).
 
 ## Live-run recipe
@@ -127,11 +126,13 @@ Last updated 2026-10-15 (Group 8's first issue, #21, PR #56).
 ## Worktrees and background processes
 
 - Main checkout on `gen1recomp-coop` (leave it; behind origin until pulled).
-- Group 8's worktree: `~/dev-scratch/gen1recomp-coop/wt-group8` on
-  `coop/group8-story` (pushed). The Superset worktree `veiled-degree-…`
-  still holds the merged `coop/group7a-party-pc`.
-- No background processes. Group 8's scratch (live import, drivers) is
-  deleted.
+- The Superset worktree `veiled-degree-…` holds the merged
+  `coop/group7a-party-pc`; this session ran in it, so it was not removed.
+  The owner removes it in Superset when they like; then
+  `git branch -D coop/group7a-party-pc veiled-degree-…` in the main
+  checkout.
+- No background processes, no scratch worktrees. Group 8's scratch (live
+  import with the extracted cartridge data, drivers) is deleted.
 
 ## Still open
 
@@ -139,18 +140,7 @@ Last updated 2026-10-15 (Group 8's first issue, #21, PR #56).
   and disable upstream's workflows.
 - Optional local tools: JDK 17 (`javac`), luacheck.
 
-## Cleanup the owner may approve
+## Cleanup
 
-- Done 2026-10-15 (owner approved): old scratch and `g2a/`; the merged
-  local branches `coop/10-session-core`, `coop/25-german`,
-  `coop/group1-cleanup`, `coop/group2-first-playable`; the finished
-  milestones (Groups 1, 2a, 3, 4, 5, 5a) closed; every merged branch
-  deleted on GitHub; `coop/group5a-story-items`; Group 6's branches and
-  milestone.
-- Merged 2026-10-15: `coop/group7-battles` and `coop/group7a-party-pc`
-  (local and remote), the Group 7 and 7a milestones, and the Superset
-  worktree that held them.
-- Once #56 is merged: `coop/group8-story` and its worktree.
-- Kept by the owner's choice: the other merged local branches
-  (`coop/group2a-*`, `coop/group3-*`, `coop/group4-*`, `coop/group5-*`,
-  `coop/workflow-groups`); the main checkout is not pulled.
+- Done 2026-10-15 (owner approved): every merged branch, locally and on
+  GitHub (the two above excepted); the milestones of Groups 1 to 7a.
