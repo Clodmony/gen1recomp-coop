@@ -6,63 +6,78 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (after Group 8's #22: PR #58 open; owner's answers recorded).
+Last updated 2026-10-16 (Group 11 built by six parallel agents: PR #61,
+stacked on #58).
 
 ## Repository state
 
-- Default branch `gen1recomp-coop`; `main` = upstream main. #53, #54, #56
-  merged. Every merged branch deleted.
-- Milestones: Group 8 is open: #21 closed; #22 done by #58 (open); #55,
-  #57 (split from #22 by the owner, 2026-10-15), #23 and #34's rest
-  (friend battles) remain. Group 2 still has #12 and #15 (owner-side
-  checks); Groups 9 and 10 are open.
+- Default branch `gen1recomp-coop`; `main` = upstream main.
+- Milestones: Group 8 holds #22 (done by #58). **Group 11: Story and
+  versions, in parallel** holds #57, #59, #55, #23, #60, #9 and #34, all
+  done by #61. Group 2 still has #12 and #15 (owner-side checks); Group
+  10 (#7, #27, #30) is open.
 
 ## Open pull requests (draft)
 
-- **#58** `coop/group8-opening` into `gen1recomp-coop`: closes #22, does
-  #34's opening part. A new player's private opening, the names, the
-  rival's starter, IN THE OPENING, no save in the opening, player 2's name.
-  `docs/coop/opening.md` has everything. Protocol 10, campaign file 4.
-  - Decision **G27** (design.md §6), **accepted by the owner 2026-10-16**: the private story
-    stays in the window (not a host-kept copy), the opening ends outside
-    `OAKS_LAB` with a starter, a new campaign is seeded by its first
-    finished opening.
-  - Verify all passed, 37/37 tiers (JDK 17 installed 2026-10-16). Live: US Red, two
-    ENet processes, both openings played from NEW GAME, 44 checks, none
-    failed (opening.md *Checked* lists what was not run).
-  - **Owner (2026-10-16): merge after their own check** in real windows
-    (two players, a new campaign, the rival named once). Once they say
-    so, merge locally as Claude (`git merge --no-ff`), push, run
-    `tools/verify.sh`.
-  - The German wording added (IM SPIELANFANG, the save box, the join
-    notice, NAME DES RIVALEN, NAME VON SPIELER 2) stays; the owner reviews
-    it later in `german-wording.md` (owner, 2026-10-16).
+- **#58** `coop/group8-opening` into `gen1recomp-coop`: closes #22.
+  Owner (2026-10-16): merge after their own check. G27 accepted.
+- **#61** `coop/group11` into `coop/group8-opening` (stacked): closes
+  #57, #59, #55, #23, #60, #9, #34. Six agents, one per issue, merged
+  one at a time; protocol 16 (11 scenes, 12 Red and Blue, 13 starts, 14
+  Cable Club, 15 friends, 16 League); decisions G28 to G33 proposed.
+  Verify ALL PASSED at ecb289d4 (37/37 tiers). luacheck has not run on
+  this code (not installed here, and CI does not run on a stacked PR):
+  it runs once #61 targets `gen1recomp-coop`.
+  - Merge order: #58 first, then `gh pr edit 61 --base gen1recomp-coop`,
+    let CI (lint) pass, then merge #61 locally as Claude
+    (`git merge --no-ff`), push, run `tools/verify.sh`.
+
+## Owner's open questions from Group 11 (recommended option first)
+
+### #59 rival scenes (G29)
+1. Where a scene starts: accept as built (a script fighting the rival on a scene map while his flag is unset; one ScriptRunner hook) [rec] / explicit hooks per scene in data/scripts.
+2. A far partner on a large map (Cerulean) also frozen: keep as A10.5 says [rec] / only within a distance.
+3. Waiting box: A joins, START/SELECT opens CO-OP [rec] / YES/NO "JOIN?" prompt.
+4. German "%s stellt sich hier dem Rivalen. Warte oder hilf im Kampf...": accept [rec] / owner wording.
+### #9 Red and Blue (G33)
+1. Switch lives on the hosting device's campaign card, changed between hostings [rec] / in the campaign file, changeable while hosting (file v5).
+2. Substituted Pokémon level: player's own cartridge's slot level (D104) [rec] / the other version's level.
+3. Yellow mixing: keep unsupported for good [rec] / follow-up to investigate same-family battles + flag translation.
+4. Extra draw only on slots offering an exclusive [rec] / on every encounter as in the sibling fork.
+### #57 starts (G28)
+1. Accept G28 as built (launcher writes start world into the slot, window sends `start`, host decides) [rec] / host builds the Pallet world / drop `returning` refusal.
+2. Yellow: START IN PALLET hidden until #9 captures its opening [rec] / offer now with guessed state.
+3. Pallet starter stands at the blackout cell (5,6) [rec] / outside Oak's lab door.
+4. German wording (SO BEGINNST DU, DER SPIELANFANG, START IN ALABASTIA, SPIELSTAND MITBRINGEN, WECHSELN): keep, review later [rec] / replacements.
+5. Split-screen seat 2 choosing how to start: follow-up issue [rec] / nothing.
+### #60 Cable Club (G32)
+1. Rooms as link screens over the session (upstream's LinkState), not walkable maps: accept [rec] / walkable rooms follow-up.
+2. Timeouts: 30 s from the first offer, 60 s from both offers, back to lists [rec] / 30 s waiting in the room for any partner.
+3. Owed-trade gap (window drops after the host committed the swap before getting the yes -> clone risk): file follow-up [rec] / accept the narrow race.
+4. German HANDELSCENTER / KOLOSSEUM: keep until checked on a German cartridge [rec] / read from the cartridge (importer change).
+5. The continue fix moves solo saves out of the rooms too: keep for every save [rec] / co-op only.
+### #23 friends (G31)
+1. Friend battles = upstream's link battle over the session; host commits trades once: accept [rec] / rebuild on G24 record.
+2. One trade per pairing, then back to the map [rec] / back to the trade screen until CANCEL.
+3. A battle released after 2 min away still pays EXP for what was fought [rec] / pays nothing.
+4. German wording of 16 lines (KAMPF %s, TAUSCH %s, "%s sagt NEIN.", "%s hat zu tun."): keep [rec] / owner revises.
+### Integration
+- Two trade cores now exist: #23's Trade.lua (each window swaps its own rows, host lays the swap over incoming worlds until shown) and #60's CableTrade.swap (host swaps stored worlds, window stamps the received uid). Unify in a follow-up [rec] / leave both.
+### #55 League (G30)
+1. Accept G30 (every lobby entry asks for the clear; clear held by League presence/fight/uninducted) [rec] / clear only after whiteout or induction.
+2. A reset reopens the host's world (last holdings + last SAVE) [rec] / the device's last SAVE.
+3. "Every connected player inducted" literal (includes players in the opening/elsewhere) [rec] / only players who entered the League this run.
+4. A gift landed after the last holdings is lost on a reset: accept and document [rec] / follow-up: host re-sends owed gifts after a restart.
 
 ## Next candidates
 
-- **#57 is next** (owner, 2026-10-16): start in Pallet Town, bring a
-  single-player save, the launcher's "how to start". Branch
-  `coop/group8-starts` from `gen1recomp-coop` once #58 is merged (or
-  stacked on `coop/group8-opening` if it is not). First steps: a canned post-opening story per
-  version for a Pallet start into a campaign with no story (the live run's
-  seed was ten entries: Oak's walk flags, `EVENT_BATTLED_RIVAL_IN_OAKS_LAB`,
-  the lab's Oak, rival and two balls, Pallet's Oak); the window's
-  `sendOpening(true, nil, chose)` is the way to say "past the opening".
-- **#55** (rival scenes, the team's League run, the Hall of Fame
-  continue): A10.5 needs a hook where each rival scene starts and a host
-  lock per map; A10.6 builds on `HostBattles.LEAGUE` and
-  `Campaign.encounters`/`commits`; A10.7 needs a restart hook.
-- **#23** friend battles and trades (a traded Pokémon keeps or gets its
-  uid: `Campaign:_stampUids`); #34's friend-battle part with it.
-- Group 2 still has #12 and #15 (owner-side checks).
-
-## Rules for every session
-
-- **No session links, ever (owner, 2026-10-15):** now in `AGENTS.md`
-  (*Hard rules*) with #58.
-- **History rewritten (owner, 2026-10-15):** a checkout made before must
-  be reset to `origin/gen1recomp-coop`, never pulled or pushed. GitHub
-  still serves the old commits until GitHub Support purges them.
+- The follow-ups proposed by the agents (file the ones the owner wants):
+  unify the two trade swap cores (#23's `Trade.lua`, #60's
+  `CableTrade.swap`); a Cable Club trade whose yes never reached a window
+  (owed like a gift); owed gifts re-sent after a restart (#55);
+  split-screen player 2 choosing how they start (#57).
+- Group 10 (#7 mobile, #27 launcher entries, #30 voxel mod) needs owner
+  decisions per feature; Group 2's #12 and #15 are owner-side checks.
 
 ## Live-run recipe
 
@@ -152,19 +167,21 @@ Last updated 2026-10-16 (after Group 8's #22: PR #58 open; owner's answers recor
 ## Worktrees and background processes
 
 - Main checkout on `gen1recomp-coop` (leave it; behind origin until pulled).
-- This Superset worktree `veiled-degree-…` holds `coop/group8-opening`
-  (pushed). Its old branch `coop/group7a-party-pc` (merged, pre-rewrite
-  ids) and the worktree's own branch `veiled-degree-…` stay until the
-  owner removes the worktree; then `git branch -D` them in the main
-  checkout.
-- No background processes, no scratch worktrees. #22's scratch (live
-  import with extracted cartridge data, drivers, verify logs) is deleted.
+- The Superset worktree `veiled-degree-…` holds `coop/group8-opening`.
+- `~/dev-scratch/gen1recomp-coop/wt/group11` holds `coop/group11`; remove
+  it once #61 is merged. The six agent branches and worktrees are
+  removed (all merged into `coop/group11`).
+- No background processes. Group 11's scratch (imports, drivers, logs)
+  is deleted; `~/dev-scratch/gen1recomp-coop/g11/` keeps only the brief,
+  the issue and PR bodies and the questions, deleted after the handoff.
 
 ## Still open
 
 - After each `main` sync: `gh workflow list -R Clodmony/gen1recomp-coop --all`
   and disable upstream's workflows.
-- Optional local tools: luacheck (JDK 17 is installed since 2026-10-16).
+- Optional local tools: luacheck (JDK 17 is installed since 2026-10-16); with
+  six agents' code unlinted, installing it (`luarocks install luacheck`) is
+  worth it.
 
 ## Cleanup
 
