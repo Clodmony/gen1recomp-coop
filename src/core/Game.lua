@@ -1564,6 +1564,9 @@ function Game:restoreSave(loaded, recovered, opts)
     for _, mon in ipairs(loaded.party or {}) do Pokemon.heal(mon) end
   end
   require("src.world.gen1.UnionSafety").settle(loaded, self.data)
+  -- co-op (#60): a world continued in a Cable Club room opens at its
+  -- center's counter (src/coop/game/CableClub.lua, design A12.8)
+  require("src.coop.game.CableClub").settle(loaded, self.data)
   local modsDiff = SaveData.modsDiff(loaded, activeMods)
   local report = SaveData.validate(loaded, self.data)
   report.recovered = recovered

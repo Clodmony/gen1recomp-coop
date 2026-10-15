@@ -123,6 +123,9 @@ function LinkState.newFromSession(game, transport, mode, isHost, opts)
   self.adopted = true
   self.adoptedMode, self.adoptedHost = mode, isHost and true or false
   self.forceLevel = opts and opts.forceLevel or nil
+  -- co-op (#60): told the Pokémon a trade brought, before the save after it
+  -- (src/coop/game/CableClub.lua stamps its campaign uid)
+  self.onTraded = opts and opts.onTraded or nil
   self.stage = "adopted"
   self:sendHello(isHost and mode or nil)
   return self
@@ -501,6 +504,7 @@ function LinkState:updateTrade(input)
   if t.stage == "done" then
     local sent = t.party[t.myPick]
     local received, evoTo = t:apply(self.game)
+    if self.onTraded then self.onTraded(received, sent) end -- co-op (#60)
     -- Autosave the instant the swap commits into game.save.party, matching the
     -- Cable Club: pokered engine/link/cable_club.asm calls SaveSAVtoSRAM
     -- (engine/menus/save.asm) right after every trade so the trade is on the

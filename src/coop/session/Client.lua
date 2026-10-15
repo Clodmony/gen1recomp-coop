@@ -39,6 +39,11 @@
 -- once a link (src/coop/game/WildMix.lua); c.wild is the other version's,
 -- { game, maps }, once the host passed them (the campaign's switch on).
 --
+-- The Cable Club (#60): c.cable is this player's cable as the host last
+-- said it ({ room, round, mate, name, lead }; nil before any), c.cableLinks
+-- the mate's link-cable messages not yet taken ({ round, link, uid }, in
+-- order); cableEnter and cableLink send the intentions.
+--
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
 --
@@ -81,6 +86,7 @@ function Client.new(conn, opts)
     uids = {}, -- uids the host gave this player's rows: { box, slot, uid, fp } (#17)
     battles = {}, -- battles this player is in or joining, by id (#18)
     wild = nil, -- the other version's wild slots: { game, maps } (#9)
+    cable = nil, cableLinks = {}, -- the Cable Club (#60)
     dropped = 0,
     onWelcome = opts.onWelcome,
     log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
@@ -224,6 +230,27 @@ function Client:battleTakeover(id, owner)
   return self:send({ type = "battle_takeover", battle = id, owner = owner })
 end
 
+-- the Cable Club (#60, design A12.7) -------------------------------------
+
+-- enter a room behind the receptionist ("trade", "colosseum"; with: the
+-- partner this player offered the cable to), or leave it ("none")
+function Client:cableEnter(room, with)
+  return self:send({ type = "cable", room = room, with = with })
+end
+
+-- a link-cable message for the mate, in the trade's round; uids: with a
+-- party, each Pokémon's uid ("" for none)
+function Client:cableLink(round, link, uids)
+  return self:send({ type = "cable_link", round = round, link = link, uids = uids })
+end
+
+-- the mate's link messages since the last call, oldest first
+function Client:takeCableLinks()
+  local out = self.cableLinks
+  self.cableLinks = {}
+  return out
+end
+
 function Client:dropBattle(id)
   self.battles[id] = nil
 end
@@ -300,6 +327,10 @@ function Client:_handle(msg)
     self.storyApplied, self.storyRev = msg.applied, msg.rev
   elseif t == "battle" then
     self:_battle(msg)
+  elseif t == "cable" then
+    self.cable = msg
+  elseif t == "cable_link" then
+    self.cableLinks[#self.cableLinks + 1] = msg
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
   elseif t == "wild" then

@@ -4120,10 +4120,13 @@ function OverworldState:cableClubReceptionist(onDone)
           t._CableClubNPCPleaseComeAgainText or romText(Game.data, "_CableClubNPCPleaseComeAgainText", "Please come\nagain!"), onDone))
         return
       end
-      Game:writeSave()
+      Game:writeSave("link") -- co-op (#60): the save kind of a link room (#13)
       require("src.core.Sound").play(Game.data, "Save")
       local ok, LinkState = pcall(require, "src.link.LinkState")
-      if ok and LinkState then
+      -- co-op (#60): in a co-op world the session is the cable and the
+      -- cartridge's link menu opens instead (src/coop/game/CableClub.lua)
+      local coop = require("src.coop.game.CableClub").open(Game)
+      if not coop and ok and LinkState then
         Game.stack:push(LinkState.new(Game))
       end
       if onDone then onDone() end

@@ -451,6 +451,9 @@ P["IN THE OPENING"] = "IM SPIELANFANG"
 P["The opening can't\nbe saved.\fLeave OAK's LAB\nfirst!"] = "Der Anfang wird\nnicht gesichert.\fVerlasse erst\nEICHs LABOR!"
 -- rival scenes (#59)
 P["%s is facing the rival here. Wait, or join the battle..."] = "%s stellt sich hier dem Rivalen. Warte oder hilf im Kampf..."
+-- the Cable Club (#60): the cartridge's link menu, which upstream never drew
+P["TRADE CENTER"] = "HANDELSCENTER"
+P["COLOSSEUM"] = "KOLOSSEUM"
 
 -- battle
 P["FOE"] = "GEGNER"

@@ -806,6 +806,8 @@ characters, a menu row fewer.
 | IN THE OPENING | IM SPIELANFANG | |
 | The opening can't / be saved. / Leave OAK's LAB / first! | Der Anfang wird / nicht gesichert. / Verlasse erst / EICHs LABOR! | |
 | %s is facing the rival here. Wait, or join the battle... | %s stellt sich hier dem Rivalen. Warte oder hilf im Kampf... | |
+| TRADE CENTER | HANDELSCENTER | |
+| COLOSSEUM | KOLOSSEUM | |
 
 #### battle
 
