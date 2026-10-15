@@ -203,19 +203,26 @@ end
 local function drawCommandMenu(battle)
   local col = (battle.menuIndex - 1) % 2
   local row = math.floor((battle.menuIndex - 1) / 2)
+  -- co-op (#25): the German words sit as many columns from the box edge as
+  -- on the classic layout (src/coop/game/German.lua layout.*)
+  local German = require("src.coop.game.German")
   if battle.safari then
+    local de = German.layoutFor("safariMenu")
+    local rx = 168 + (de and (de.rightX - 14) * 8 or 0)
     Font.drawBox(0, 13, 38, 5)
     love.graphics.setColor(0, 0, 0, 1)
     Font.draw(Strings("BALLx"), 16, 112)
     -- wNumSafariBalls immediately after the label, as at hlcoord 7,14
     -- (engine/battle/core.asm:2074-2079) (#540)
     Font.draw(("%2d"):format(battle.safari.balls), 56, 112)
-    Font.draw(Strings("BAIT"), 168, 112)
+    Font.draw(Strings("BAIT"), rx, 112)
     Font.draw(Strings("THROW ROCK"), 16, 128)
-    Font.draw(Strings("RUN"), 168, 128)
-    Font.drawCode(0xED, col == 0 and 8 or 160, 112 + row * 16)
+    Font.draw(Strings("RUN"), rx, 128)
+    Font.drawCode(0xED, col == 0 and 8 or rx - 8, 112 + row * 16)
     return
   end
+  local de = German.layoutFor("battleMenu")
+  local rx = 240 + (de and (de.rightCursorX + 1 - 16) * 8 or 0)
 
   -- the prompt on the left, the 2x2 commands on the right
   Font.drawBox(0, 13, 20, 5)
@@ -229,9 +236,9 @@ local function drawCommandMenu(battle)
   -- prompt side blank and run the same scripted hand the classic does.
   if battle.demo then
     Font.draw(Strings("FIGHT"), 176, 112)
-    Font.drawCode(0xE1, 240, 112); Font.drawCode(0xE2, 248, 112)
+    Font.drawCode(0xE1, rx, 112); Font.drawCode(0xE2, rx + 8, 112)
     Font.draw(Strings("ITEM"), 176, 128)
-    Font.draw(Strings("RUN"), 240, 128)
+    Font.draw(Strings("RUN"), rx, 128)
     Font.drawCode(0xED, 168, (battle.demoTimer or 0) <= battle:demoDelays() and 112 or 128)
     return
   end
@@ -239,11 +246,11 @@ local function drawCommandMenu(battle)
   local who = battle.player and battle.player.name or ""
   Font.draw(fitName(who, 112) .. Strings(" do?"), 8, 128)
   Font.draw(Strings("FIGHT"), 176, 112)
-  Font.drawCode(0xE1, 240, 112) -- 'PK'
-  Font.drawCode(0xE2, 248, 112) -- 'MN'
+  Font.drawCode(0xE1, rx, 112) -- 'PK'
+  Font.drawCode(0xE2, rx + 8, 112) -- 'MN'
   Font.draw(Strings("ITEM"), 176, 128)
-  Font.draw(Strings("RUN"), 240, 128)
-  Font.drawCode(0xED, col == 0 and 168 or 232, 112 + row * 16)
+  Font.draw(Strings("RUN"), rx, 128)
+  Font.drawCode(0xED, col == 0 and 168 or rx - 8, 112 + row * 16)
 end
 
 local function drawMoveDetails(battle, move)

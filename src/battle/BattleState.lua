@@ -7088,11 +7088,16 @@ function BattleState:drawTextArea()
     end
   elseif self.phase == "menu" and self.demo then
     -- engine/battle/core.asm:2038-2049
-    box(8, 12, 12, 6)
-    text(Strings("FIGHT", "battle"), 80, 112)
-    drawGlyph(0xE1, 128, 112); drawGlyph(0xE2, 136, 112)
-    text(Strings("ITEM", "battle"), 80, 128); text(Strings("RUN", "battle"), 128, 128)
-    drawGlyph(0xED, 72, (self.demoTimer or 0) <= self:demoDelays() and 112 or 128)
+    -- co-op (#25): the German cartridge's menu box starts at column 6
+    -- with the words from 8 (src/coop/game/German.lua layout.battleMenu)
+    local de = require("src.coop.game.German").layoutFor("battleMenu")
+    local bx, lx, rx = 8, 80, 128
+    if de then bx, lx, rx = de.boxX, de.textX * 8, (de.rightCursorX + 1) * 8 end
+    box(bx, 12, 20 - bx, 6)
+    text(Strings("FIGHT", "battle"), lx, 112)
+    drawGlyph(0xE1, rx, 112); drawGlyph(0xE2, rx + 8, 112)
+    text(Strings("ITEM", "battle"), lx, 128); text(Strings("RUN", "battle"), rx, 128)
+    drawGlyph(0xED, lx - 8, (self.demoTimer or 0) <= self:demoDelays() and 112 or 128)
   elseif self.phase == "menu" then
     local col = (self.menuIndex - 1) % 2
     local row = math.floor((self.menuIndex - 1) / 2)
@@ -7100,22 +7105,32 @@ function BattleState:drawTextArea()
       -- SAFARI_BATTLE_MENU_TEMPLATE: full-width box, "BALLx  BAIT /
       -- THROW ROCK  RUN" from (2,14)
       box(0, 12, 20, 6)
-      text(Strings("BALLx"), 16, 112); text(Strings("BAIT"), 112, 112)
-      text(Strings("THROW ROCK"), 16, 128); text(Strings("RUN", "battle"), 112, 128)
+      -- co-op (#25): the German Safari menu's right words start a column
+      -- earlier (German.layout.safariMenu)
+      local de = require("src.coop.game.German").layoutFor("safariMenu")
+      local rx, rc = 112, 104
+      if de then rx, rc = de.rightX * 8, de.rightCursorX * 8 end
+      text(Strings("BALLx"), 16, 112); text(Strings("BAIT"), rx, 112)
+      text(Strings("THROW ROCK"), 16, 128); text(Strings("RUN", "battle"), rx, 128)
       -- DisplayBattleMenu .safariLeftColumn / .safariRightColumn print
       -- wNumSafariBalls at hlcoord 7,14 with `lb bc, 1, 2` -- one byte, two
       -- digits, space padded -- right after the "BALLx" label at columns
       -- 2..6 (engine/battle/core.asm:2074-2079, 2107-2112) (#540)
       text(("%2d"):format(self.safari.balls), 56, 112)
-      drawGlyph(0xED, (col == 0 and 8 or 104), 112 + row * 16)
+      drawGlyph(0xED, (col == 0 and 8 or rc), 112 + row * 16)
     else
       -- BATTLE_MENU_TEMPLATE: box (8,12)-(19,17), "FIGHT <PK><MN> /
       -- ITEM  RUN" from (10,14); cursor columns 9 / 15
-      box(8, 12, 12, 6)
-      text(Strings("FIGHT", "battle"), 80, 112)
-      drawGlyph(0xE1, 128, 112); drawGlyph(0xE2, 136, 112)
-      text(Strings("ITEM", "battle"), 80, 128); text(Strings("RUN", "battle"), 128, 128)
-      drawGlyph(0xED, (col == 0 and 72 or 120), 112 + row * 16)
+      -- co-op (#25): the German box starts at column 6, the words at 8 and
+      -- the right column at 13 (German.layout.battleMenu)
+      local de = require("src.coop.game.German").layoutFor("battleMenu")
+      local bx, lx, rx = 8, 80, 128
+      if de then bx, lx, rx = de.boxX, de.textX * 8, (de.rightCursorX + 1) * 8 end
+      box(bx, 12, 20 - bx, 6)
+      text(Strings("FIGHT", "battle"), lx, 112)
+      drawGlyph(0xE1, rx, 112); drawGlyph(0xE2, rx + 8, 112)
+      text(Strings("ITEM", "battle"), lx, 128); text(Strings("RUN", "battle"), rx, 128)
+      drawGlyph(0xED, (col == 0 and lx - 8 or rx - 8), 112 + row * 16)
     end
   elseif self.phase == "moveSelect" then
     -- pokered MoveSelectionMenu: move list in a box at (4,12) 16x6,

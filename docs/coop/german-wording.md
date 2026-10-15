@@ -335,5 +335,463 @@ The credit line of upstream's licence is not translated.
 
 ## The games (#25)
 
-The engine's own lines in a German game (menus, battle messages, co-op lines)
-come with the rest of #25 and will be listed here.
+A German game shows the engine's own lines in the cartridge's words where the
+cartridge has them and in the fork's wording for the rest
+([german.md](german.md), decision G15). Upstream already prints most battle,
+item and field lines from the cartridge's text labels; the list below is what
+`src/coop/game/German.lua` adds on top. Keys with a `context|` prefix are the
+same English word on a screen where the cartridge uses another word.
+
+Lines the cartridge has but the engine spells differently are composed from
+the cartridge's labels (an EXP gain from `_GainedText` + `_ExpPointsText`);
+their German is the cartridge's and is not reproduced here. "greatly rose"
+and the boosted EXP line have no German label and use the fork's wording.
+`PP` is written `AP` on the German cartridge, which keeps no label for it.
+
+<!-- made by: luajit tools/game_strings.lua --markdown -->
+### From the cartridge
+
+These come from the player's own cartridge at import: nothing to check,
+listed so the owner sees which lines are the cartridge's.
+
+| English | Read from |
+|---|---|
+| %s's NEST | MonsNestText, row 1 |
+| %s's PC | PlayersPCText, row 1 |
+| <PK><MN>LEAGUE | PKMNLeaguePCText, row 1 |
+| ACCURACY | StatModTextStrings, row 5 |
+| AREA | PokedexMenuItemsText, row 3 |
+| AREA UNKNOWN | AreaUnknownText, row 1 |
+| ATTACK | StatModTextStrings, row 1 |
+| BACK | OptionMenuCancelText, row 1 |
+| BADGES | SaveScreenInfoText, row 2 |
+| BAIT | SafariZoneBattleMenuText, row 1, word 2 |
+| BALLx | SafariZoneBattleMenuText, row 1, word 1 |
+| BATTLE ANIMATION | BattleAnimationOptionText, row 1 |
+| BATTLE STYLE | BattleStyleOptionText, row 1 |
+| BILL'S PC | BillsPCText, row 1 |
+| BOX No. | BoxNoText, row 1 |
+| BOX No.%d | BoxNoText, row 1 |
+| BUY | BuySellQuitText, row 1 |
+| CANCEL | ListMenuCancelText, row 1 |
+| CHANGE BOX | BillsPCMenuText, row 4 |
+| COIN | PrintPrizePrice.CoinString, row 1 |
+| CONTENTS | PokedexContentsText, row 1 |
+| CONTINUE | ContinueText, row 1 |
+| CRY | PokedexMenuItemsText, row 2 |
+| CUT | the import's own data (an item, a move, a preset name) |
+| Congrats! This | DiplomaCongrats, row 1 |
+| DATA | PokedexMenuItemsText, row 1 |
+| DEFENSE | StatModTextStrings, row 2 |
+| DEPOSIT | DepositPCText, row 1 |
+| DEPOSIT <PK><MN> | BillsPCMenuText, row 2 |
+| DEPOSIT ITEM | PlayersPCMenuEntries, row 2 |
+| DIG | the import's own data (an item, a move, a preset name) |
+| EVADE | StatModTextStrings, row 6 |
+| EXP POINTS | StatusScreenExpText, row 1 |
+| Enemy %s | EnemyText, row 1 |
+| FAST | TextSpeedOptionText, row 2, word 1 |
+| FIGHT | BattleMenuText, row 1, word 1 |
+| FLASH | the import's own data (an item, a move, a preset name) |
+| FLY | the import's own data (an item, a move, a preset name) |
+| HALL OF FAME | HallOfFameText, row 1 |
+| HALL OF FAME No | HallOfFameNoText, row 1 |
+| HEAL | TwoOptionMenuStrings.HealCancelMenu, row 1 |
+| ITEM | BattleMenuText, row 2, word 1 |
+| LEVEL UP | StatusScreenExpText, row 2 |
+| LEVEL/ | HoFMonInfoText, row 1 |
+| LOG OFF | PlayersPCMenuEntries, row 4 |
+| MEDIUM | TextSpeedOptionText, row 2, word 2 |
+| MONEY | MoneyText, row 1 |
+| MONEY/¥%d | TrainerInfo_NameMoneyTimeText, row 2 |
+| NAME/%s | TrainerInfo_NameMoneyTimeText, row 1 |
+| NEW GAME | NewGameText, row 1 |
+| NEW NAME | the import's own data (an item, a move, a preset name) |
+| NICKNAME? | NicknameTextString, row 1 |
+| NO | TwoOptionMenuStrings.YesNoMenu, row 2 |
+| Now saving... | NowSavingString, row 1 |
+| OFF | BattleAnimationOptionText, row 2, word 2 |
+| ON | BattleAnimationOptionText, row 2, word 1 |
+| OPTION | StartMenuOptionText, row 1 |
+| OT/ | TypesIDNoOTText, row 4 |
+| OT/%s | TypesIDNoOTText, row 4 |
+| OWN | PokedexOwnText, row 1 |
+| PLAY TIME | HoFPlayTimeText, row 1 |
+| PLAYER | SaveScreenInfoText, row 1 |
+| POKé BALL | the import's own data (an item, a move, a preset name) |
+| POKéDEX | StartMenuPokedexText, row 1 |
+| POKéDEX. | the import's own data (an item, a move, a preset name) |
+| POKéMON | StartMenuPokemonText, row 1 |
+| PROF.OAK's PC | OaksPCText, row 1 |
+| RELEASE <PK><MN> | BillsPCMenuText, row 3 |
+| RIVAL's NAME? | RivalsTextString, row 1 + NameTextString, row 1 |
+| RUN | BattleMenuText, row 2, word 2 |
+| SAVE | StartMenuSaveText, row 1 |
+| SEE YA! | BillsPCMenuText, row 5 |
+| SEEN | PokedexSeenText, row 1 |
+| SEEN %3d  OWN %3d | PokedexSeenText, row 1 + PokedexOwnText, row 1 |
+| SELL | BuySellQuitText, row 2 |
+| SET | BattleStyleOptionText, row 2, word 2 |
+| SHIFT | BattleStyleOptionText, row 2, word 1 |
+| SLOW | TextSpeedOptionText, row 2, word 3 |
+| SOFTBOILED | the import's own data (an item, a move, a preset name) |
+| SOMEONE'S PC | SomeonesPCText, row 1 |
+| SPECIAL | StatModTextStrings, row 4 |
+| SPEED | StatModTextStrings, row 3 |
+| STATS | PokemonMenuEntries, row 1 |
+| STATUS/ | StatusText, row 1 |
+| STRENGTH | the import's own data (an item, a move, a preset name) |
+| SURF | the import's own data (an item, a move, a preset name) |
+| SWITCH | PokemonMenuEntries, row 2 |
+| TELEPORT | the import's own data (an item, a move, a preset name) |
+| TEXT SPEED | TextSpeedOptionText, row 1 |
+| THROW ROCK | SafariZoneBattleMenuText, row 2, word 1 |
+| TIME | SaveScreenInfoText, row 4 |
+| TIME/  %d:%02d | TrainerInfo_NameMoneyTimeText, row 3 |
+| TOSS | UseTossText, row 2 |
+| TOSS ITEM | PlayersPCMenuEntries, row 3 |
+| TRADE | TwoOptionMenuStrings.TradeCancelMenu, row 1 |
+| TYPE/ | TypeText, row 1 |
+| TYPE1/ | TypesIDNoOTText, row 1 |
+| TYPE2/ | TypesIDNoOTText, row 2 |
+| The trade was / cancelled. | TradeCanceled |
+| USE | UseTossText, row 1 |
+| WHICH TECHNIQUE? | WhichTechniqueString, row 1 |
+| WITHDRAW | WithdrawPCText, row 1 |
+| WITHDRAW <PK><MN> | BillsPCMenuText, row 1 |
+| WITHDRAW ITEM | PlayersPCMenuEntries, row 1 |
+| Waiting...! | WaitingText, row 1 |
+| YES | TwoOptionMenuStrings.YesNoMenu, row 1 |
+| YOUR NAME? | YourTextString, row 1 + NameTextString, row 1 |
+| cableclub\|CANCEL | CancelTextString, row 1 |
+| completed your | DiplomaCongrats, row 4 |
+| diploma certifies | DiplomaCongrats, row 2 |
+| disabled! | DisabledText, row 1 |
+| pokedex\|QUIT | PokedexMenuItemsText, row 4 |
+| shop\|QUIT | BuySellQuitText, row 3 |
+| status\|ATTACK | PrintStatsBox.StatsText, row 1 |
+| status\|DEFENSE | PrintStatsBox.StatsText, row 2 |
+| status\|SPECIAL | PrintStatsBox.StatsText, row 4 |
+| status\|SPEED | PrintStatsBox.StatsText, row 3 |
+| that you have | DiplomaCongrats, row 3 |
+|  / For some people, / POKéMON are / pets. Others use / them for fights. / Myself... / I study POKéMON / as a profession. | _OakSpeechText2B |
+| %s / dug a hole! | _DugAHoleText |
+| %s / flew up high! | _FlewUpHighText |
+| %s / is glowing! | _SkyAttackGlowingText |
+| %s / lowered its head! | _LoweredItsHeadText |
+| %s / made a whirlwind! | _MadeWhirlwindText |
+| %s / took in sunlight! | _TookInSunlightText |
+| %s blacked / out! | _PlayerBlackedOutText, page 2 |
+| %s found / %d coins! | _FoundHiddenCoinsText |
+| %s gained / %d EXP. Points! | _GainedText + _ExpPointsText |
+| %s gained / with EXP.ALL, / %d EXP. Points! | _GainedText + _WithExpAllText + _ExpPointsText |
+| %s got off / the BICYCLE. | _GotOffBicycleText1 + _GotOffBicycleText2 |
+| %s got on / the BICYCLE! | _GotOnBicycleText1 + _GotOnBicycleText2 |
+| %s grew / to level %d! | _GrewLevelText |
+| %s has no / moves left! | _NoMovesLeftText |
+| %s is / about to use / %s! | _TrainerAboutToUseText, page 1 |
+| %s is / already out! | _AlreadyOutText |
+| %s is / taken out. / Got %s. | _MonIsTakenOutText |
+| %s is out of / useable POKéMON! | _PlayerBlackedOutText, page 1 |
+| %s is too / scared to move! | _ScaredText |
+| %s learned / %s! | _LearnedMove1Text |
+| %s saved / the game! | _GameSavedText |
+| %s sent / out %s! | _TrainerSentOutText |
+| %s wants / to fight! | _TrainerWantsToFightText |
+| %s was / released outside. / Bye %s! | _MonWasReleasedText |
+| %s was / stored in Box %s. | _MonWasStoredText |
+| %s's / %s fell! | _MonsStatsRoseText + _FellText |
+| %s's / %s rose! | _MonsStatsRoseText + _RoseText |
+| %s's / %s rose. | _VitaminStatRoseText |
+| %s's / dream was eaten! | _DreamWasEatenText |
+| %s's / hurt by poison! | _HurtByPoisonText |
+| %s's / hurt by the burn! | _HurtByBurnText |
+| A blinding FLASH / lights the area! | _FlashLightsAreaText |
+| Accessed PROF. / OAK's PC. / Accessed POKéDEX / Rating System. | _AccessedOaksPCText |
+| An elevator! | _ElevatorText |
+| BILL's favorite / POKéMON list! | _BillsHousePokemonListText1 |
+| Bingo! | _CardKeySuccessText1 |
+| Bring out which / POKéMON? | _PartyMenuBattleText |
+| Choose a / <PK><MN> BOX. | _ChooseABoxText |
+| Choose a POKéMON. | _PartyMenuNormalText |
+| Closed link to / PROF.OAK's PC. | _ClosedOaksPCText |
+| Crammed full of / POKéMON books! | _PokemonBooksText |
+| Darn! / Ran out of coins! | _OutOfCoinsSlotMachineText |
+| Darn! The POKéMON / broke free! | _ItemUseBallText02 |
+| Do it! %s! | _DoItText |
+| Do you want to / give a nickname / to %s? | _DoYouWantToNicknameText |
+| First, what is / your name? | _IntroducePlayerText |
+| GHOST: Get out... / Get out... | _GetOutText |
+| Get'm! %s! | _GetmText |
+| Go! %s! | _GoText |
+| Gyaoo! | _VictoryRoad2FMoltresBattleText |
+| Hello there! / Welcome to the / world of POKéMON! / My name is OAK! / People call me / the POKéMON PROF! | _OakSpeechText1 |
+| Here you are! / Thank you! | _PokemartBoughtItemText |
+| Hey! There's a / switch under the / trash! / The 1st electric / lock opened! | _VermilionGymTrashSuccessText1 |
+| Hi there! / May I help you? | _PokemartGreetingText |
+| How many? | _WithdrawHowManyText |
+| I can't put a / price on that. | _PokemartUnsellableItemText |
+| I like shorts! / They're comfy and / easy to wear! | _Route3Youngster2BattleText |
+| Is it OK to toss / %s? | _IsItOKToTossItemText |
+| Is there anything / else I can do? | _PokemartAnythingElseText |
+| Move POKéMON / where? | _PartyMenuSwapMonText |
+| No cycling / allowed here. | _NoCyclingAllowedHereText |
+| No room left to / store items. | _NoRoomToStoreText |
+| No! A new BADGE / is required. | _NewBadgeRequiredText |
+| No! There's no / running from a / trainer battle! | _NoRunningText |
+| Nope! ITEMFINDER / isn't responding. | _ItemfinderFoundNothingText |
+| Nope! There's / only trash here. / Hey! The electric / locks were reset! | _VermilionGymTrashFailText |
+| Not enough / coins! | _NotEnoughCoinsSlotMachineText |
+| OAK: %s! / This isn't the / time to use that! | _ItemUseNotTimeText |
+| OK. We'll need / your POKéMON. | _NeedYourPokemonText |
+| Once released, / %s is / gone forever. OK? | _OnceReleasedText |
+| Oops! This Box is / full of POKéMON. | _BoxFullText |
+| PA: You're out of / SAFARI BALLs! | _OutOfSafariBallsText, page 2 |
+| PA: You're out of / SAFARI BALLs! / Game over! | _OutOfSafariBallsText |
+| POKéDEX   Seen:{NUM:wDexRatingNumMonsSeen, 1, 3} /          Owned:{NUM:wDexRatingNumMonsOwned, 1, 3} | _DexSeenOwnedText |
+| POKéDEX Rating{COLON} | _DexRatingText |
+| Right! So your / name is {PLAYER}! | _YourNameIsText |
+| SILPH SCOPE / unveiled the / GHOST's identity! | _UnveiledGhostText |
+| Shall we heal your / POKéMON? | _ShallWeHealYourPokemonText |
+| Sucked health from / %s! | _SuckedHealthText |
+| That's right! I / remember now! His / name is {RIVAL}! | _HisNameIsText |
+| That's too impor- / tant to toss! | _TooImportantToTossText |
+| The 2nd electric / lock opened! / The motorized door / opened! | _VermilionGymTrashSuccessText3 |
+| The link was / broken. | _LinkCanceledText |
+| There's no more / room for POKéMON! / %s was / sent to POKéMON / BOX %s on PC! | _SentToBoxText |
+| There's no will / to fight! | _NoWillText |
+| This is my grand- / son. He's been / your rival since / you were a baby. / ...Erm, what is / his name again? | _IntroduceRivalText |
+| This world is / inhabited by / creatures called / POKéMON! | _OakSpeechText2A |
+| Threw away / %s. | _ThrewAwayItemText |
+| Use TM on which / POKéMON? | _PartyMenuUseTMText |
+| Use item on which / POKéMON? | _PartyMenuItemUseText |
+| Use next POKéMON? | _UseNextMonText |
+| Want to get your / POKéDEX rated? | _GetDexRatedText |
+| Welcome to our / POKéMON CENTER! | _PokemonCenterWelcomeText, page 1 |
+| What would you / like to sell? | _PokemonSellingGreetingText |
+| What? | _WhatText |
+| What? There are / no POKéMON here! | _NoMonText |
+| When you change a / POKéMON BOX, data / will be saved. / Is that okay? | _WhenYouChangeBoxText |
+| Will %s / change POKéMON? | _TrainerAboutToUseText, page 2 |
+| Would you like to / SAVE the game? | _WouldYouLikeToSaveText |
+| Yes! ITEMFINDER / indicates there's / an item nearby. | _ItemfinderFoundItemText |
+| You can't carry / any more items! | _CantCarryMoreText |
+| You can't carry / any more items. | _CantCarryMoreText |
+| You can't deposit / the last POKéMON! | _CantDepositLastMonText |
+| You can't get off / here. | _CannotGetOffHereText |
+| You can't take / any more POKéMON. / Deposit POKéMON / first. | _CantTakeMonText |
+| You don't have / anything to sell. | _PokemartItemBagEmptyText |
+| You don't have / enough money. | _PokemartNotEnoughMoneyText |
+| You don't have the / BOULDERBADGE yet! | _Route22GateGuardNoBoulderbadgeText, page 2 |
+| You missed the / POKéMON! | _ItemUseBallText01 |
+| Your POKéMON are / fighting fit! | _PokemonFightingFitText |
+| {PLAYER} got / %s! | _GotMonText |
+| {PLAYER} got on / {RAM:wNameBuffer}! | _SurfingGotOnText |
+| {PLAYER} initiated / TELEPORTER's Cell / Separator! | _BillsHouseInitiatedText |
+| {PLAYER}! / Your very own / POKéMON legend is / about to unfold! / A world of dreams / and adventures / with POKéMON / awaits! Let's go! | _OakSpeechText3 |
+| {RAM:wNameBuffer} can / move boulders. | _CanMoveBouldersText |
+| {RAM:wNameBuffer} can't / FLY here. | _CannotFlyHereText |
+| {RAM:wNameBuffer} can't / use TELEPORT now. | _CannotUseTeleportNowText |
+| {RAM:wNameBuffer} hacked / away with CUT! | _UsedCutText |
+| {RAM:wNameBuffer} used / STRENGTH. | _UsedStrengthText |
+| {RIVAL}: Yeah! Am / I great or what? | _Rival1WinText |
+
+### The fork's own wording
+
+Write the better German in the last column; a box row holds 18
+characters, a menu row fewer.
+
+#### co-op (START > CO-OP, notices)
+
+| English | German | Better German |
+|---|---|---|
+| CO-OP | KOOP | |
+| NO PARTNERS YET | NOCH KEINE PARTNER | |
+| AWAY | WEG | |
+| TOWN MAP | KARTE | |
+| LEAVE SESSION | SITZUNG VERLASSEN | |
+| LEAVE THE CO-OP / SESSION? | KOOP-SITZUNG / VERLASSEN? | |
+| END THE SESSION / FOR EVERYONE? | SITZUNG FÜR ALLE / BEENDEN? | |
+| %s joined the session. | %s ist der Sitzung beigetreten. | |
+| %s left the session. | %s hat die Sitzung verlassen. | |
+
+#### battle
+
+| English | German | Better German |
+|---|---|---|
+| FOE | GEGNER | |
+| But every BOX / is full! | Aber jede BOX / ist voll! | |
+| %s used / SAFARI BALL! | %s setzt / SAFARIBALL ein! | |
+| %s / is charging up! | %s / lädt sich auf! | |
+| %s is / protected by MIST! | %s wird / durch WEISSNEBEL / geschützt! | |
+| %s / was afflicted / by %s! | %s / leidet an / %s! | |
+| HEALTH | KP | |
+| PP | AP | |
+| %s gained / a boosted / %d EXP. Points! | %s erhält / einen Bonus: / %d EP! | |
+| %s's / %s / greatly rose! | %ss / %s / steigt stark! | |
+| %s's / %s / greatly fell! | %ss / %s / sinkt stark! | |
+| What will | Was soll | |
+|  do? |  tun? | |
+| %s is out of / POKéMON! / %s wins! | %s hat keine / POKéMON mehr! / %s gewinnt! | |
+| %s left the / battle. | %s hat den / Kampf verlassen. | |
+| %s ran from / the battle! | %s ist aus dem / Kampf geflohen! | |
+| %s ran out of / time! | %s hat keine / Zeit mehr! | |
+| %s vs %s! | %s gegen %s! | |
+| %s's %s can't / battle on this / game. | %s: %s kann / in diesem Spiel / nicht kämpfen. | |
+| %s's %s can't / battle on this / game. / (%s) | %s: %s kann / in diesem Spiel / nicht kämpfen. / (%s) | |
+| Items can't be / used in a link / battle! | Im Link-Kampf / sind keine Items / erlaubt! | |
+| Link battle needs / the same version / and mods. | Link-Kampf nur / mit gleicher / Version und Mods. | |
+| Link desync! / %s differs. / Are both games / the same version / and mods? | Link gestört! / %s weicht ab. / Haben beide Spiele / dieselbe Version / und Mods? | |
+| Their %s isn't / in this game. / (%s) | Das %s gibt es / in diesem Spiel / nicht. (%s) | |
+| Time's up! You / forfeit the match. | Zeit um! Du gibst / den Kampf auf. | |
+| Your %s can't / battle on the / other game. | Dein %s kann / im anderen Spiel / nicht kämpfen. | |
+
+#### field
+
+| English | German | Better German |
+|---|---|---|
+| %s received / %s! | %s erhält / %s! | |
+| %s received / the %s! | %s erhält / %s! | |
+| Go right ahead! | Geh ruhig weiter! | |
+| Oh! That is the / {RAM}! | Oh! Das ist der / {RAM}! | |
+| You don't have the / {RAM} yet! | Du hast den / {RAM} noch nicht! | |
+| Keep it up! | Weiter so! | |
+| PIKACHU looks / content. | PIKACHU sieht / zufrieden aus. | |
+| POKéMON LEAGUE HQ | POKéMON-LIGA-SITZ | |
+| There's a slew of / POKéMON stuff! | Hier ist jede / Menge POKéMON- / Kram! | |
+| You need a / BICYCLE for the / Cycling Road! | Für die Radstraße / brauchst Du ein / FAHRRAD! | |
+| POKéDEX comp- / letion is: / {NUM:hDexRatingNumMonsSeen} POKéMON seen / {NUM:hDexRatingNumMonsOwned} POKéMON owned / PROF.OAK's / Rating: | Stand des / POKéDEX: / {NUM:hDexRatingNumMonsSeen} POKéMON / gesehen, / {NUM:hDexRatingNumMonsOwned} POKéMON / gefangen. / PROF.EICHS / Urteil: | |
+| {RAM} / POKéMON GYM / LEADER: {RAM} | {RAM} / POKéMON-ARENA / LEITER: {RAM} | |
+| To %s | Nach %s | |
+| FLY TO? | WOHIN? | |
+| ABLE | OK | |
+| NOT ABLE | NEIN | |
+| FNT | BSG | |
+| No POKéMON! | Kein POKéMON! | |
+| No SURFing here! | Hier kein SURFEN! | |
+| Nothing to CUT! | Nichts zu / ZERSCHNEIDEN! | |
+| No good! It's not / even near water. | Geht nicht! Kein / Wasser in der / Nähe. | |
+| The TOWN MAP is / unreadable here. | Die KARTE ist / hier nicht / lesbar. | |
+| There isn't any / response... | Keine / Reaktion... | |
+| Empty. | Leer. | |
+| Nothing here. | Nichts da. | |
+| %s looks / unhappy about it! | %s sieht / unglücklich aus! | |
+| The party is full! | Das Team ist voll! | |
+| You need at least / one POKéMON! | Du brauchst / mindestens ein / POKéMON! | |
+| BOX %d is full! | BOX %d voll! | |
+| PRINT BOX | BOX DRUCKEN | |
+| Printed BOX %d! /  | BOX %d / gedruckt! /  | |
+| Printed %s's / data! /  | Daten von %s / gedruckt! /  | |
+| Printer error! / %s | Druckerfehler! / %s | |
+| PRNT | DRCK | |
+| Toss %s? | %s / wegwerfen? | |
+| NO THANKS | NEIN DANKE | |
+| SLOT MACHINE | SPIELAUTOMAT | |
+| COINS %4d | MÜNZEN %4d | |
+| RETURN TO MAIN / MENU? | ZURÜCK ZUM / HAUPTMENÜ? | |
+| QUIT | BEENDEN | |
+| EXIT GAME | SPIEL BEENDEN | |
+| Diploma | Diplom | |
+| Player | Spieler | |
+| IDNo.%05d | IDNr.%05d | |
+| No.%03d | Nr.%03d | |
+| No. | Nr. | |
+| :L%d No.%03d | :L%d Nr.%03d | |
+| Trade completed! / %s received / %s! | Tausch vollzogen! / %s erhält / %s! | |
+| The trade stopped: / %s. | Der Tausch wurde / abgebrochen: / %s. | |
+
+#### the engine's own options (START > OPTION)
+
+| English | German | Better German |
+|---|---|---|
+| %d OPTIONS | %d OPTIONEN | |
+| options\|SPEED | TEMPO | |
+| GRAPHICS | GRAFIK | |
+| %d INSTALLED | %d INSTALLIERT | |
+| AUDIO MODE | AUDIO-MODUS | |
+| AUTO (FILL HUD) | AUTO (HUD FÜLLEN) | |
+| BATTLE BG | KAMPF-HINTERGRUND | |
+| BATTLE HUD | KAMPF-HUD | |
+| BATTLE LAYOUT | KAMPF-LAYOUT | |
+| BATTLE SIZE | KAMPF-GRÖSSE | |
+| BATTLE SPEED | KAMPF-TEMPO | |
+| BLACK | SCHWARZ | |
+| BOTH | BEIDE | |
+| CENTERED | ZENTRIERT | |
+| COLORS | FARBEN | |
+| CONTROLS | STEUERUNG | |
+| DATE FORMAT | DATUMSFORMAT | |
+| DISPLAY | ANZEIGE | |
+| DISPLAY (%dHZ) | ANZEIGE (%dHZ) | |
+| DYNAMIC | DYNAMISCH | |
+| EXTENDED | ERWEITERT | |
+| FAITHFUL RATIO | ORIGINALFORMAT | |
+| FILL | FÜLLEN | |
+| FIT | EINPASSEN | |
+| FIXED | FEST | |
+| KEY BAR | TASTENLEISTE | |
+| LOGIC CLOCK | LOGIKTAKT | |
+| MAX FPS | MAX. FPS | |
+| MENU SPEED | MENÜ-TEMPO | |
+| MUSIC FILTER | MUSIKFILTER | |
+| MUSIC VOL | MUSIK-LAUTST. | |
+| OG | ORIGINAL | |
+| ORIENTATION | AUSRICHTUNG | |
+| OVERWORLD SPEED | WELT-TEMPO | |
+| PERFORMANCE | LEISTUNG | |
+| PIKACHU VOL | PIKACHU-LAUTST. | |
+| RULESET | REGELWERK | |
+| SCREEN POS | BILDPOSITION | |
+| SFX VOL | EFFEKT-LAUTST. | |
+| SHADER FX | SHADER-EFFEKTE | |
+| SHADER FX 2 | SHADER-EFFEKTE 2 | |
+| TILT | NEIGUNG | |
+| TIME FORMAT | ZEITFORMAT | |
+| TOUCH PAD | TOUCH-PAD | |
+| UI LAYOUT | UI-LAYOUT | |
+| UI LETTERBOX | UI-LETTERBOX | |
+| UNAVAILABLE | NICHT VERFÜGBAR | |
+| VIDEO MODE | VIDEO-MODUS | |
+| VOID FILL | RANDFÜLLUNG | |
+| WHITE | WEISS | |
+| WIDE | BREIT | |
+| WORLD | WELT | |
+
+#### link play (upstream's Cable Club over the network)
+
+| English | German | Better German |
+|---|---|---|
+| HOST A GAME | SPIEL ERÖFFNEN | |
+| JOIN A GAME | SPIEL BEITRETEN | |
+| BATTLE | KAMPF | |
+| Calling... | Rufe an... | |
+| Waiting for join... | Warte auf Gast... | |
+| Waiting for the | Warte auf das | |
+| other game... | andere Spiel... | |
+| host to choose... | Wahl des Hosts... | |
+| Checking the | Prüfe das | |
+| Exchanging data... | Datenaustausch... | |
+| Friend joins at: | Freund wählt: | |
+| Port: %s | Port: %s | |
+| UDP port %s | UDP-Port %s | |
+| LEVELS: | LEVEL: | |
+| A: connect  B: back | A: start  B: zurück | |
+| A: continue  B: back | A: weiter  B: zurück | |
+| A: trade anyway | A: trotzdem | |
+| Not an IP address. | Keine IP-Adresse. | |
+| Link battle / can't start. | Link-Kampf kann / nicht starten. | |
+| Link error: / %s | Link-Fehler: / %s | |
+| The other side / sent bad data. | Die Gegenseite / sendet Unsinn. | |
+| The relay stopped / answering. | Das Relay / antwortet nicht. | |
+| can't reach relay %s:%d / (%s) | Relay %s:%d nicht / erreichbar (%s) | |
+| no answer from / %s | Keine Antwort von / %s | |
+| Something broke / during the link. | Beim Link ist / etwas kaputt- / gegangen. | |
+| Names are 3 to 16 characters. | Namen haben 3 bis 16 Zeichen. | |
+| Sign-in didn't work: %s | Anmeldung fehlgeschlagen: %s | |
+| The server kept your old name. | Der Server behält Deinen alten Namen. | |
+| This build is too old for online play. Please update. | Dieser Build ist zu alt für Online-Spiel. Bitte aktualisieren. | |
+
+### Kept in English
+
+Names, codes and values that are no words: `GAME FREAK inc.`, `GAME FREAK`, `Creatures inc.`, `Nintendo`, `GENGAR VS NIDORINO`, `T H E  E N D`, `POKéMON RED`, `POKéMON BLUE`, `POKéMON YELLOW`, `ITEMS`, `MODS`, `BALL`, `NAME`, `NORMAL`, `STANDARD`, `VSYNC`, `ZOOM`, `VIBRATION`, `OG`, `%dX`, `IN%d`, `OUT%d`, `Level %d`, `POKéDEX`, `POKéMON`, `ITEM`, `OPTION`, `OT/`, `STATUS/`, `TYPE1/`, `TYPE2/`, `LEVEL/`, `HT`, `WT`, `lb`, `GR. %.1fm`, `GR. ???m`, `GEW. %.1fkg`, `GEW. ???kg`, `BOX%2d`, `:L%d`, `Printer error! / %s`, ` [%s %s.%s]`, `contribution is not a table`, `AUDIO`, `VIDEO`.
+<!-- end of the games part -->

@@ -762,11 +762,16 @@ function LinkState:draw()
       Font.drawCode(CURSOR, self.pickChoice == 1 and 8 or 88, 128)
     else
       -- engine/link/cable_club.asm:601
-      CableFrame.fill(11, 15, 9, 1)
+      -- co-op (#25): the German box holds ABBRECHEN, 12 columns inside
+      -- (src/coop/game/German.lua layout.cableClubCancel)
+      local de = require("src.coop.game.German").layoutFor("cableClubCancel")
+      local bw, fx, fw = 11, 11, 9
+      if de then bw, fx, fw = de.boxW, de.fillX, de.fillW end
+      CableFrame.fill(fx, 15, fw, 1)
       CableFrame.fill(0, 16, 20, 2)
-      CableFrame.box(0, 15, 11, 3)
+      CableFrame.box(0, 15, bw, 3)
       love.graphics.setColor(0, 0, 0, 1)
-      Font.draw(Strings("CANCEL"), 16, 128)
+      Font.draw(Strings("CANCEL", "cableclub"), 16, 128)
       -- engine/link/cable_club.asm:552
       if self.side == "cancel" then Font.drawCode(CURSOR, 8, 128) end
     end

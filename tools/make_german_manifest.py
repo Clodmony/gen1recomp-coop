@@ -79,6 +79,52 @@ GERMAN_FIELD_SYMBOLS = (
 # TheEndTextString (US: 4), the four-letter E N D E.
 THE_END_COLUMN = 7
 
+# The cartridge's menu words (#25, D102): the labelled `db "..."` strings
+# the engine draws itself (menu rows, box headings, the option names), which
+# are not text labels and so not in `text.labels`.  RomExtractor.germanField
+# reads each as one `@`-terminated string (rows joined by newlines) into
+# field.words, keyed by label; src/coop/game/German.lua maps the engine's
+# English sources onto them.  A pair (label, n) reads n consecutive
+# strings, newline-joined.
+GERMAN_WORD_SYMBOLS = (
+    # data/text_boxes.asm, data/yes_no_menu_strings.asm
+    "BattleMenuText", "SafariZoneBattleMenuText", "SwitchStatsCancelText",
+    "BuySellQuitText", "UseTossText", "MoneyText",
+    "TwoOptionMenuStrings.YesNoMenu", "TwoOptionMenuStrings.NoYesMenu",
+    "TwoOptionMenuStrings.TradeCancelMenu", "TwoOptionMenuStrings.HealCancelMenu",
+    # engine/battle/core.asm, end_of_battle.asm, data/battle/stat_mod_names.asm
+    "WhichTechniqueString", "DisabledText", "TypeText",
+    "YouWinText", "YouLoseText", "DrawText", ("StatModTextStrings", 6),
+    # engine/menus/draw_start_menu.asm, main_menu.asm, save.asm
+    "StartMenuPokedexText", "StartMenuPokemonText", "StartMenuItemText",
+    "StartMenuSaveText", "StartMenuResetText", "StartMenuExitText",
+    "StartMenuOptionText", "ContinueText", "NewGameText",
+    "CableClubOptionsText", "SaveScreenInfoText", "TextSpeedOptionText",
+    "BattleAnimationOptionText", "BattleStyleOptionText",
+    "OptionMenuCancelText", "NowSavingString", "BoxNoText",
+    # engine/menus/text_box.asm, players_pc.asm, engine/pokemon/bills_pc.asm
+    "PokemonMenuEntries", "PlayersPCMenuEntries", "BillsPCMenuText",
+    "DepositPCText", "WithdrawPCText", "StatsCancelPCText",
+    "SomeonesPCText", "BillsPCText", "PlayersPCText", "OaksPCText",
+    "PKMNLeaguePCText", "LogOffPCText",
+    # engine/menus/naming_screen.asm, pokedex.asm, start_sub_menus.asm
+    "YourTextString", "RivalsTextString", "NameTextString",
+    "NicknameTextString", "PokedexSeenText", "PokedexOwnText",
+    "PokedexContentsText", "PokedexMenuItemsText",
+    "TrainerInfo_NameMoneyTimeText",
+    # engine/pokemon/status_screen.asm, engine/movie/hall_of_fame.asm,
+    # engine/menus/league_pc.asm, engine/events/diploma.asm, prize_menu.asm
+    "TypesIDNoOTText", "StatusText", "PrintStatsBox.StatsText",
+    "StatusScreenExpText", "HallOfFameText", "HoFMonInfoText",
+    "HoFPlayTimeText", "HoFMoneyText", "HallOfFameNoText",
+    "DiplomaCongrats", "PrintPrizePrice.CoinString",
+    # engine/items/town_map.asm, engine/link/cable_club.asm,
+    # print_waiting_text.asm, home/list_menu.asm, home/text.asm
+    "MonsNestText", "AreaUnknownText", "CancelTextString", "TradeCanceled",
+    "WaitingText", "PleaseWaitString", "ListMenuCancelText",
+    "TrainerCharText", "EnemyText",
+)
+
 
 def _variable(token):
     """'{NUM:wAmountMoneyWon, $c3}' -> 'wAmountMoneyWon'."""
@@ -132,6 +178,16 @@ def derive(base, pokered_de, symbols_path, sha1, the_end):
         if symbol is None:
             raise SystemExit(f"{os.path.basename(symbols_path)} has no {name}")
         out["symbols"][name] = [symbol.bank, symbol.address]
+    # ..and its menu words, read by label into field.words at import.
+    words = []
+    for entry in GERMAN_WORD_SYMBOLS:
+        name = entry[0] if isinstance(entry, tuple) else entry
+        symbol = symbols.by_name.get(name)
+        if symbol is None:
+            raise SystemExit(f"{os.path.basename(symbols_path)} has no {name}")
+        out["symbols"][name] = [symbol.bank, symbol.address]
+        words.append(list(entry) if isinstance(entry, tuple) else entry)
+    out["field"]["words"] = words
     out["field"]["presetNames"] = None
     out["field"]["credits"]["screens"] = None
     # Blue's US manifest has no theEnd entry; both German carts get Red's

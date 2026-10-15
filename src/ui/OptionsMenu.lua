@@ -780,7 +780,7 @@ local function groupRows(game, rows)
     local members = picked[group.id]
     if #members > 0 then
       made[group.id] = {
-        id = group.id, label = Strings(group.label), group = true,
+        id = group.id, label = Strings(group.label, "options"), group = true, -- co-op (#25): not the stat
         value = function() return Strings("%d OPTIONS", #members) end,
         -- No onCancel: BACK out of a page returns here, it does not close
         -- OPTIONS, so the caller's close callback must not fire.

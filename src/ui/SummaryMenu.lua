@@ -198,7 +198,7 @@ function SummaryMenu:draw()
     }
     for i, s in ipairs(stats) do
       local y = 72 + (i - 1) * 16
-      Font.draw(Strings(s[1]), 8, y)
+      Font.draw(Strings(s[1], "status"), 8, y) -- co-op (#25): the short German forms
       Font.draw(("%3d"):format(s[2]), 48, y + 8)
     end
 
