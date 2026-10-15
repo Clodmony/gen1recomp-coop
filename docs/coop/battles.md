@@ -2,9 +2,9 @@
 
 Two or more players fight the game together: a wild Pokémon or a trainer
 one player's world met, with every player's team on the allied side (#18,
-area A8 in [design.md](design.md), decision G24). This page is the rules
-part; the presentation (#19), leaving and taking over (#20) and the CO-OP
-menu's battle rows (#34) build on it.
+area A8 in [design.md](design.md), decision G24), shown with the
+cartridge's own battle screen and menus (#19, area A9). Leaving and taking
+over (#20) and the CO-OP menu's battle rows (#34) build on it.
 
 ## How a co-op battle runs (G24)
 
@@ -48,6 +48,9 @@ The battle only moves when the command comes back as an input.
   `BattleState` into a co-op battle; `Replica.build` builds one from the
   record; `Replica.catchUp` plays a record's inputs without a screen or
   sound.
+- `src/coop/battle/View.lua`: what the battle shows on top of the
+  cartridge's screen (who decides, suggestions, the roster menu, the ball
+  row, the join line, the self-moving last lines, the catch list).
 - `src/coop/game/Battles.lua`: the running game. The world's battles go to
   the host; JOIN in the CO-OP menu; the end of a battle in the window.
 - `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7.
@@ -100,6 +103,49 @@ evolution for its own Pokémon that grew (A7.8). A loss whites out every
 participant in their own world: the opener's through its world's own
 `onFinish`, a joiner's through `afterBattle` (A8.17). A side that wins
 blacks out nobody.
+
+## What the battle shows (#19)
+
+Every window shows its copy with the cartridge's own battle screen: the
+intro (for a player who saw the battle start), the lines, move animations
+and sounds, HP bars draining in the turn's order, faints, send-outs, ball
+tosses, cries, the battle music by trainer class, the victory fanfare, the
+trainer's defeat line and prize with this window's own player name, all as
+the cartridge plays them (A9.8, A9.9). A choice waits until the last turn
+has played out in the window that makes it. On top of that
+(`src/coop/battle/View.lua`):
+
+- **Who decides** (A9.2). The other players' text box names the player the
+  battle asks, "<NAME> / decides", left of the menu (and under a
+  replacement, a move to learn or a YES/NO of another player).
+- **Suggestions** (A8.8, A9.3, A9.4). A player who is not asked walks the
+  same menus: FIGHT opens the move list, PKMN the party. The row their
+  cursor rests on (20 frames) is suggested to the decider; A suggests it
+  again rather than acting. Every window marks a partner's suggestion with
+  a hollow ▷ on the main menu's entry (FIGHT, PKMN, ITEM, RUN) and on the
+  exact move row or party row, with the partner's initial when three or
+  more players are in. When the decider has pressed nothing for two
+  seconds, their box alternates every 1.5 s between the menu and
+  "<NAME> suggests / <choice>". Marks are in the cartridge's black, not in
+  player colours (A9.12).
+- **The party list** (A9.1) is the allied roster, six rows at a time: down
+  past the sixth row turns the page. The box's top border names the owner
+  of the row under the cursor and the page ("GREEN 2/2"). Nicknames show.
+- **The party balls** under the HUD are this player's own team, not the
+  whole roster (A9.10).
+- **Lines of its own** (A9.11): "<NAME> joined the battle!" when a team
+  comes in (in every copy, so all stay alike); an item a partner used is
+  said with their name; a catch by another player says who caught it.
+- **The end** (A9.6). Once the battle is decided, a line waiting for a
+  press moves on by itself after 1.5 s, so the battle closes after its last
+  line without anybody pressing.
+- **A ball** asks whom the catch is for, each player in the battle once
+  (A7.6); with one player it asks nothing.
+- **The bag** is the cartridge's (A9.1 asks for the battle items only; the
+  cartridge lists every item and refuses the others with OAK's line).
+
+Split-screen: each player's game is a world of its own (#11), so each half
+shows its player's copy of the battle with its own menus (G2).
 
 ## Opening and joining
 
@@ -194,6 +240,10 @@ it the return fade, never updated). It did not come back in seven later
 runs; a finished co-op battle now leaves at once if it is entered again,
 and the joining box removes itself wherever it is on the stack.
 
+- GREEN's box named RED as the decider while RED's Pokémon was out, and
+  RED's idle box alternated with "GREEN suggests / FIGHT" after GREEN's
+  cursor rested on FIGHT (screenshots, kept local).
+
 Not run yet: real pads in a real window, the menus driven by hand (the
 drivers sent the replacement and the switch as commands), a move to learn,
 MIMIC, a catch, items and Pay Day with the cartridge, three players,
@@ -215,6 +265,10 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   trainer's prize for both, EXP.ALL per team, a loss for both, a switch
   handing control over, a catch going to the thrower once, a locked-in
   turn taking no command, a POTION from the actor's bag, the bag's facade.
+- `tests/coop/battle_view_test.lua` (#19): who decides, a suggestion from
+  a resting cursor and its marks, the idle decider's alternating box, the
+  join line in every copy, the roster six rows at a time with its owner,
+  the viewer's own ball row, the catch list, the self-moving last lines.
 - `tests/coop/battle_game_test.lua`: the running fixture overworld with
   this device hosting: a battle the world opens becomes the host's and
   keeps the world's `onFinish`, a refused opening is fought alone, the
