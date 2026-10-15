@@ -461,6 +461,7 @@ function Session:update(dt, game)
       require("src.coop.campaign.Items").openBag(game.data)
       self:_report(game)
       require("src.coop.game.SharedWorld").step(self.window, game)
+      require("src.coop.game.Battles").step()
     end
     self:_narrate()
   end
