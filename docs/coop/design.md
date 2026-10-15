@@ -788,6 +788,11 @@ accepted both as built (2026-10-15).
 
 ### A12. Friend battles and trades
 
+In place for rules 1 to 6 (#23, [friends.md](friends.md), decision G31,
+proposed): invitations, a friend battle on upstream's lockstep link
+battle, a direct trade with the host's swap once; the Cable Club and the
+Colosseum (7 to 9) are #60.
+
 1. **carry** Talking to the partner opens BATTLE / TRADE / CANCEL; the CO-OP menu also
    lists BATTLE and TRADE with each free partner's name (D100).
 2. **carry** An invitation needs the recipient's YES, shown only at a rest point, back
@@ -872,9 +877,10 @@ accepted both as built (2026-10-15).
 In place (#15, [presence.md](presence.md)), with what a session without
 battles supports; the battle parts since #34 ([battles.md](battles.md)):
 the "!" where a battle started, a joiner from elsewhere not drawn, JOIN and
-REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle. Left: who
-is not drawn in the opening or the Cable Club, the BATTLE and TRADE rows
-and "in the opening" (#22, #23); the last save is in since #13.
+REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle; the
+opening's parts since #22; the BATTLE and TRADE rows, VS <foe> and
+TRADING since #23 ([friends.md](friends.md)). Left: who is not drawn in
+the Cable Club (#60); the last save is in since #13.
 
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
@@ -1319,3 +1325,31 @@ sibling's D-numbers.
   the starter he counters (the first finisher's); Red and Blue's later
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
+- **G31. Friend battles are upstream's link battle; the host trades once**
+  (#23, 2026-10-16, proposed). A12.3 left the engine to the issue: the
+  co-op battle record (G24) or upstream's lockstep link battle. A friend
+  battle is upstream's link battle (`src/link/LinkBattle.lua`): each
+  window runs the whole battle from its own side (its own team as allies,
+  its own moves, switches and replacements), the host deals the seed and
+  passes the two windows' messages on over the co-op session, numbered,
+  kept and sent again from the first after a drop. G24's record has every
+  player on one side against an enemy's AI; a second human side, a
+  mirrored view and a RUN per side would have meant a second battle kind
+  inside it, where the link battle has them already, with the
+  cartridge's battle screen and the real teams untouched. On top of it:
+  RUN forfeits, no money, a released battle is a draw after the two
+  minutes of A12.4, the team is healed after, and each Pokémon gets the
+  full trainer EXP and stat EXP of every foe it stood against (both out
+  with HP left at once), paid over the map after the battle with the
+  engine's levels, moves to learn and evolutions. A direct trade is shown
+  by upstream's link trade screen (its drawing; the LAN screens and the
+  launcher's ONLINE screens are not used), with the host in the middle:
+  both offers and both TRADEs go to the host, which commits the swap once
+  (`trade:<pair>`) on both worlds it keeps and lays it over every world or
+  holdings a window sends until that window shows it; each window swaps
+  its own team (whole rows: uids and original trainers kept), saves,
+  plays the movie and the trade evolution. One trade per pairing. Costs:
+  the link battle forces 1X game speed while it runs, as upstream's
+  does; a released battle pays EXP for what was fought; the battle's
+  learning and evolution come after it, not during it. Protocol 11.
+  Details: [friends.md](friends.md).

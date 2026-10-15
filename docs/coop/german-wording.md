@@ -767,6 +767,22 @@ characters, a menu row fewer.
 | %s joined the session in the opening. | %s ist der Sitzung beigetreten und spielt den Anfang. | |
 | IN THE OPENING | IM SPIELANFANG | |
 | The opening can't / be saved. / Leave OAK's LAB / first! | Der Anfang wird / nicht gesichert. / Verlasse erst / EICHs LABOR! | |
+| BATTLE %s | KAMPF %s | |
+| TRADE %s | TAUSCH %s | |
+| for %s? | gegen %s? | |
+| VS %s | GEGEN %s | |
+| TRADING | TAUSCHT | |
+| Invitation sent. | Anfrage gesendet. | |
+| %s wants / to battle! | %s / möchte kämpfen! | |
+| %s wants / to trade! | %s / möchte tauschen! | |
+| %s declined. | %s sagt NEIN. | |
+| %s did not answer. | %s hat nicht geantwortet. | |
+| %s is busy. | %s hat zu tun. | |
+| %s is away. | %s ist weg. | |
+| %s left. | %s ist fort. | |
+| Waiting for %s... | Warte auf %s... | |
+| %s forfeited / the match! | %s gibt / den Kampf auf! | |
+| %s left the battle. | %s hat den Kampf verlassen. | |
 
 #### battle
 

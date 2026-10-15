@@ -125,6 +125,15 @@ function TradeScreen:update()
   if v.ended then
     return self:close(v.ended == "left" and Strings("The link was\nbroken.") or cancelText(), "cancel")
   end
+  -- a new link after a drop: what the host has not echoed goes again
+  if c and self.link ~= c then
+    if self.link then
+      if not v.mine then self.teamSent = nil end
+      if not v.myPick then self.pickSent = nil end
+      if not v.confirmed then self.confirmSent = nil end
+    end
+    self.link = c
+  end
   -- the team goes to the host once, as the screen opens
   if not self.teamSent and c then
     if c:tradeTeam(self.pair.id, Trade.encodeTeam(game.save.party)) then self.teamSent = true end
@@ -133,7 +142,7 @@ function TradeScreen:update()
   local t = self:_session()
   if not (self.theirs and v.mine) then
     t.stage = "waitParty"
-  elseif not v.myPick then
+  elseif not v.myPick and not self.pickSent then
     t.stage = "picking"
   elseif not v.theirPick then
     t.stage = "waitPick"
@@ -155,7 +164,8 @@ function TradeScreen:update()
         self.pickChoice = nil
         self:openStats(party[self.index])
       elseif c and c:tradePick(self.pair.id, self.index) then
-        self.pickChoice = nil
+        -- once: the host's echo moves the screen on
+        self.pickChoice, self.pickSent = nil, true
         self.side = "mine"
       end
     end
@@ -184,7 +194,7 @@ function TradeScreen:update()
     end
   elseif t.stage == "picking" and input:wasPressed("left") then
     self.side = "mine"
-  elseif not v.confirmed and input:wasPressed("b") then
+  elseif not (v.confirmed or self.confirmSent) and input:wasPressed("b") then
     if t.stage == "confirming" and c then c:tradeConfirm(self.pair.id, false) end
     return self:close(cancelText(), "cancel")
   elseif t.stage == "picking" and input:wasPressed("a") then
@@ -195,10 +205,11 @@ function TradeScreen:update()
     else
       self.pickChoice = 1
     end
-  elseif t.stage == "confirming" and not v.confirmed and input:wasPressed("a") and c then
-    c:tradeConfirm(self.pair.id, true)
+  elseif t.stage == "confirming" and not (v.confirmed or self.confirmSent)
+         and input:wasPressed("a") and c then
+    self.confirmSent = c:tradeConfirm(self.pair.id, true) ~= nil
   end
-  self.confirmed = v.confirmed or nil
+  self.confirmed = (v.confirmed or self.confirmSent) or nil
 end
 
 function TradeScreen:openStats(mon)
@@ -212,7 +223,7 @@ function TradeScreen:draw()
   self.stage = "trade"
   require("src.link.LinkState").draw(self)
   local v, t = self.view, self.trade
-  if t.stage == "confirming" and not v.confirmed then
+  if t.stage == "confirming" and not self.confirmed then
     local Font = require("src.render.Font")
     local mine = self.game.save.party[v.myPick]
     local theirs = (self.theirs or {})[v.theirPick]
