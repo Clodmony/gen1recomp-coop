@@ -41,6 +41,7 @@
 local Strings = require("src.core.Strings")
 local Logger = require("src.core.Logger")
 local Protocol = require("src.coop.session.Protocol")
+local View = require("src.coop.battle.View")
 
 local Replica = {}
 
@@ -179,6 +180,7 @@ local function applyJoin(b, input)
   c.otIds[input.player] = input.otId
   c.expAll[input.player] = input.expAll == true
   local live = input.player == c.me and c.live or nil
+  local later = #c.roster > 0
   for i, packed in ipairs(input.team or {}) do
     local mon = unpack(data, packed)
     if mon then
@@ -188,6 +190,11 @@ local function applyJoin(b, input)
     end
   end
   if input.player == c.me then c.live = nil end
+  if later then
+    -- "<NAME> joined the battle!" (design A9.11), in every copy alike
+    View.joinLine(b, input.player)
+    b.phase, b.afterQueue = "messages", "menu"
+  end
   if not b.player then
     local Party = require("src.pokemon.Party")
     local lead = Party.firstHealthy(c.roster)
@@ -286,7 +293,7 @@ local function applyCmd(b, input)
     })
     BattleState.itemUsed(b, lines, {})
   elseif kind == "ball" then
-    c.catcher = input.player
+    c.catcher = cmd.target or input.player
     b.phase, b.afterQueue = "messages", "menu"
     BattleState.throwBall(b, cmd.item)
   elseif kind == "run" then
@@ -416,22 +423,22 @@ end
 -- the bag and the party menu work on scratch copies: the choice goes to
 -- the host, the effect comes back as an input
 function Replica.facade(b)
+  -- an item is used on the Pokemon that is out (design A8.13): the picker
+  -- offers a scratch copy of it alone
   local copies, index = {}, {}
-  for i, mon in ipairs(b.coop.roster) do
-    local copy = {}
-    for k, v in pairs(mon) do copy[k] = v end
-    copy.moves = {}
-    for j, mv in ipairs(mon.moves or {}) do
-      copy.moves[j] = {}
-      for k, v in pairs(mv) do copy.moves[j][k] = v end
-    end
-    copies[i], index[copy] = copy, i
-  end
   local p = b.player
+  local mon = p.mon
+  local copy = {}
+  for k, v in pairs(mon) do copy[k] = v end
+  copy.moves = {}
+  for j, mv in ipairs(mon.moves or {}) do
+    copy.moves[j] = {}
+    for k, v in pairs(mv) do copy.moves[j][k] = v end
+  end
+  copies[1], index[copy] = copy, Replica.index(b, mon)
   local stages = {}
   for k, v in pairs(p.stages or {}) do stages[k] = v end
-  local player = setmetatable({ mon = copies[Replica.index(b, p.mon) or 1], stages = stages },
-                              { __index = p })
+  local player = setmetatable({ mon = copy, stages = stages }, { __index = p })
   local facade = setmetatable({ playerParty = copies, player = player }, { __index = b })
   facade.itemUsed = function(_, _, o)
     o = o or {}
@@ -439,46 +446,26 @@ function Replica.facade(b)
                       move = o.moveIndex })
   end
   facade.throwBall = function(_, ball)
-    Replica.send(b, { kind = "ball", item = ball })
+    -- whom the catch is for (design A7.6)
+    View.askCatcher(b, ball, function(pid)
+      Replica.send(b, { kind = "ball", item = ball, target = pid })
+    end)
   end
   return facade, copies, index
 end
 
 function Replica.openParty(b)
-  local c = b.coop
-  b.game.stack:push(b:buildScreen("PartyMenu", {
-    battle = b, party = c.roster, keepOpen = true,
-    onSwitch = function(mon, menu)
-      local refusal
-      if mon == b.player.mon then
-        refusal = b:romText("_AlreadyOutText", "%s is\nalready out!", b.player.name)
-      elseif mon.hp <= 0 then
-        refusal = b:romText("_NoWillText", "There's no will\nto fight!")
-      end
-      if refusal then
-        if menu then menu:refuse(refusal) end
-        return
-      end
-      if menu then menu:close() end
-      Replica.send(b, { kind = "switch", index = Replica.index(b, mon) })
-    end,
-  }))
+  View.openRoster(b, { onPick = function(index)
+    Replica.send(b, { kind = "switch", index = index })
+  end })
 end
 
 function Replica.openReplacement(b)
   local c = b.coop
   c.picking = c.applied
-  b.game.stack:push(b:buildScreen("PartyMenu", {
-    battle = b, party = c.roster, forceSwitch = true, keepOpen = true,
-    onSwitch = function(mon, menu)
-      if mon.hp <= 0 then
-        if menu then menu:refuse(b:romText("_NoWillText", "There's no will\nto fight!")) end
-        return
-      end
-      if menu then menu:close() end
-      Replica.send(b, { kind = "replace", index = Replica.index(b, mon) })
-    end,
-  }))
+  View.openRoster(b, { forceSwitch = true, onPick = function(index)
+    Replica.send(b, { kind = "replace", index = index })
+  end })
 end
 
 function Replica.openItems(b)
@@ -590,6 +577,7 @@ function Replica.make(b, rec, opts)
   local BattleState = engine()
   local real = opts.real
   local game, save = proxyGame(real, b)
+  game.input = View.input(b, real.input)
   b.game = game
   b.coop = {
     id = opts.id, client = opts.client, me = opts.me, real = real, save = save,
@@ -727,6 +715,15 @@ function Replica.make(b, rec, opts)
     end
     return BattleState.finish(s)
   end
+  b.draw = function(s)
+    BattleState.draw(s)
+    View.draw(s)
+  end
+  b.drawBallRow = function(s, party, ...)
+    -- this player's own team, not the whole roster (design A9.10)
+    if party == s.coop.roster then party = View.ownTeam(s) end
+    return BattleState.drawBallRow(s, party, ...)
+  end
   b.enter = function(s)
     if s.coop.done then
       -- a finished battle never comes back (its record is gone)
@@ -746,6 +743,16 @@ function Replica.make(b, rec, opts)
     Replica.step(s)
     local mine, kind = Replica.mine(s)
     local cc = s.coop
+    cc.autoA = View.autoLines(s)
+    local _, by = questionOf(s)
+    if kind == "menu" and by ~= cc.me and not cc.ask then
+      -- a player not asked walks the menus and suggests (design A9.4)
+      s:tickFx()
+      s:snapIdleBars()
+      View.follow(s, dt)
+      return
+    end
+    if mine then View.noteInput(s) end
     if cc.ask or (kind and not mine) or (cc.sent and kind) then
       s:tickFx()
       if s.phase == "menu" then s:snapIdleBars() end

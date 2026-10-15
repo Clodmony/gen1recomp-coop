@@ -738,6 +738,9 @@ characters, a menu row fewer.
 | Could not join the battle. | Beitritt zum Kampf ging nicht. | |
 | Only %s can / run from this / battle! | Nur %s kann / aus diesem Kampf / fliehen! | |
 | %s caught / %s! | %s hat / %s gefangen! | |
+| %s joined / the battle! | %s hilft / im Kampf! | |
+| decides | wählt | |
+| %s suggests | %s rät zu | |
 
 #### battle
 
