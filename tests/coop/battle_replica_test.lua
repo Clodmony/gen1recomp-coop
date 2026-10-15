@@ -43,6 +43,7 @@ local function newStack()
 end
 
 local function newGame(name, otId, party)
+  for _, m in ipairs(party) do m.otId, m.ot = otId, name end
   local save = SaveData.newGame()
   save.player.name = name
   save.player.id = otId
@@ -90,6 +91,10 @@ local function autopilot(g)
   if not (b and b.coop) then return end
   Replica.step(b) -- the question goes to the host before its answer
   local kind, by = Replica.question(b)
+  if kind == "menu" and by == b.coop.me and not b.coop.sent and g.decide then
+    local cmd = g.decide(b)
+    if cmd then Replica.send(b, cmd) end
+  end
   if kind == "choice" and by == b.coop.me and not b.coop.sent then
     b.coop.picking = b.coop.applied
     Replica.send(b, { kind = "choice", yes = true })
@@ -177,6 +182,7 @@ do
   local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 12) })
   local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 12) })
   local games = { redGame, greenGame }
+  local greenExp0 = greenGame.save.party[1].exp
   run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
 
   local battle = openWild(red, redGame, "FIXMON_B", 6)
@@ -208,20 +214,6 @@ do
   end, 30000)
   check(done ~= nil, "the battle ends in both windows")
   for _ = 1, 3 do frame(host, clients, games) end
-  if os.getenv("PROBE") then
-    for _, b in ipairs({ battle, gb }) do
-      local k, by = Replica.question(b)
-      print("PROBE", b.coop.me, "phase", b.phase, "q", k, by, "applied", b.coop.applied,
-        "ask", b.coop.ask and b.coop.ask.kind, "sent", b.coop.sent and b.coop.sent.cmd.kind,
-        "result", b.result, "queue", #b.queue, "player", b.player.mon.species, b.player.mon.hp,
-        "enemy hp", b.enemy.mon.hp)
-    end
-    for _, g in ipairs(games) do print("PROBE top", g.stack:top() and (g.stack:top().screenId or tostring(g.stack:top()))) end
-    local hb = host.battles[id]
-    print("PROBE host", hb and #hb.inputs, hb and hb.ask and hb.ask.kind, hb and hb.ask and hb.ask.by)
-    for _, r in ipairs(red.rejections) do print("PROBE red rej", r.seq, r.reason) end
-    for _, r in ipairs(green.rejections) do print("PROBE green rej", r.seq, r.reason) end
-  end
   eq(battle.result, gb.result, "with the same result")
   eq(battle.result, "win", "a win")
   check(hp0 > 0, "the foe had HP")
@@ -232,9 +224,138 @@ do
   check(redMon.exp > 0 and redMon.exp == battle.coop.roster[1].exp,
     "red's own Pokémon got its experience (A8.14)")
   eq(greenMon.exp, gb.coop.roster[2].exp, "green's own Pokémon has what the battle gave it")
+  eq(greenMon.exp, greenExp0, "a Pokémon that never fought gets nothing without EXP.ALL (A8.14)")
   eq(redGame.save.party[1].hp, battle.coop.roster[1].hp, "red's Pokémon's HP came back")
   eq(#redGame.save.party, 1, "nothing was added to red's party")
   eq(#greenGame.save.party, 1, "nor to green's")
+end
+
+-- 2. a trainer: both get the full prize; EXP.ALL in green's bag counts for
+-- both teams, each split over its own Pokémon; a partner's own Pokémon is
+-- not a traded one (A8.15, A8.16, A7.10) ----------------------------------
+do
+  local host, red, green = setup()
+  local clients = { red, green }
+  local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 14), Pokemon.new(Data, "FIXMON_B", 9) })
+  local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 12), Pokemon.new(Data, "FIXMON_A", 8) })
+  local games = { redGame, greenGame }
+  run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
+  local before = {}
+  for _, g in ipairs(games) do for _, m in ipairs(g.save.party) do before[m] = m.exp end end
+
+  local battle = BattleState.newTrainer(redGame, "OPP_FIX_YOUNGSTER", 1)
+  local enemy = {}
+  for i, m in ipairs(battle.enemyParty) do enemy[i] = Replica.pack(m) end
+  red:battleOpen({ kind = "trainer", enemy = enemy, map = "FIX_TOWN", foe = "FIX YOUNGSTER",
+                   trainer = { class = "OPP_FIX_YOUNGSTER", index = 1, rival = "BLUE" } },
+                 Replica.packTeam(redGame.save.party), 1111, false)
+  local id = bindOpener(host, red, redGame, battle, clients, games)
+  redGame.setPress(false)
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and b.ask and b.ask.kind == "menu"
+  end, 3000)
+  redGame.setPress(true)
+  green:battleJoin(id, Replica.packTeam(greenGame.save.party), 2222, true)
+  local rec
+  run(host, clients, games, function()
+    rec = green.battles[id]
+    return rec and #rec.inputs >= 2
+  end, 4000)
+  local live = { greenGame.save.party[1], greenGame.save.party[2] }
+  local gb = Replica.build(greenGame, rec, { client = green, id = id, me = green.player,
+                                              real = greenGame, live = live })
+  Replica.catchUp(gb, rec)
+  greenGame.stack:push(gb)
+  eq(gb.kind, "trainer", "the joiner's copy is the trainer battle")
+  eq(#gb.enemyParty, 2, "with the trainer's party")
+  local done = run(host, clients, games, function() return battle.coop.done and gb.coop.done end, 40000)
+  check(done ~= nil, "the trainer battle ends in both windows")
+  for _ = 1, 3 do frame(host, clients, games) end
+  eq(battle.result, "win", "won")
+  eq(gb.result, "win", "in both")
+  eq(logged("battle_desync"), 0, "no desync")
+  local prize = 15 * 5
+  eq(redGame.save.money, 1000 + prize, "the opener got the full prize (A8.16)")
+  eq(greenGame.save.money, 1000 + prize, "and the partner too")
+  for _, g in ipairs(games) do
+    for _, m in ipairs(g.save.party) do
+      check(m.exp > before[m], g.save.player.name .. "'s " .. m.species
+        .. " gained with EXP.ALL, fought or not (A8.15)")
+    end
+  end
+  eq(greenGame.save.party[1].exp - before[greenGame.save.party[1]],
+     gb.coop.roster[3].exp - before[greenGame.save.party[1]], "written back as the battle gave it")
+end
+
+-- 3. a loss whites out every participant: both see "lose" (A8.17) ----------
+do
+  local host, red, green = setup()
+  local clients = { red, green }
+  local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 5) })
+  local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 5) })
+  local games = { redGame, greenGame }
+  run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
+  local battle = openWild(red, redGame, "FIXMON_B", 40)
+  local ended = {}
+  battle.onFinish = function(result) ended.red = result end
+  local id = bindOpener(host, red, redGame, battle, clients, games)
+  redGame.setPress(false)
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and b.ask and b.ask.kind == "menu"
+  end, 3000)
+  redGame.setPress(true)
+  local gb = joinBattle(host, green, greenGame, id, clients, games)
+  gb.coop.onEnd = function(_, result) ended.green = result end
+  run(host, clients, games, function() return ended.red and ended.green end, 40000)
+  eq(ended.red, "lose", "the opener's world hears the loss")
+  eq(ended.green, "lose", "and the partner's window: both white out in their own world")
+  eq(redGame.save.party[1].hp, 0, "red's Pokémon fell")
+  eq(greenGame.save.party[1].hp, 0, "green's too")
+  eq(logged("battle_desync"), 0, "no desync")
+end
+
+-- 4. switching to the partner's Pokémon hands them control (A8.6); a catch
+-- goes to the thrower once (A7.6) ---------------------------------------------
+do
+  local host, red, green = setup()
+  local clients = { red, green }
+  local redGame = newGame("RED", 1111, { Pokemon.new(Data, "FIXMON_A", 10) })
+  local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 10) })
+  greenGame.save.inventory.FIX_BALL = 50
+  local games = { redGame, greenGame }
+  run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
+  local battle = openWild(red, redGame, "FIXMON_B", 3)
+  local id = bindOpener(host, red, redGame, battle, clients, games)
+  redGame.setPress(false)
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and b.ask and b.ask.kind == "menu"
+  end, 3000)
+  redGame.setPress(true)
+  local gb = joinBattle(host, green, greenGame, id, clients, games)
+  local switched = false
+  redGame.decide = function(b)
+    if switched then return nil end
+    switched = true
+    return { kind = "switch", index = 2 }
+  end
+  local greenAsked = false
+  greenGame.decide = function(b)
+    greenAsked = true
+    return { kind = "ball", item = "FIX_BALL" }
+  end
+  local done = run(host, clients, games, function() return battle.coop.done and gb.coop.done end, 60000)
+  check(done ~= nil, "the battle ends")
+  check(greenAsked, "after the switch the menu is asked of green, whose Pokémon is out (A8.6)")
+  eq(gb.result, "caught", "green's ball caught it")
+  eq(battle.result, "caught", "in both copies")
+  eq(#greenGame.save.party, 2, "the catch is in the thrower's party")
+  eq(greenGame.save.party[2].species, "FIXMON_B", "the foe")
+  eq(greenGame.save.party[2].otId, 2222, "with the thrower as its trainer")
+  eq(#redGame.save.party, 1, "and not in the partner's (never duplicated)")
+  eq(logged("battle_desync"), 0, "no desync")
 end
 
 T.finish()
