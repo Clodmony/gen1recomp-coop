@@ -671,9 +671,11 @@ cartridge's bag stays, refusing the rest; accepted by the owner,
 ### A10. Unique encounters, trainers, rival scenes and the League
 
 A10.1 to A10.4 and A10.8 are in place (#21, [battles.md](battles.md), G26),
-with these adaptations: an encounter is named by its map object, and the
-League's rooms are never kept done until A10.6. A10.5 to A10.7 are #55
-(owner, 2026-10-15).
+with this adaptation: an encounter is named by its map object. A10.6 and
+A10.7 are in place (#55, [battles.md](battles.md), G30 proposed), with these
+adaptations: the run's clear is asked by every lobby entry, and a reset
+reopens the world as the host last had it. A10.5 is #59 (owner,
+2026-10-16).
 
 1. **carry** A unique encounter (or any carrying victory flags) has at most one active
    instance; beating it marks it done for everybody; losing or fleeing releases
@@ -1038,7 +1040,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
 | A8 Co-op battles: rules | #18 ([battles.md](battles.md)) |
 | A9 Co-op battles: presentation and menus | #19 |
-| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes, the League run and the Hall of Fame #55 |
+| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); the League run and the Hall of Fame #55 ([battles.md](battles.md)); rival scenes #59 |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
 | A12 Friend battles and trades | #23 |
 | A13 Red + Blue mixing, Yellow | #9 |
@@ -1319,3 +1321,33 @@ sibling's D-numbers.
   the starter he counters (the first finisher's); Red and Blue's later
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
+- **G30. The League run lives on the host; a reset reopens the co-op world**
+  (#55, 2026-10-16, proposed). A10.6: a League fight won is a unique
+  encounter kept done (G26) until the run's clear, so a window walking
+  into one, the Champion included, counts it as won at once; the members'
+  beaten flags and beaten trainers are story entries, and the started bit
+  and the Champion room's run flag (`EVENT_STARTED_ELITE_4`,
+  `EVENT_BEAT_CHAMPION_RIVAL_THIS_RUN`) join the walk-ins and Lance's lock
+  as each player's, so every window that reaches the Champion's room meets
+  him. The engine erases a run in the Indigo Plateau lobby only (its Hall
+  of Fame keeps the flags until the next lobby visit), so the clear is
+  asked by every lobby entry in a co-op world and by each induction
+  (`league`). The lobby then resets only the player's part; the host
+  erases the campaign's part, the League's encounters and their victory
+  commits once no connected player is in the League (its five rooms and
+  the Hall of Fame) and no League fight runs, and, after the Champion fell,
+  every connected player is inducted. A10.7: the engine's Hall of Fame
+  ends in Game:returnToTitle's path (the boot movie, the title), which
+  every other reset takes too; in a co-op window both freeze the world and
+  send `restart` (after the Hall of Fame with the world just saved, as one
+  that asks for no save, and the induction). The host answers in the
+  link's order with the player's world, the story laid over it, and the
+  game reopens it with its own CONTINUE. A world left in the Hall of Fame
+  goes to the engine's post-game home (`SaveData.applyPostGameHome`:
+  Pallet Town, healed), where the cartridge's fly warp also lands. A player
+  without a world (in the opening) starts the opening again. Costs: a
+  reset loses what the window had not sent yet (the host's world is its
+  last holdings, sent at rest points, and its last SAVE), a gift landed in
+  that time included; the hold lives in host memory, and a disconnected
+  player inside holds nothing. Protocol 11.
+  Details: [battles.md](battles.md).

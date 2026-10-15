@@ -5,9 +5,10 @@ one player's world met, with every player's team on the allied side (#18,
 area A8 in [design.md](design.md), decision G24, accepted), shown with the
 cartridge's own battle screen and menus (#19, area A9); leaving it, coming
 back and taking over for a player who dropped (#20, area A11); what the
-world shows of partners in a battle (#34, area A14); and the unique
+world shows of partners in a battle (#34, area A14); the unique
 encounters, trainers and static Pokémon met once per campaign (#21, area
-A10, decision G26).
+A10, decision G26); and the team's League run and the Hall of Fame's
+continue (#55, A10.6, A10.7, decision G30, proposed).
 
 ## How a co-op battle runs (G24)
 
@@ -59,6 +60,11 @@ The battle only moves when the command comes back as an input.
   a fight held while away; battles built again after coming back; the end
   of a battle in the window.
 - `src/coop/game/Presence.lua`: partners in a battle in the world (#34).
+- `src/coop/battle/League.lua` (#55): the team's League run on the host:
+  the run's clear, what holds it, what it erases.
+- `src/coop/game/League.lua` (#55): the Indigo Plateau lobby in a co-op
+  world. `src/coop/game/Restart.lua` (#55): the Hall of Fame's continue,
+  and every reset in a co-op window.
 - `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7
   (8 adds `room`, #17; 9 adds `encounter`, #21).
 
@@ -74,6 +80,12 @@ Upstream files, with marked hooks:
   owner's pick; and a battle may award experience its own way (`expAward`,
   `expTrainerId`).
 - `src/coop/game/CoopMenu.lua` (the fork's own): the JOIN rows.
+- `data/scripts/story6.lua` (#55): `INDIGO_PLATEAU_LOBBY.onEnter` asks
+  `League.lobby` before its reset.
+- `src/script/Commands.lua` (#55): `record_hall_of_fame` asks
+  `Restart.take` before its boot movie and title; `src/core/Game.lua`:
+  `Game:returnToTitle` asks it first (START > QUIT, the soft reset chord,
+  the touch skin's reset).
 
 ## The copy in a window
 
@@ -236,8 +248,8 @@ sprite) is none.
   abandoned battle or a shutdown releases it. A window walking into a done
   one is refused `beaten`: its world's `onFinish` hears a win after the
   battle transition, with no fight and no prize, under "<FOE> was already
-  beaten.". The League's rooms are never kept done: every run fights
-  everyone again until the team's League run (#55, A10.6).
+  beaten.". The League's fights are kept done only while the team's run
+  lasts (#55, below).
 - **The sight gate** (A10.4). `state` names each running battle's
   encounter; a trainer the host names as in a battle spots nobody
   (`Battles.engaged`, a marked hook in `checkTrainerSight`). Talking to it,
@@ -250,9 +262,74 @@ sprite) is none.
   beaten (`EVENT_BEAT_CHAMPION_RIVAL`, a campaign flag), so it stays the
   campaign's.
 
-Rival scenes, the team's League run and the Hall of Fame's continue
-(A10.5 to A10.7) are #55. A rival on a map object is already one
+Rival scenes (A10.5) are #59. A rival on a map object is already one
 encounter, so two windows starting the scene at once fight it together.
+
+## The team's League run (#55)
+
+The Elite Four is one run for the team (A10.6, G30):
+
+- **Beaten for the team.** Each member's beaten flag
+  (`EVENT_BEAT_<ROOM>_TRAINER_0`, `EVENT_BEAT_LANCE`) and beaten trainer
+  (`defeatedTrainers/<ROOM>_obj_<n>`) are story entries
+  ([world.md](world.md)). A window standing in that room reloads it when
+  the flag lands, so the exit opens; a partner arriving later finds the
+  door open, hears the member's line after the battle when talking to
+  them, and walks through.
+- **Won at once.** A League fight won is a unique encounter kept done
+  until the run's clear. A window that walks into one, the Champion
+  included, hears `beaten`: its world counts the fight as won without a
+  battle, under "<FOE> was already beaten.". A late player who reaches the
+  Champion so gets the rival's lines, Oak's scene, their own Hall of Fame,
+  the credits and the continue.
+- **Each player's.** The walk-ins, Lance's door lock, the started bit
+  (`EVENT_STARTED_ELITE_4`) and the Champion room's run flag
+  (`EVENT_BEAT_CHAMPION_RIVAL_THIS_RUN`): every window that reaches the
+  Champion's room meets him there, whoever beat AGATHA.
+- **The run's clear.** The engine erases a run in the Indigo Plateau lobby
+  (after a whiteout, or on the way to a new run). In a co-op world the
+  lobby resets only the player's part of it and sends `league` `lobby` to
+  the host; each induction into the Hall of Fame sends `league`
+  `inducted`. The host keeps the request (`host.league`) and applies it
+  once nothing holds it: no connected player in the League (the four
+  rooms, the Champion's room, the Hall of Fame), no League fight running,
+  and, after the Champion fell, every connected player inducted. Applied,
+  it erases the run's story entries and forgets the League's encounters
+  and their victory commits, so the next run fights everyone again.
+  `EVENT_BEAT_CHAMPION_RIVAL` stays (the Cerulean Cave guard, A10.8). So a
+  player who whited out while a partner is still inside walks back through
+  the rooms the team has beaten.
+- **Costs.** The hold lives in host memory; a disconnected player inside
+  holds nothing. Every lobby entry asks for the clear, so a run left over
+  from a host that forgot its hold ends with the next visit.
+
+## The Hall of Fame's continue (#55)
+
+On the cartridge, THE END saves and resets into the title. In a co-op
+window (A10.7, G30), that reset, and every other one there (START > QUIT,
+the soft reset chord, the touch skin's reset), continues the co-op world:
+
+- The world freezes: a blank screen, "Waiting for the host..." after a
+  second.
+- The window sends `restart`; after the Hall of Fame it first sends the
+  world it just saved, as one that asks for no save (a SAVE the host
+  refused while another battle ran still reaches it), and `league`
+  `inducted`. The host handles a link's messages in order, so its answer,
+  the player's world with the story laid over it (`world` with `restart`),
+  comes once it has applied everything sent before. A dropped link waits;
+  the restart is said again on the new link.
+- The world reopens from the answer with the game's own CONTINUE (facing
+  down, the title's song fading into the map's). A world left in the
+  Hall of Fame goes to the engine's post-game home (Pallet Town, healed),
+  where the cartridge's fly warp lands too. A player the campaign has no
+  world for (still in the opening) starts the opening again.
+- The window opens again as a late one, finished battles are dropped, and
+  a battle still running that this player is in comes back from its
+  record, as after a drop.
+
+A reset loses what the window had not sent yet, as a reset on the
+cartridge loses what was not saved: the host's world is the last
+holdings and the last SAVE.
 
 ## Leaving, coming back, taking over (#20)
 
@@ -418,6 +495,38 @@ players, split-screen, and a trainer that uses items; for #21, a static
 Pokémon with the cartridge, a scripted fight (a gym leader), a walk-in
 through a trainer's sight during a partner's walk-up, and a full fight.
 
+The team's League run and the Hall of Fame's continue (#55, same setup:
+each player given three level 100 MEWTWO by the drivers, which also put
+them in the rooms, answered the move questions and pressed A through the
+scenes):
+
+- RED beat LORELEI as a co-op battle (`trainer:LORELEIS_ROOM_obj_1`);
+  the campaign kept her done and her beaten flag reached GREEN's story.
+- GREEN entered her room later: the exit block stood open, talking to
+  LORELEI gave no battle, and GREEN walked through into BRUNO's room.
+- GREEN then stood in the Indigo Plateau lobby (put there as a whiteout
+  would) while RED was in BRUNO's room: GREEN's started bit and walk-in
+  were reset, LORELEI's beaten flag stayed in GREEN's world and in the
+  story, and the host held the lobby's clear (`in_league`).
+- RED met the Champion, won, and went through Oak's scene, the Hall of
+  Fame and the credits. THE END's press froze the world (no boot movie,
+  no title) and it continued at Pallet Town facing down, healed, with one
+  Hall of Fame entry; the host had the induction and still held the run.
+- GREEN met the Champion afterwards: the host refused `beaten`, the
+  notice read "<RIVAL> was already beaten.", no battle showed, and GREEN
+  got Oak's scene, the Hall of Fame, the credits and the same continue
+  at Pallet Town.
+- Once GREEN was back in Pallet Town the host cleared the run (two story
+  entries, two encounters); `EVENT_BEAT_CHAMPION_RIVAL` stayed, and both
+  worlds lost LORELEI's beaten flag.
+- The host's session log showed no `battle_desync`.
+
+Not run live: a real whiteout into the lobby, BRUNO, AGATHA and LANCE, a
+soft reset or START > QUIT in a co-op window, a dropped link during the
+continue, a disconnected player inside, split-screen, and Blue or Yellow
+(ROM-free tests cover the reset, the dropped link and the disconnected
+player).
+
 ## Tests
 
 ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
@@ -426,8 +535,9 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   loopback: the encounter in the record and in `state`, a walk-in queued as
   a join (one instance), a win and a catch done and kept in the file,
   `beaten`, a loss, a flight, an abandoned battle and a shutdown
-  releasing, the League never kept done, a walk-in into a full fight or
-  while in another, the protocol's check, the cave guard's flag.
+  releasing, the League kept done during the team's run (#55), a walk-in
+  into a full fight or while in another, the protocol's check, the cave
+  guard's flag.
 - `tests/coop/encounters_game_test.lua` (#21): the fixture overworld: the
   key of a trainer, a static object and a battle in the grass; the sight
   gate on and off; RED's world walking into BLUE's trainer fight and
@@ -435,6 +545,23 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   counting as won without a fight or prize; talking to a static object;
   a walk-in into a full fight ending without one.
 
+- `tests/coop/league_test.lua` (#55): the host over loopback: a League
+  fight kept done while the run lasts and `beaten` for a partner, the
+  lobby's clear held by a connected player in the League and by a running
+  League fight, the clear erasing the run's entries, encounters and
+  commits (the Champion's flag kept), the hold after the Champion fell
+  until every connected player is inducted, a late Champion won at once,
+  a disconnected player holding nothing, a restart answered with the
+  player's world, the protocol's checks.
+- `tests/coop/league_game_test.lua` (#55): the fixture overworld: the
+  lobby's reset solo and in a co-op world (the player's part reset, the
+  campaign's kept while a partner is inside, then the clear at a rest
+  point); the Hall of Fame's end frozen and continued at the post-game
+  home, healed, with the induction on the host; a reset continuing from
+  the host's world and dropping finished battles; a world left in the
+  Hall of Fame flying home; a dropped link waiting and the restart said
+  on the new link; a player without a world starting again; solo still
+  showing the title.
 - `tests/coop/holdings_test.lua` (#17): a catch for the named player, the
   name list offering only players with room, the host's refusal, a ball
   kept when nobody has room, and the Pokédex of both players.
