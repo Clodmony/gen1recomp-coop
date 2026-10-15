@@ -27,7 +27,7 @@ Last updated 2026-10-16 (after Group 8's #22: PR #58 open; owner's answers recor
     stays in the window (not a host-kept copy), the opening ends outside
     `OAKS_LAB` with a starter, a new campaign is seeded by its first
     finished opening.
-  - Verify 36/37 (only the Android tier: no `javac`). Live: US Red, two
+  - Verify all passed, 37/37 tiers (JDK 17 installed 2026-10-16). Live: US Red, two
     ENet processes, both openings played from NEW GAME, 44 checks, none
     failed (opening.md *Checked* lists what was not run).
   - **Owner (2026-10-16): merge after their own check** in real windows
@@ -164,7 +164,7 @@ Last updated 2026-10-16 (after Group 8's #22: PR #58 open; owner's answers recor
 
 - After each `main` sync: `gh workflow list -R Clodmony/gen1recomp-coop --all`
   and disable upstream's workflows.
-- Optional local tools: JDK 17 (`javac`), luacheck.
+- Optional local tools: luacheck (JDK 17 is installed since 2026-10-16).
 
 ## Cleanup
 
