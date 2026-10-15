@@ -277,6 +277,8 @@ local function applyCmd(b, input)
       BattleState.resolveTurn(b, STRUGGLE())
     end
   elseif kind == "item" then
+    -- as BattleState:openItems leaves it before the bag
+    b.phase, b.afterQueue = "messages", "menu"
     local LinkItems = require("src.link.LinkItems")
     local lines = LinkItems.apply(b, { item = cmd.item, index = cmd.index, move = cmd.move }, {
       battler = b.player, party = c.roster, opponent = b.enemy,
@@ -285,6 +287,7 @@ local function applyCmd(b, input)
     BattleState.itemUsed(b, lines, {})
   elseif kind == "ball" then
     c.catcher = input.player
+    b.phase, b.afterQueue = "messages", "menu"
     BattleState.throwBall(b, cmd.item)
   elseif kind == "run" then
     BattleState.tryRun(b)
