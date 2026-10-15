@@ -1298,8 +1298,9 @@ sibling's D-numbers.
   already stops it seeing anyone. The League's rooms are never kept done,
   so every run fights everyone again, until #55's team run (A10.6).
 - **G27. The opening's private story stays in the window** (#22,
-  2026-10-15, proposed; the split into #57 and the seed from the first
-  finished opening chosen by the owner the same day). A4.4 has the host
+  2026-10-15, accepted by the owner on 2026-10-16; the split into #57 and
+  the seed from the first finished opening chosen by the owner on
+  2026-10-15). A4.4 has the host
   keep a private copy of the story for a player in the opening and send it
   to their window. Here the window keeps it: a window whose world has no
   starter (`EVENT_GOT_STARTER`) sends and takes nothing of the campaign's

@@ -6,7 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (after Group 8's #22: PR #58 open).
+Last updated 2026-10-16 (after Group 8's #22: PR #58 open; owner's answers recorded).
 
 ## Repository state
 
@@ -23,20 +23,27 @@ Last updated 2026-10-16 (after Group 8's #22: PR #58 open).
   #34's opening part. A new player's private opening, the names, the
   rival's starter, IN THE OPENING, no save in the opening, player 2's name.
   `docs/coop/opening.md` has everything. Protocol 10, campaign file 4.
-  - Decision **G27** (design.md §6) is **proposed**: the private story
+  - Decision **G27** (design.md §6), **accepted by the owner 2026-10-16**: the private story
     stays in the window (not a host-kept copy), the opening ends outside
     `OAKS_LAB` with a starter, a new campaign is seeded by its first
     finished opening.
   - Verify 36/37 (only the Android tier: no `javac`). Live: US Red, two
     ENet processes, both openings played from NEW GAME, 44 checks, none
     failed (opening.md *Checked* lists what was not run).
-  - Merge after the owner's word, locally as Claude (`git merge --no-ff`),
-    then push and run `tools/verify.sh`.
+  - **Owner (2026-10-16): merge after their own check** in real windows
+    (two players, a new campaign, the rival named once). Once they say
+    so, merge locally as Claude (`git merge --no-ff`), push, run
+    `tools/verify.sh`.
+  - The German wording added (IM SPIELANFANG, the save box, the join
+    notice, NAME DES RIVALEN, NAME VON SPIELER 2) stays; the owner reviews
+    it later in `german-wording.md` (owner, 2026-10-16).
 
 ## Next candidates
 
-- **#57** (start in Pallet Town, bring a single-player save; the
-  launcher's "how to start"). First steps: a canned post-opening story per
+- **#57 is next** (owner, 2026-10-16): start in Pallet Town, bring a
+  single-player save, the launcher's "how to start". Branch
+  `coop/group8-starts` from `gen1recomp-coop` once #58 is merged (or
+  stacked on `coop/group8-opening` if it is not). First steps: a canned post-opening story per
   version for a Pallet start into a campaign with no story (the live run's
   seed was ten entries: Oak's walk flags, `EVENT_BATTLED_RIVAL_IN_OAKS_LAB`,
   the lab's Oak, rival and two balls, Pallet's Oak); the window's
