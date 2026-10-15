@@ -4,8 +4,10 @@ Two or more players fight the game together: a wild Pokémon or a trainer
 one player's world met, with every player's team on the allied side (#18,
 area A8 in [design.md](design.md), decision G24, accepted), shown with the
 cartridge's own battle screen and menus (#19, area A9); leaving it, coming
-back and taking over for a player who dropped (#20, area A11); and what the
-world shows of partners in a battle (#34, area A14).
+back and taking over for a player who dropped (#20, area A11); what the
+world shows of partners in a battle (#34, area A14); and the unique
+encounters, trainers and static Pokémon met once per campaign (#21, area
+A10, decision G26).
 
 ## How a co-op battle runs (G24)
 
@@ -58,13 +60,15 @@ The battle only moves when the command comes back as an input.
   of a battle in the window.
 - `src/coop/game/Presence.lua`: partners in a battle in the world (#34).
 - `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7
-  (8 adds `room`, #17).
+  (8 adds `room`, #17; 9 adds `encounter`, #21).
 
 Upstream files, with marked hooks:
 
 - `src/world/OverworldController.lua`: `OverworldState:pushBattle` asks
   `Battles.take` first; every battle the world opens passes there (grass,
-  fishing, a trainer's sight, scripts, static Pokémon).
+  fishing, a trainer's sight, scripts, static Pokémon). `checkTrainerSight`
+  asks `Battles.engaged` (the sight gate, #21), and a static object's
+  battle carries its encounter (#21).
 - `src/battle/BattleState.lua`: the send-out after a forced replacement is
   a method of its own (`sendOutReplacement`), so a co-op battle sends out the
   owner's pick; and a battle may award experience its own way (`expAward`,
@@ -205,6 +209,51 @@ never left their map: the return point is where they stood.
   so nothing of it can be applied twice (A8.21). A campaign does not save
   while a battle runs or a join waits (A3.7).
 
+## Unique encounters (#21)
+
+A trainer or a one-off wild Pokémon (the birds, MEWTWO, SNORLAX, the
+Power Plant's VOLTORB) is a **unique encounter**, named by its map object
+(G26): `trainer:<MAP>_obj_<n>` or `static:<MAP>_obj_<n>`
+(`Battles.encounterOf`). A static object's battle carries its key
+(`battle.coopEncounter`, a marked hook in the overworld's talk code); a
+trainer's comes from the trainer the battle was pushed with, scripted
+fights included. A battle with no map object (grass, water, a scene's
+sprite) is none.
+
+- **One instance** (A10.1). The opening names its encounter. While it
+  runs, a window whose world walks into it (a trainer's sight, talking to
+  it, the static Pokémon) joins that fight: the host queues its team like
+  JOIN, and once the team is in, the world's own battle becomes the copy
+  of the partner's record, caught up without a screen, and keeps the
+  world's `onFinish` (the trainer's flag, its rewards, the whiteout). It
+  waits for the team to go in however long that takes. A walk-in into a
+  full fight is refused (`roster_full`): the world's battle ends without a
+  fight, as a flight, under "The battle is full.", and the encounter
+  stands.
+- **Done** (A10.2, A10.3). A win, or a catch, makes it done for the
+  campaign: the victory's commit (`victory:<encounter>`) puts it in the
+  campaign's `encounters`, kept in the file. A loss, a flight, an
+  abandoned battle or a shutdown releases it. A window walking into a done
+  one is refused `beaten`: its world's `onFinish` hears a win after the
+  battle transition, with no fight and no prize, under "<FOE> was already
+  beaten.". The League's rooms are never kept done: every run fights
+  everyone again until the team's League run (#55, A10.6).
+- **The sight gate** (A10.4). `state` names each running battle's
+  encounter; a trainer the host names as in a battle spots nobody
+  (`Battles.engaged`, a marked hook in `checkTrainerSight`). Talking to it,
+  or JOIN, still joins. A beaten trainer is the story's
+  (`defeatedTrainers`, [world.md](world.md)), which already stops it
+  seeing anyone; a window the story has not reached yet meets it as
+  `beaten`. A partner spotted during the first player's walk-up, before
+  the host knows of the fight, joins it as a walk-in.
+- **The Cerulean Cave guard** (A10.8) stands aside once the Champion is
+  beaten (`EVENT_BEAT_CHAMPION_RIVAL`, a campaign flag), so it stays the
+  campaign's.
+
+Rival scenes, the team's League run and the Hall of Fame's continue
+(A10.5 to A10.7) are #55. A rival on a map object is already one
+encounter, so two windows starting the scene at once fight it together.
+
 ## Leaving, coming back, taking over (#20)
 
 A participant is **present** or **absent**: absent because they left on
@@ -271,11 +320,11 @@ nobody is left.
 - in a co-op battle SELECT opens nothing: the battle screen is on top and
   its SELECT swaps moves as in the cartridge (A14.9).
 
-## Protocol 7 (8)
+## Protocol 7 (8, 9)
 
 | Client to host | Fields |
 |---|---|
-| `battle_open` | `seq`, `kind` (`wild`, `trainer`), `enemy` (packed Pokémon), `map`, `team` (this player's, at most six), optional `trainer` (`class`, `index`, `rival`), `hooked`, `foe`, `otId`, `expAll`, `room` (8) |
+| `battle_open` | `seq`, `kind` (`wild`, `trainer`), `enemy` (packed Pokémon), `map`, `team` (this player's, at most six), optional `trainer` (`class`, `index`, `rival`), `hooked`, `foe`, `otId`, `expAll`, `room` (8), `encounter` (9) |
 | `battle_join` | `seq`, `battle`, `team`, optional `otId`, `expAll`, `room` (8) |
 | `battle_cmd` | `seq`, `battle`, `rev`, `cmd` |
 | `battle_suggest` | `seq`, `battle`, `rev`, optional `cmd` (none takes it back) |
@@ -287,7 +336,7 @@ nobody is left.
 | Host to client | Fields |
 |---|---|
 | `battle` | `id`, `rev`, `seed`, `from`, `inputs` (from `from` on, at most 256 a message), `players` (`id`, `present`, `left`), the `open`ing with the first inputs (and `by`, who opened it), `ask`, `by` (who decides) and `owner` (whose Pokémon it is about), `offer` (a dropped owner the present players may take over for), `standins` (`owner`, `by`), `suggestions` (`by`, `cmd`), `ended` |
-| `state` | each player's `battle` (the one they fight in), and `battles`: `id`, `by`, `kind`, `foe`, `players`, `joinable` |
+| `state` | each player's `battle` (the one they fight in), and `battles`: `id`, `by`, `kind`, `foe`, `players`, `joinable`, `encounter` (9) |
 
 A command is `kind` (`move`, `struggle`, `fight`, `switch`, `item`,
 `ball`, `run` answer the menu; `replace`, `learn`, `mimic`, `choice` the
@@ -353,6 +402,19 @@ players, split-screen, and a trainer that uses items.
 ## Tests
 
 ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
+
+- `tests/coop/encounters_test.lua` (#21): the host's registry over
+  loopback: the encounter in the record and in `state`, a walk-in queued as
+  a join (one instance), a win and a catch done and kept in the file,
+  `beaten`, a loss, a flight, an abandoned battle and a shutdown
+  releasing, the League never kept done, a walk-in into a full fight or
+  while in another, the protocol's check, the cave guard's flag.
+- `tests/coop/encounters_game_test.lua` (#21): the fixture overworld: the
+  key of a trainer, a static object and a battle in the grass; the sight
+  gate on and off; RED's world walking into BLUE's trainer fight and
+  winning it as one battle, the trainer marked beaten; a beaten trainer
+  counting as won without a fight or prize; talking to a static object;
+  a walk-in into a full fight ending without one.
 
 - `tests/coop/holdings_test.lua` (#17): a catch for the named player, the
   name list offering only players with room, the host's refusal, a ball

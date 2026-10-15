@@ -63,6 +63,18 @@ local HostBattles = {}
 HostBattles.TAKEOVER = 30 -- seconds without a dropped decider before TAKE OVER is offered
 HostBattles.ABANDON = 120 -- seconds a battle nobody is present in waits (a redial's budget)
 
+-- the League's rooms: the cartridge fights everyone there again on every
+-- run, so their encounters are never kept done (#21; the team's League
+-- run, design A10.6, is still to come)
+HostBattles.LEAGUE = { LORELEIS_ROOM = true, BRUNOS_ROOM = true, AGATHAS_ROOM = true,
+                       LANCES_ROOM = true, CHAMPIONS_ROOM = true }
+
+-- whether an encounter is kept done once won (#21)
+function HostBattles.keeps(encounter)
+  local map = encounter:match("^%l+:(.+)_obj_%d+$")
+  return not (map and HostBattles.LEAGUE[map])
+end
+
 local function count(t)
   local n = 0
   for _ in pairs(t) do n = n + 1 end
@@ -319,7 +331,7 @@ local function finish(host, b, result, by, why)
   -- a unique encounter won or caught is done for the campaign; anything
   -- else releases it (#21, A10.1, A10.3)
   local enc = b.open.encounter
-  if enc and (result == "win" or result == "caught") then
+  if enc and (result == "win" or result == "caught") and HostBattles.keeps(enc) then
     host.state:commit("victory:" .. enc, function(c) c.encounters[enc] = { state = "done" } end)
     host:_log("encounter_done", { encounter = enc, battle = b.id }, by)
   end

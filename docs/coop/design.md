@@ -665,6 +665,11 @@ cartridge's bag stays, refusing the rest; accepted by the owner,
 
 ### A10. Unique encounters, trainers, rival scenes and the League
 
+A10.1 to A10.4 and A10.8 are in place (#21, [battles.md](battles.md), G26),
+with these adaptations: an encounter is named by its map object, and the
+League's rooms are never kept done until A10.6. A10.5 to A10.7 are #55
+(owner, 2026-10-15).
+
 1. **carry** A unique encounter (or any carrying victory flags) has at most one active
    instance; beating it marks it done for everybody; losing or fleeing releases
    it (D10, design §Story).
@@ -1028,7 +1033,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
 | A8 Co-op battles: rules | #18 ([battles.md](battles.md)) |
 | A9 Co-op battles: presentation and menus | #19 |
-| A10 Unique encounters, trainers, rival scenes, the League | #21 |
+| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes, the League run and the Hall of Fame #55 |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
 | A12 Friend battles and trades | #23 |
 | A13 Red + Blue mixing, Yellow | #9 |
@@ -1272,3 +1277,18 @@ sibling's D-numbers.
   window encodes its PC after each held scene (about 2 ms for a full PC on
   a desktop); a world reaches the host each time the holdings change, not
   only on SAVE. Details: [campaign.md](campaign.md).
+- **G26. A unique encounter is its map object; a beaten one counts as won
+  in the world** (#21, 2026-10-15, proposed). A10.2 and A10.3 name a
+  trainer `trainer:<class>:<index>` and a one-off wild Pokémon
+  `static:<species>:<map>`. This engine already keys a beaten trainer or
+  static Pokémon by its map object (`defeatedTrainers/<MAP>_obj_<n>`, the
+  campaign's since #14), so the encounter is `trainer:<MAP>_obj_<n>` or
+  `static:<MAP>_obj_<n>`: one key per object, and a scripted fight with a
+  map object (a gym leader, SNORLAX) gets one too. A battle with no map
+  object (grass, water, a scene's sprite) is no encounter. A window
+  walking into a done one is refused `beaten`; its world's own `onFinish`
+  hears a win after the battle transition, with no fight and no prize, and
+  a notice says "<FOE> was already beaten.". The sight gate reads the
+  running encounters from `state`; a beaten trainer is the story's, which
+  already stops it seeing anyone. The League's rooms are never kept done,
+  so every run fights everyone again, until #55's team run (A10.6).
