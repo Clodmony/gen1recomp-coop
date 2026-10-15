@@ -20,8 +20,11 @@ local Protocol = {}
 -- window's `world` and save requests, the host's `world` and `saved`, and
 -- the last save and the save gate in `state`.  5: the shared world (#14):
 -- a window's `patch` and the host's `story`.  6: story items (#16): the
--- bag change on a `patch` and the host's `gifts`.
-Protocol.VERSION = 6
+-- bag change on a `patch` and the host's `gifts`.  7: co-op battles (#18):
+-- `battle_open`, `battle_join`, `battle_cmd`, `battle_suggest` and
+-- `battle_at` to the host, `battle` to the client, and who is in which
+-- battle in `state`.
+Protocol.VERSION = 7
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -51,6 +54,10 @@ Protocol.REASONS = {
   hello_first = true, already_joined = true, bad_step = true,
   session_full = true, shutting_down = true, flood = true,
   bad_world = true, battle_in_progress = true, save_failed = true,
+  -- co-op battles (#18)
+  in_battle = true, no_battle = true, not_in_battle = true, stale = true,
+  not_ready = true, not_yours = true, bad_cmd = true, roster_full = true,
+  no_pokemon = true, run_initiator = true,
 }
 
 -- a player's world travels as the game's save text (World.lua checks it):
@@ -70,6 +77,22 @@ Protocol.MAX_PATH = 96
 -- a bag change moves, and how many items one message names
 Protocol.MAX_QTY = 999
 Protocol.MAX_ITEMS = 256
+
+-- co-op battles (#18, design A8): a team is at most six, the allied roster
+-- at most twelve; one `battle` message carries at most MAX_INPUTS of the
+-- battle's inputs (the rest follow in the next frames)
+Protocol.MAX_TEAM = 6
+Protocol.MAX_ROSTER = 12
+Protocol.MAX_INPUTS = 256
+-- what the battle waits for (the window's report, `battle_at`), and the
+-- commands that answer each
+Protocol.ASKS = { menu = true, replace = true, learn = true, mimic = true, choice = true }
+Protocol.CMDS = {
+  move = "menu", struggle = "menu", fight = "menu", switch = "menu", item = "menu",
+  ball = "menu", run = "menu",
+  replace = "replace", learn = "learn", mimic = "mimic", choice = "choice",
+}
+Protocol.RESULTS = { win = true, lose = true, run = true, caught = true }
 
 local FACINGS = { up = true, down = true, left = true, right = true }
 -- how a player moves: the sprite they wear and how fast their steps are
@@ -178,6 +201,7 @@ local function storyValue(v)
 end
 Protocol.storyPath = storyPath
 Protocol.itemId = pattern("^[A-Z0-9_]+$", 40)
+Protocol.battleId = pattern("^b[0-9a-f]+$", 17)
 
 -- a table whose every value passes fn; maps arrive as objects, an empty one
 -- as an empty array
@@ -281,7 +305,7 @@ local publicPlayer = record({
   connected = bool,
 }, {
   map = Protocol.mapId, x = cell, y = cell, facing = enum(FACINGS),
-  travel = enum(TRAVELS),
+  travel = enum(TRAVELS), battle = pattern("^b[0-9a-f]+$", 17),
 })
 
 -- the lobby view of a player (probe answers and the LAN beacon)
@@ -348,6 +372,59 @@ Protocol.gift = function(v)
   return ok and out or nil
 end
 
+
+-- co-op battles (#18) -----------------------------------------------------
+
+local cmdKinds = {}
+for k in pairs(Protocol.CMDS) do cmdKinds[k] = true end
+local dataId = pattern("^[A-Z0-9_]+$", 40)
+local stats5 = function(max)
+  local n = int(0, max)
+  return record({ hp = n, attack = n, defense = n, speed = n, special = n })
+end
+-- a Pokémon as it rides a battle message: the link cable's packed mon
+-- (src/link/Protocol.lua packMon), rebuilt and clamped by its unpackMon on
+-- the receiving window, and its campaign uid (coopUid, #13)
+local mon = record({
+  species = dataId, level = int(1, 100), hp = int(0, 999),
+  moves = listOf(record({ id = dataId, pp = int(0, 99) }, { ppUps = int(0, 3) }), 4),
+}, {
+  exp = int(0, 16777215), status = pattern("^[A-Z]+$", 8), sleepTurns = int(0, 7),
+  nickname = text(11), dvs = stats5(15), statExp = stats5(65535), ot = text(11),
+  otId = int(0, 65535), uid = pattern("^[%w_%-]+$", 40), extra = plain,
+})
+local team = function(v)
+  local out, why = listOf(mon, Protocol.MAX_TEAM)(v)
+  if out and #out == 0 then return nil, "empty team" end
+  return out, why
+end
+Protocol.battleMon = mon
+-- a command: what answers the battle's question (Protocol.CMDS)
+local cmd = record({ kind = enum(cmdKinds) }, {
+  slot = int(1, 4), index = int(1, Protocol.MAX_ROSTER), item = Protocol.itemId,
+  move = int(1, 4), yes = bool, forget = int(0, 4), target = Protocol.playerId,
+})
+-- the battle as the opening window's world prepared it (design A1.10:
+-- the host trusts the enemies a window prepared)
+local opening = {
+  kind = enum({ wild = true, trainer = true }),
+  enemy = listOf(mon, Protocol.MAX_TEAM), map = Protocol.mapId,
+}
+local openingOpt = {
+  trainer = record({ class = dataId, index = int(1, 64) }, { rival = name }),
+  hooked = bool, foe = text(20),
+}
+-- one input of a battle, in the order every window applies them: a team
+-- that joined, or an accepted command
+local input = record({ kind = enum({ join = true, cmd = true }), player = Protocol.playerId }, {
+  name = name, team = team, otId = int(0, 65535), expAll = bool, cmd = cmd,
+})
+-- a running battle in `state`: who started it, against what, who is in it
+local battleSummary = record({
+  id = Protocol.battleId, by = Protocol.playerId, kind = enum({ wild = true, trainer = true }),
+  players = listOf(Protocol.playerId, Protocol.MAX_ROSTER),
+}, { foe = text(20), joinable = bool })
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -376,6 +453,28 @@ Protocol.TO_HOST = {
   -- bag (#16): the window's bag change in the same rest-to-rest change
   patch = record(withType("patch", { seq = seq, set = storySet, unset = storyUnset }),
                  { bag = bagChange }),
+  -- co-op battles (#18, design A8): a battle this window's world opened,
+  -- with this player's team (otId: their trainer id; expAll: an EXP.ALL in
+  -- their bag)
+  battle_open = record(withType("battle_open", extend(opening, { seq = seq, team = team })),
+                       extend(openingOpt, { otId = int(0, 65535), expAll = bool })),
+  -- join a running battle with this team (applied at the next safe point)
+  battle_join = record(withType("battle_join", { seq = seq, battle = Protocol.battleId,
+                                                 team = team }),
+                       { otId = int(0, 65535), expAll = bool }),
+  -- answer the battle's question at revision rev
+  battle_cmd = record(withType("battle_cmd", { seq = seq, battle = Protocol.battleId,
+                                               rev = int(0, Protocol.MAX_SEQ), cmd = cmd })),
+  -- a suggestion to whoever decides (none: take it back)
+  battle_suggest = record(withType("battle_suggest", { seq = seq, battle = Protocol.battleId,
+                                                       rev = int(0, Protocol.MAX_SEQ) }),
+                          { cmd = cmd }),
+  -- the window's copy of the battle reached revision rev: it asks `ask` of
+  -- player `by`, or it ended with `ended`; hash is its state's digest
+  battle_at = record(withType("battle_at", { seq = seq, battle = Protocol.battleId,
+                                             rev = int(0, Protocol.MAX_SEQ) }),
+                     { ask = enum(Protocol.ASKS), by = Protocol.playerId, hash = text(64),
+                       ended = enum(Protocol.RESULTS) }),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -396,7 +495,8 @@ Protocol.TO_CLIENT = {
     players = listOf(publicPlayer, Protocol.MAX_PLAYERS),
     you = Protocol.playerId, last_seq = int(0, Protocol.MAX_SEQ),
     nearby = listOf(Protocol.playerId, Protocol.MAX_PLAYERS),
-  }), { saved_ago = int(-1, Protocol.MAX_SEQ), busy = text(Protocol.MAX_REASON) }),
+  }), { saved_ago = int(-1, Protocol.MAX_SEQ), busy = text(Protocol.MAX_REASON),
+         battles = listOf(battleSummary, Protocol.MAX_PLAYERS) }),
   -- the player's world from the campaign, once after welcome (#13); none
   -- for a player who never saved in this campaign
   world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),
@@ -421,6 +521,20 @@ Protocol.TO_CLIENT = {
   -- items owed to this player (#16, design A6): sent once per link, in
   -- order; the window applies each seq once
   gifts = record(withType("gifts", { list = listOf(gift, Protocol.MAX_ITEMS) })),
+  -- a battle this player is in or joining (#18): its inputs from `from`
+  -- on (rev: how many there are in all), the opening with the first ones,
+  -- what it asks of whom, the suggestions, its participants (present or
+  -- not), and its end
+  battle = record(withType("battle", {
+    id = Protocol.battleId, rev = int(0, Protocol.MAX_SEQ), seed = int(1, 2147483646),
+    from = int(1, Protocol.MAX_SEQ), inputs = listOf(input, Protocol.MAX_INPUTS),
+    players = listOf(record({ id = Protocol.playerId, present = bool }), Protocol.MAX_ROSTER),
+  }), {
+    open = record(extend(opening, { by = Protocol.playerId }), openingOpt),
+    ask = enum(Protocol.ASKS), by = Protocol.playerId,
+    suggestions = listOf(record({ by = Protocol.playerId, cmd = cmd }), Protocol.MAX_PLAYERS),
+    ended = enum(Protocol.RESULTS),
+  }),
 }
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))

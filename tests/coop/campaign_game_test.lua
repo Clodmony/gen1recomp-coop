@@ -124,7 +124,7 @@ step(3)
 eq(Notices.texts()[1], "BLUE saved the campaign.", "\"BLUE saved the campaign.\"")
 
 -- START > SAVE while a battle runs: the save box says so, no YES/NO --------------
-s.host.battles.b1 = true
+s.host.battles.b1 = { open = { by = "p0", kind = "wild" }, players = {}, inputs = {}, suggestions = {} }
 step(2)
 check(require("src.coop.game.CampaignSave").refusal(Game), "the host would refuse a save")
 local before = campaignFs.read(CampaignFile.path("red", CID))
