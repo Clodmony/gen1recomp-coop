@@ -34,7 +34,7 @@ end
 
 -- a Pokémon as a battle message carries it (#18)
 local BATTLE_MON = { species = "PIDGEY", level = 12, hp = 30, exp = 1500, status = "PSN",
-                     sleepTurns = 0, nickname = "BIRD", ot = "RED", otId = 4321, uid = "u12ab",
+                     sleepTurns = 0, nickname = "BIRD", ot = "RED", otId = 4321, uid = "p0001:12",
                      dvs = { hp = 1, attack = 2, defense = 3, speed = 4, special = 5 },
                      statExp = { hp = 10, attack = 20, defense = 30, speed = 40, special = 50 },
                      moves = { { id = "GUST", pp = 35, ppUps = 1 }, { id = "SAND_ATTACK", pp = 15 } },
