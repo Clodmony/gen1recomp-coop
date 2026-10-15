@@ -54,6 +54,9 @@
 -- battle engine; src/coop/battle/HostBattles.lua keeps each battle's
 -- opening, inputs and question, and every window in it runs the battle
 -- from those (src/coop/battle/Replica.lua).
+--
+-- Rival scenes (#59, design A10.5): src/coop/session/HostScenes.lua keeps
+-- one driver a map; `state.scenes` names them.
 
 local GameVersion = require("src.core.GameVersion")
 local Json = require("src.link.Json")
@@ -64,6 +67,7 @@ local Campaign = require("src.coop.campaign.Campaign")
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
 local HostBattles = require("src.coop.battle.HostBattles")
+local HostScenes = require("src.coop.session.HostScenes")
 
 local Host = {}
 Host.__index = Host
@@ -282,6 +286,7 @@ function Host:_disconnect(link, why)
     self.dirty = true
     self:_log("left", { why = why }, p)
     HostBattles.left(self, p)
+    HostScenes.left(self, p) -- a driver who dropped lets go (#59)
     -- a player leaving saves the campaign (design A3.9); nobody has to save
     -- before leaving (A3.12)
     if self.status == "running" then self:_autosave("leave") end
@@ -544,6 +549,7 @@ function Host:_move(link, msg)
     end
   end
   p.map, p.x, p.y, p.facing, p.travel = msg.map, msg.x, msg.y, msg.facing, msg.travel
+  HostScenes.moved(self, p) -- a driver on another map lets go (#59)
   self.dirty = true
 end
 
@@ -655,7 +661,9 @@ local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    battle_at = battleHandler(HostBattles.at),
                    battle_leave = battleHandler(HostBattles.leave),
                    battle_rejoin = battleHandler(HostBattles.rejoin),
-                   battle_takeover = battleHandler(HostBattles.takeover) }
+                   battle_takeover = battleHandler(HostBattles.takeover),
+                   -- rival scenes (#59)
+                   scene = battleHandler(HostScenes.claim) }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -714,7 +722,8 @@ function Host:_broadcast()
       self:_send(link, { type = "state", players = players, you = p.id,
                          last_seq = p.lastSeq, nearby = nearby,
                          saved_ago = savedAgo, busy = busy, battles = battles,
-                         rival = self.state.rival, chose = self.state.chose })
+                         rival = self.state.rival, chose = self.state.chose,
+                         scenes = HostScenes.summaries(self) })
     end
   end
 end

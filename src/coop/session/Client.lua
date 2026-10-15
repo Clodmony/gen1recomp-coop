@@ -151,6 +151,14 @@ function Client:sendOpening(done, rival, chose)
                      chose = chose })
 end
 
+-- A rival scene (#59, design A10.5): this window's world started the
+-- scene `key` on `map` (on: a claim; the host refuses it `scene_taken`
+-- when another player drives that map) or is past it (on false).  The
+-- claims stand in state.scenes.  Returns the seq, or nil when not joined.
+function Client:sendScene(map, key, on)
+  return self:send({ type = "scene", map = map, key = key, on = on and true or false })
+end
+
 -- co-op battles (#18, design A8) ----------------------------------------
 
 -- a battle this window's world opened: opening = { kind, enemy, map,

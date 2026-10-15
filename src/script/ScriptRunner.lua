@@ -135,6 +135,9 @@ function ScriptRunner:run(script, extra, startPc)
       Runtime.emit("script.ended", { ctx = ctx, completed = true })
     end
   end)
+  -- co-op (#59): a rival scene's script is this window's to drive in a
+  -- session (src/coop/game/Scenes.lua); a solo game returns at once
+  require("src.coop.game.Scenes").started(self, script)
   self:resume()
 end
 

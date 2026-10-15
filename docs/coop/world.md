@@ -89,7 +89,9 @@ by:
 
 A step the player walks of their own does not hold them: the cartridge
 opens START at the next cell. A battle the host runs for this player
-comes with #18.
+comes with #18. The box a world waits under while a partner faces the
+rival on its map holds nobody either, so the scene's result lands at
+once (#59, [battles.md](battles.md)).
 
 So a scene's result reaches the partners when the scene ends, not during
 it. Exceptions:

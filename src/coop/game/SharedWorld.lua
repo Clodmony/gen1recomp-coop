@@ -13,7 +13,8 @@
 -- whole-screen overlay), a map load or warp, a running or queued script, a
 -- forced or scripted walk (scriptMoves, spinner tiles, a ledge hop), a
 -- trainer's approach, a script-held NPC, and the overworld's own animations
--- (fly, teleport, holes, CUT, a boulder's dust, a heal).  A step the player
+-- (fly, teleport, holes, CUT, a boulder's dust, a heal).  Not held: the box
+-- a world waits under while a partner faces the rival on its map (#59).  A step the player
 -- walks of their own is not held (Window.lua).  A battle the host runs for
 -- this player comes with #18.
 --
@@ -37,7 +38,13 @@ function SharedWorld.busy(game)
   local ow = game and game.overworld
   if not (ow and ow.player and ow.map) then return "no_overworld" end
   local stack = game.stack
-  if not (stack and stack:top() == ow) then return "above" end
+  local top = stack and stack:top()
+  -- a box the world waits under that counts as resting: a partner's rival
+  -- scene (#59, Scenes.lua)
+  if top and top.coopRest and stack.states and stack.states[#stack.states - 1] == ow then
+    top = ow
+  end
+  if top ~= ow then return "above" end
   if ow.transitioning then return "map_load" end
   if ow.runner and ow.runner.isRunning and ow.runner:isRunning() then return "script" end
   if ow.pendingScripts and #ow.pendingScripts > 0 then return "script" end
