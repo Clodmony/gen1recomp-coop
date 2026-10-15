@@ -21,10 +21,13 @@
 --   env.nearby()           -> a Beacon listener, or nil and why
 --   env.closeNearby()
 --   env.addresses()        -> { { ip, kind } }, this device's addresses
+--   env.splitReady()       -> true when CONTROLS has a device for each of
+--                          two players (split-screen, #11)
 --
 -- Actions: "up", "down", "left", "right", "a", "b", "start".  A press or
 -- update() may return a command for the launcher:
---   { kind = "coop_enter", version = v, campaign = { id, title } }
+--   { kind = "coop_enter", version = v, campaign = { id, title }, split = true? }
+--   (split: a second player on this device joins once the game runs, #11)
 --   { kind = "copy", text = "…" }
 --   { kind = "coop_exit", notice = text? }   back to PLAY
 
@@ -153,6 +156,7 @@ function CoopMenu:items()
       add({ id = "address", address = a.text, label = L("COPY"), value = a.text, detail = a.note })
     end
     add({ id = "stop", label = L("STOP HOSTING") })
+    if self:_splitReady() then add({ id = "enter2", label = L("ENTER WITH 2 PLAYERS") }) end
     add({ id = "enter", label = L("ENTER THE WORLD") })
   elseif s == "join" then
     local listener, why = self.env.nearby()
@@ -174,6 +178,7 @@ function CoopMenu:items()
       local you = session.lobby and session.lobby.you
       add({ id = "cancel", label = L("CANCEL") })
       if not (you and you.player) then add({ id = "name", label = L("NEW NAME") }) end
+      if self:_splitReady() then add({ id = "join2", label = L("JOIN WITH 2 PLAYERS") }) end
       add({ id = "join", label = L("JOIN AS %s", (you and you.name) or self.joinName) })
     elseif st == "unreachable" then
       add({ id = "back", label = L("CANCEL") })
@@ -385,7 +390,13 @@ function CoopMenu:_enter()
     campaign = { id = s.client.campaign, title = s.lobby and s.lobby.title or "CO-OP" }
   end
   self.entered = true
-  return { kind = "coop_enter", version = s.cartridge.game, campaign = campaign }
+  return { kind = "coop_enter", version = s.cartridge.game, campaign = campaign,
+           split = self.split or nil }
+end
+
+-- two players on this device can start: a device claimed for each (#11)
+function CoopMenu:_splitReady()
+  return self.env.splitReady ~= nil and self.env.splitReady() == true
 end
 
 local function exit(notice) return { kind = "coop_exit", notice = notice } end
@@ -486,7 +497,8 @@ function CoopMenu:press(action)
     end
     return self:_openList(self.root, self.campaign.id)
   elseif s == "hosting" then
-    if id == "enter" then return self:_enter() end
+    self.split = id == "enter2" or nil
+    if id == "enter" or id == "enter2" then return self:_enter() end
     if id == "address" then
       self:notify(L("Copied %s.", row.address))
       return { kind = "copy", text = row.address }
@@ -527,7 +539,8 @@ function CoopMenu:press(action)
     local st = self.session and self.session.status
     if id == "retry" then
       self.session:retryNow()
-    elseif id == "join" then
+    elseif id == "join" or id == "join2" then
+      self.split = id == "join2" or nil
       local you = self.session.lobby and self.session.lobby.you
       self.session:join((you and you.player) and you.name or self.joinName)
     elseif id == "name" then

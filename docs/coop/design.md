@@ -125,7 +125,9 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
    remembered player is already connected joins as someone new (two windows on
    one machine are two players); a player whose device lost its id is
    recognised by typing the same name (D26, D48, D49). Split-screen needs two
-   remembered identities per device (one per local seat).
+   remembered identities per device (one per local seat). Here (#11) both
+   seats remember theirs in one identity, under the host's key and the seat
+   ([split.md](split.md)).
 10. **carry** Windows stay trusted (owner, D72): the host checks only step length (up
     to two cells on the same map, a ledge hop), trusts the warps a window
     reports and the enemies its world prepared; collision is the window's own;
@@ -152,7 +154,8 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
     device with a 256 KB backlog for late joiners; relayed lines are never sent
     on. Logs contain names and addresses: never posted publicly (D59, play
     §Logs). Re-think for LÖVE's save directory; in split-screen one process
-    holds both players' lines. The local logs are #10, sharing them #31
+    holds both players' lines (here each seat writes its own file, and the
+    first seat's link shares, #11). The local logs are #10, sharing them #31
     ([session.md](session.md)): the hello's `logs` carries only `share`, the
     hello's `device` already names the device.
 15. **skip** Godot `var_to_bytes` encoding and `ENetMultiplayerPeer` raw packets
@@ -210,6 +213,9 @@ rival's name and how a new player starts (#22); the split-screen entry
    number keypad (D103, tc K11).
 10. **adapt** A split-screen entry (both seats on one device) has no source
     equivalent; it needs its own start path in this flow (G2, G3; #11).
+    Here: ENTER WITH 2 PLAYERS on the hosting screen and JOIN WITH 2
+    PLAYERS on the connection check, shown when CONTROLS has a device for
+    each player ([split.md](split.md)).
 11. **skip** Launcher themes surviving a theme switch (tc K12), the scripted
     launcher checks (D69's runner): Godot launcher and source tooling.
 
@@ -271,8 +277,9 @@ rival's name and how a new player starts (#22); the split-screen entry
     on a scratch save area, restored on leaving; nothing is written back to a
     single-player save a player brought in (D29, D34). Split-screen needs one
     scratch area per seat. Here the scratch area is the campaign's save slot
-    on the device (G10), filled from the host's file on entering (G20); one
-    per seat comes with #11.
+    on the device (G10), filled from the host's file on entering (G20). The
+    second seat plays in the campaign's second slot on the device (#11,
+    [split.md](split.md)).
 15. **skip** Moving the earlier build's single campaign file in as FIRST CAMPAIGN
     (D49) and settling format-1 files with the intro state (D58, D66): source
     migrations with no target history.
@@ -344,7 +351,8 @@ In place (#14, [world.md](world.md), G21).
    locked screen such as a fade or a trainer's approach); it counts after three
    such frames in a row. A scene is the stretch between two rest points
    (D72, D79). The target needs equivalents for each "busy" signal; in
-   split-screen each view rests on its own. Here (G21) a step the player
+   split-screen each view rests on its own (here each seat's game has its
+   own session and window, #11). Here (G21) a step the player
    walks of their own does not hold them, since START opens at the next
    cell; a reload or refresh waits for a frame between two cells.
 5. **carry** Away from a rest point a window sends and takes nothing, world or
@@ -594,7 +602,8 @@ In place (#16, [items.md](items.md), G22).
    under the cursor), the Gen 1 bag list (battle items only), YES/NO boxes, and
    a name list for whom a ball catches for (owner, D98, replaces D22/D32/D45's
    panels). In the target, feed the existing battle UI from host events; in
-   split-screen each view draws its own player's menus.
+   split-screen each view draws its own player's menus (each seat's game is
+   a world of its own, #11, so a battle of one seat shows only in its half).
 2. **carry** The menu says who decides ("<NAME> decides") (D98, play §Battles).
 3. **carry** A partner's suggestion is a hollow ▷ at every menu level (on the main
    menu entry and on the exact row), a partner's initial with three or more
@@ -740,7 +749,8 @@ In place (#16, [items.md](items.md), G22).
 13. **adapt** Closing the app during a session first says goodbye (the host's `ended`
     and last log lines, a joiner's last log batch), then quits at most 2.5 s
     (host) or 0.6 s (joiner) later (D60). In LÖVE: defer `love.quit`.
-    Split-screen: closing ends both seats.
+    Split-screen: closing ends both seats, the second seat's goodbye first
+    (#11).
 14. **carry** Host migration stays out of scope (brief, design §Sessions).
 
 ### A12. Friend battles and trades
@@ -1188,3 +1198,15 @@ sibling's D-numbers.
   them. The bag holds 40 rows while a session's game runs, and a
   campaign's slot is not exported to a `.sav`. Protocol 6, campaign file
   version 3. Details: [items.md](items.md).
+- **G23. Split-screen: two worlds, one mix** (#11, 2026-10-15, accepted by
+  the owner the same day, with player 2's sound effects to follow in #51
+  and player 2's naming in #22).
+  The second seat's game is a second set of the game's modules in the same
+  process (`package.loaded` swapped per world). It is a client of the
+  session like any other player: it dials the in-process host's loopback
+  hub, or the host the first seat joined. The window has one mix: the
+  first seat's music and sounds. The second seat's game runs without
+  `love.audio`, `love.sound` and `love.thread`, so its sound waits take
+  their silent timings. Its trainer is named `PLAYER2` until a host knows
+  it. The launcher shows the two-player rows only when CONTROLS has a
+  device for each player. Details: [split.md](split.md).
