@@ -19,6 +19,7 @@ local Transport = require("src.coop.session.Transport")
 local Host = require("src.coop.session.Host")
 local Client = require("src.coop.session.Client")
 local Protocol = require("src.coop.session.Protocol")
+local HostBattles = require("src.coop.battle.HostBattles")
 
 local SHA = ("ab"):rep(20)
 local CAMPAIGN = "c0123456789abcdef"
@@ -29,7 +30,8 @@ local host = Host.new({
   campaign = { id = CAMPAIGN, title = "RED CO-OP" }, cartridge = { game = "red", sha1 = SHA },
   clock = function() return clock end,
   hex = function(n) idCounter = idCounter + 1; return ("%0" .. n .. "x"):format(idCounter) end,
-  log = { write = function(_, src, kind, data) logLines[#logLines + 1] = { kind = kind, data = data } end },
+  log = { write = function(_, src, kind, data) logLines[#logLines + 1] = { kind = kind, data = data } end,
+          close = function() end },
 })
 local hub = host:serve(Transport.loopback())
 
@@ -266,5 +268,134 @@ pump()
 for _, e in ipairs(red.battles[id3].players) do if e.id == green.player then present = e.present end end
 eq(present, true, "back on a new link, present again")
 eq(green.battles[id3] and #green.battles[id3].inputs, 2, "and the new link hears the whole battle")
+red:battleAt(id3, 2, nil, nil, nil, "run")
+pump()
+eq(host.battles[id3], nil, "(that battle ends)")
+
+-- leaving, the absent decider, rejoining (#20, A11.1 to A11.5) ------------------------------
+do
+  red:battleOpen(OPENING, team("r", 2), 1234, false)
+  pump()
+  local id4
+  for k, b in pairs(red.battles) do if not b.ended then id4 = k end end
+  red:battleAt(id4, 1, "menu", red.player, "x")
+  pump()
+  yellow:battleJoin(id4, team("y", 2), 6, false)
+  pump()
+  eq(#red.battles[id4].inputs, 2, "YELLOW is in")
+  red:battleLeave(id4)
+  pump()
+  eq(lastRejection(red), "opener_stays", "the opener cannot leave (A11.2)")
+  yellow:battleLeave(id4)
+  pump()
+  local entry
+  for _, e in ipairs(red.battles[id4].players) do if e.id == yellow.player then entry = e end end
+  eq(entry and entry.left, true, "YELLOW left the battle (A11.1)")
+  eq(entry and entry.present, false, "and is absent")
+  -- YELLOW's Pokemon is out: the first present player decides at once (A11.5)
+  red:battleAt(id4, 2, "menu", yellow.player, "y")
+  pump()
+  eq(red.battles[id4].owner, yellow.player, "the question is about YELLOW's Pokémon")
+  eq(red.battles[id4].by, red.player, "RED decides for it at once")
+  red:battleCmd(id4, 2, { kind = "move", slot = 1 })
+  pump()
+  eq(#red.battles[id4].inputs, 3, "and RED's command goes in")
+  -- REJOIN: YELLOW decides for their own Pokemon again (A11.4)
+  yellow:battleRejoin(id4)
+  pump()
+  for _, e in ipairs(red.battles[id4].players) do if e.id == yellow.player then entry = e end end
+  eq(entry.present, true, "REJOIN: YELLOW is back in at once (A11.4)")
+  red:battleAt(id4, 3, "menu", yellow.player, "z")
+  pump()
+  eq(red.battles[id4].by, yellow.player, "and decides for their Pokémon again")
+  red:battleRejoin(id4)
+  pump()
+  eq(lastRejection(red), "not_away", "a player who never left has nothing to rejoin")
+
+  -- YELLOW drops while asked: the battle waits; TAKE OVER after 30 s (A11.5, A11.6)
+  local yKnown = yellow.known
+  yellow.conn:close()
+  pump()
+  eq(red.battles[id4].by, nil, "a dropped decider pauses the battle")
+  red:battleCmd(id4, 3, { kind = "move", slot = 1 })
+  pump()
+  eq(lastRejection(red), "not_yours", "nobody decides for them unasked")
+  red:battleTakeover(id4, yellow.player)
+  pump()
+  eq(lastRejection(red), "not_ready", "TAKE OVER is not offered before 30 s")
+  clock = clock + HostBattles.TAKEOVER
+  pump()
+  eq(red.battles[id4].offer, yellow.player, "after 30 s the present players are offered TAKE OVER")
+  red:battleTakeover(id4, yellow.player)
+  pump()
+  eq(red.battles[id4].by, red.player, "RED stands in for YELLOW")
+  eq(red.battles[id4].standins[1] and red.battles[id4].standins[1].owner, yellow.player,
+    "the view names both")
+  -- YELLOW comes back: their own decision again
+  yellow = Client.new(hub:dial(), { name = "YELLOW", game = "red", sha1 = SHA, device = "d4",
+                                    known = yKnown, build = "test" })
+  yellow:join()
+  all[4] = yellow
+  pump()
+  eq(red.battles[id4].by, yellow.player, "back: YELLOW takes back control (A11.6)")
+  eq(#red.battles[id4].standins, 0, "no stand-in any more")
+  eq(yellow.battles[id4] and #yellow.battles[id4].inputs, 3, "and hears the battle again")
+
+  -- YELLOW drops again and the battle ends meanwhile: told once back (A11.8)
+  yKnown = yellow.known
+  yellow.conn:close()
+  pump()
+  red:battleAt(id4, 3, nil, nil, nil, "win")
+  pump()
+  eq(host.battles[id4], nil, "the battle is over")
+  yellow = Client.new(hub:dial(), { name = "YELLOW", game = "red", sha1 = SHA, device = "d4",
+                                    known = yKnown, build = "test" })
+  yellow:join()
+  all[4] = yellow
+  pump()
+  eq(yellow.battles[id4] and yellow.battles[id4].ended, "win",
+    "a player away when it ended gets the end when back (A11.8)")
+  eq(yellow.battles[id4] and #yellow.battles[id4].inputs, 3, "with the whole battle")
+  eq(host.missed[yellow.player] and next(host.missed[yellow.player]), nil, "once")
+end
+
+-- a queued join is called off (A11.4) --------------------------------------------------------
+do
+  red:battleOpen(OPENING, team("r", 1), 1234, false)
+  pump()
+  local id5
+  for k, b in pairs(red.battles) do if not b.ended then id5 = k end end
+  blue:battleJoin(id5, team("b", 1), 5, false)
+  pump()
+  check(host.joins[blue.player] ~= nil, "BLUE's join waits")
+  blue:battleLeave(id5)
+  pump()
+  eq(host.joins[blue.player], nil, "called off")
+  -- nobody present for two minutes: the battle ends as fled (A11.7)
+  local rKnown = red.known
+  red.conn:close()
+  pump()
+  clock = clock + HostBattles.ABANDON
+  pump()
+  eq(host.battles[id5], nil, "a battle nobody is in ends after two minutes (A11.7)")
+  red = Client.new(hub:dial(), { name = "RED", game = "red", sha1 = SHA, device = "d1",
+                                 known = rKnown, build = "test" })
+  red:join()
+  all[1] = red
+  pump()
+  eq(red.battles[id5] and red.battles[id5].ended, "run", "as fled, told when back")
+end
+
+-- shutdown: battles still running end as fled before `ended` (A11.7) ---------------------------
+do
+  red:battleOpen(OPENING, team("r", 1), 1234, false)
+  pump()
+  local id6
+  for k, b in pairs(red.battles) do if not b.ended then id6 = k end end
+  host:shutdown("host_quit")
+  pump()
+  eq(red.battles[id6] and red.battles[id6].ended, "run", "a running battle ends as fled at shutdown")
+  eq(red.status, "ended", "then the session ends")
+end
 
 T.finish()

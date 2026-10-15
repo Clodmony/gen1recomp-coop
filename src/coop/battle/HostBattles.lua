@@ -28,12 +28,30 @@
 -- its players once and dropped, so nothing of it can be applied twice
 -- (A8.21).
 --
+-- Leaving, taking over, coming back (#20, design A11): a participant is
+-- present, or absent: left on purpose (LEAVE BATTLE, `left`) or dropped
+-- (their link went away).  Their Pokemon stay in the roster and fight on
+-- under whoever is present.  The battle asks the owner of the Pokemon
+-- concerned (the windows report it); who decides is derived from that
+-- (HostBattles.decider): the owner if present, else the player standing in
+-- for them, else, for an owner who left, the first present participant at
+-- once; an owner who dropped pauses the battle, and after TAKEOVER seconds
+-- the present participants are offered to take over (A11.5, A11.6).  An
+-- owner who comes back decides again.  The opener cannot leave (A11.2).  A
+-- battle nobody is present in ends as fled after ABANDON seconds, and every
+-- battle still running at shutdown ends as fled (A11.7).  A participant
+-- whose link was down when their battle ended hears the end once back
+-- (A11.8).
+--
 -- State lives on the host: host.battles (id -> battle) and host.joins
 -- (player id -> queued join); Host:busy() reads both (design A3.7).
 
 local Protocol = require("src.coop.session.Protocol")
 
 local HostBattles = {}
+
+HostBattles.TAKEOVER = 30 -- seconds without a dropped decider before TAKE OVER is offered
+HostBattles.ABANDON = 120 -- seconds a battle nobody is present in waits (a redial's budget)
 
 local function count(t)
   local n = 0
@@ -178,8 +196,28 @@ function HostBattles.join(host, p, msg)
   return b
 end
 
+-- Who decides the current question (design A8.6, A11.5, A11.6): the
+-- owner of the Pokemon concerned when present, else their stand-in, else,
+-- for an owner who left, the first present participant; nil while the
+-- battle waits for an owner who dropped (or before any report).
+function HostBattles.decider(b)
+  local ask = b.ask
+  if not ask or ask.rev ~= #b.inputs then return nil end
+  local owner = participant(b, ask.by)
+  if owner and owner.present then return ask.by end
+  local stand = b.standIns and b.standIns[ask.by]
+  local se = stand and participant(b, stand)
+  if se and se.present then return stand end
+  if owner and owner.left then
+    for _, e in ipairs(b.players) do
+      if e.present then return e.id end
+    end
+  end
+  return nil
+end
+
 -- A command at revision rev (design A8.6, A8.7): only for the battle's
--- current question, from the player it asks.
+-- current question, from the player who decides it.
 function HostBattles.cmd(host, p, msg)
   local b = host.battles[msg.battle]
   if not b or b.ended then return nil, "no_battle" end
@@ -188,7 +226,7 @@ function HostBattles.cmd(host, p, msg)
   if msg.rev ~= #b.inputs then return nil, "stale" end
   local ask = b.ask
   if not ask or ask.rev ~= #b.inputs then return nil, "not_ready" end
-  if ask.by ~= p.id then return nil, "not_yours" end
+  if HostBattles.decider(b) ~= p.id then return nil, "not_yours" end
   local c = msg.cmd
   if Protocol.CMDS[c.kind] ~= ask.kind then return nil, "bad_cmd" end
   if (c.kind == "switch" or c.kind == "replace") and not (c.index and c.index <= rosterSize(b)) then
@@ -199,8 +237,8 @@ function HostBattles.cmd(host, p, msg)
   if c.kind == "choice" and c.yes == nil then return nil, "bad_cmd" end
   -- a catch is for a player in the battle (design A7.6)
   if c.target and not participant(b, c.target) then return nil, "bad_cmd" end
-  -- RUN flees for the player whose world started the fight (design A9.5);
-  -- leaving a battle is #20
+  -- RUN flees for the player whose world started the fight; the others
+  -- leave the battle instead (design A9.5, A11.1)
   if c.kind == "run" and p.id ~= b.open.by then return nil, "run_initiator" end
   push(host, b, { kind = "cmd", player = p.id, cmd = c })
   host:_log("battle_cmd", { battle = b.id, rev = #b.inputs, cmd = c }, p)
@@ -218,17 +256,25 @@ function HostBattles.suggest(host, p, msg)
   if msg.rev ~= #b.inputs then return nil, "stale" end
   local ask = b.ask
   if not ask or ask.rev ~= #b.inputs then return nil, "not_ready" end
-  if ask.by == p.id then return nil, "not_yours" end
+  if HostBattles.decider(b) == p.id then return nil, "not_yours" end
   if msg.cmd and Protocol.CMDS[msg.cmd.kind] ~= ask.kind then return nil, "bad_cmd" end
   b.suggestions[p.id] = msg.cmd
   host.dirty = true
   return b
 end
 
-local function finish(host, b, result, by)
+local function finish(host, b, result, by, why)
   b.ended = result
   host.dirty = true
-  host:_log("battle_end", { battle = b.id, result = result, rev = #b.inputs }, by)
+  host:_log("battle_end", { battle = b.id, result = result, rev = #b.inputs, why = why }, by)
+  -- a participant whose link is down hears the end once back (A11.8)
+  for _, e in ipairs(b.players) do
+    local p = host.byId[e.id]
+    if not (p and p.connected) then
+      host.missed[e.id] = host.missed[e.id] or {}
+      host.missed[e.id][b.id] = b
+    end
+  end
   -- a join still queued is released (design A11.8), and hears the end
   b.released = {}
   for _, e in ipairs(queued(host, b)) do
@@ -266,8 +312,99 @@ function HostBattles.at(host, p, msg)
   return b
 end
 
+-- LEAVE BATTLE (design A11.1, A11.2): a participant whose own world did not
+-- open the battle is absent from it; their Pokemon fight on.  A queued join
+-- is called off the same way (A11.4).
+function HostBattles.leave(host, p, msg)
+  local q = host.joins[p.id]
+  if q and q.battle == msg.battle then
+    host.joins[p.id] = nil
+    host.dirty = true
+    host:_log("battle_join_called_off", { battle = msg.battle }, p)
+    return true
+  end
+  local b = host.battles[msg.battle]
+  if not b or b.ended then return nil, "no_battle" end
+  local me = participant(b, p.id)
+  if not me then return nil, "not_in_battle" end
+  if p.id == b.open.by then return nil, "opener_stays" end
+  me.left, me.present = true, false
+  host.dirty = true
+  host:_log("battle_leave", { battle = b.id, rev = #b.inputs }, p)
+  return b
+end
+
+-- REJOIN (design A11.4): a player who left is back in at once
+function HostBattles.rejoin(host, p, msg)
+  local b = host.battles[msg.battle]
+  if not b or b.ended then return nil, "no_battle" end
+  local me = participant(b, p.id)
+  if not (me and me.left) then return nil, "not_away" end
+  me.left, me.present = false, true
+  if b.standIns then b.standIns[p.id] = nil end
+  host.dirty = true
+  host:_log("battle_rejoin", { battle = b.id, rev = #b.inputs }, p)
+  return b
+end
+
+-- TAKE OVER (design A11.6): a present participant decides for an owner who
+-- dropped, once the battle offered it; the owner's results stay theirs
+function HostBattles.takeover(host, p, msg)
+  local b = host.battles[msg.battle]
+  if not b or b.ended then return nil, "no_battle" end
+  local me = participant(b, p.id)
+  if not (me and me.present) then return nil, "not_in_battle" end
+  if b.offer ~= msg.owner then return nil, "not_ready" end
+  b.standIns = b.standIns or {}
+  b.standIns[msg.owner] = p.id
+  b.offer, b.pausedAt = nil, nil
+  host.dirty = true
+  host:_log("battle_takeover", { battle = b.id, owner = msg.owner, rev = #b.inputs }, p)
+  return b
+end
+
+-- every second or so: a paused battle offers TAKE OVER; a battle nobody is
+-- present in ends as fled (design A11.6, A11.7)
+function HostBattles.tick(host, now)
+  for _, b in pairs(host.battles) do
+    if not b.ended then
+      local present = false
+      for _, e in ipairs(b.players) do present = present or e.present end
+      if present then
+        b.emptyAt = nil
+      else
+        b.emptyAt = b.emptyAt or now
+        if now - b.emptyAt >= HostBattles.ABANDON then
+          finish(host, b, "run", nil, "abandoned")
+        end
+      end
+      local ask = b.ask
+      local owner = ask and ask.rev == #b.inputs and participant(b, ask.by)
+      if not b.ended and owner and not owner.present and not owner.left
+         and not HostBattles.decider(b) and present then
+        b.pausedAt = b.pausedAt or now
+        if not b.offer and now - b.pausedAt >= HostBattles.TAKEOVER then
+          b.offer = ask.by
+          host.dirty = true
+          host:_log("battle_offer", { battle = b.id, owner = ask.by }, nil)
+        end
+      else
+        b.pausedAt = nil
+        if b.offer then b.offer = nil; host.dirty = true end
+      end
+    end
+  end
+end
+
+-- shutdown: every battle still running ends as fled (design A11.7)
+function HostBattles.endAll(host)
+  for _, b in pairs(host.battles) do
+    if not b.ended then finish(host, b, "run", nil, "shutdown") end
+  end
+end
+
 -- A player's link went away: they are absent from their battle (design
--- A11.1, #20 adds the rest); a queued join is dropped.
+-- A11.1); a queued join is dropped.
 function HostBattles.left(host, p)
   for _, b in pairs(host.battles) do
     local me = participant(b, p.id)
@@ -282,12 +419,14 @@ function HostBattles.left(host, p)
   end
 end
 
--- a player came back: present again in a battle still running
+-- a player came back: present again in a battle still running (unless
+-- they had left it), deciding for their own Pokemon again (design A11.6)
 function HostBattles.back(host, p)
   for _, b in pairs(host.battles) do
     local me = participant(b, p.id)
-    if me and not b.ended then
+    if me and not b.ended and not me.left then
       me.present = true
+      if b.standIns then b.standIns[p.id] = nil end
       host.dirty = true
     end
   end
@@ -295,8 +434,10 @@ end
 
 -- what the battle looks like to its players, apart from its inputs
 local function signature(b)
-  local parts = { tostring(b.ended), b.ask and (b.ask.rev .. b.ask.kind .. b.ask.by) or "-" }
-  for _, e in ipairs(b.players) do parts[#parts + 1] = e.id .. tostring(e.present) end
+  local parts = { tostring(b.ended), b.ask and (b.ask.rev .. b.ask.kind .. b.ask.by) or "-",
+                  tostring(HostBattles.decider(b)), tostring(b.offer) }
+  for _, e in ipairs(b.players) do parts[#parts + 1] = e.id .. tostring(e.present) .. tostring(e.left) end
+  for owner, pid in pairs(b.standIns or {}) do parts[#parts + 1] = owner .. ">" .. pid end
   local by = {}
   for pid in pairs(b.suggestions) do by[#by + 1] = pid end
   table.sort(by)
@@ -312,7 +453,11 @@ end
 -- suggestions and players when they changed.
 function HostBattles.sendTo(host, link, p)
   link.battles = link.battles or {}
-  for id, b in pairs(host.battles) do
+  local all = {}
+  for id, b in pairs(host.battles) do all[id] = b end
+  local missed = host.missed[p.id]
+  for id, b in pairs(missed or {}) do all[id] = b end
+  for id, b in pairs(all) do
     local q = host.joins[p.id]
     if participant(b, p.id) or (q and q.battle == id) or (b.released and b.released[p.id]) then
       local sent = link.battles[id] or { n = 0 }
@@ -325,18 +470,24 @@ function HostBattles.sendTo(host, link, p)
           inputs[#inputs + 1] = b.inputs[i]
         end
         local players = {}
-        for i, e in ipairs(b.players) do players[i] = { id = e.id, present = e.present } end
+        for i, e in ipairs(b.players) do
+          players[i] = { id = e.id, present = e.present, left = e.left or nil }
+        end
         local suggestions = {}
         for pid, c in pairs(b.suggestions) do suggestions[#suggestions + 1] = { by = pid, cmd = c } end
+        local standins = {}
+        for owner, pid in pairs(b.standIns or {}) do standins[#standins + 1] = { owner = owner, by = pid } end
         local ask = b.ask and b.ask.rev == #b.inputs and b.ask or nil
         host:_send(link, {
           type = "battle", id = id, rev = #b.inputs, seed = b.seed, from = from,
           inputs = inputs, players = players, open = from == 1 and b.open or nil,
-          ask = ask and ask.kind, by = ask and ask.by, suggestions = suggestions,
-          ended = b.ended,
+          ask = ask and ask.kind, by = ask and HostBattles.decider(b) or nil,
+          owner = ask and ask.by, offer = b.offer, standins = standins,
+          suggestions = suggestions, ended = b.ended,
         })
         sent.n = sent.n + #inputs
         sent.sig = sent.n == #b.inputs and sig or nil
+        if b.ended and missed and missed[id] and sent.n == #b.inputs then missed[id] = nil end
       end
     end
   end
