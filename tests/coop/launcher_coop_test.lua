@@ -463,7 +463,8 @@ end
 do
   local m = CoopMenu.new(A.env)
   A.menu = m
-  eq(ids(m), "campaign,rename,delete,new", "the campaign has a card: HOST, RENAME, DELETE")
+  eq(ids(m), "campaign,rename,delete,mix,new",
+    "the campaign has a card: HOST, RENAME, DELETE, and Red's switch of both versions (#9)")
   local d = fits(m, "campaign cards")
   eq(#d.cards[1].players, 2, "with its players")
   choose(m, "rename")
@@ -493,18 +494,19 @@ do
   eq(hostFs.files["coop/campaigns/" .. campaignId .. ".json.bak"], nil, "and drops the backup")
   check(m.notice and m.notice:find("JOHTO"), "saying which one")
   m:press("a")
-  eq(ids(m), "campaign,rename,delete,new", "the card is listed again")
-  -- every campaign on the CAMPAIGNS tab, this cartridge's on HOST
-  local blue = Campaigns.create({ title = "SEAFOAM", game = "blue" })
+  eq(ids(m), "campaign,rename,delete,mix,new", "the card is listed again")
+  -- every campaign on the CAMPAIGNS tab, this cartridge's on HOST (and its
+  -- pair's, #9: tests/coop/versions_launcher_test.lua)
+  local yellow = Campaigns.create({ title = "SEAFOAM", game = "yellow" })
   eq(#CoopMenu.new(A.env):details().cards, 1, "HOST lists this cartridge's campaigns")
   local all = CoopMenu.new(A.env, { start = "campaigns" })
   eq(#all:details().cards, 2, "CAMPAIGNS lists every campaign")
   for _, r in ipairs(all:items()) do
-    if r.id == "campaign" and r.campaign.game == "blue" then
+    if r.id == "campaign" and r.campaign.game == "yellow" then
       eq(r.enabled, false, "one whose cartridge is not imported cannot be hosted")
     end
   end
-  Campaigns.delete(blue.id)
+  Campaigns.delete(yellow.id)
 end
 
 -- refusals are named exactly; another cartridge that fits is offered ---------
@@ -528,7 +530,9 @@ do
   eq(bm.session.status, "refused", "BLUE is refused by a RED host")
   local d = fits(bm, "refused")
   eq(d.steps.fits, "no", "the cartridge step fails")
-  eq(d.reason, "The host plays RED. This game is BLUE.", "the reason names both cartridges")
+  -- this test's dumps are not the verified ones: Red and Blue do not pair (#9)
+  eq(d.reason, "RED and BLUE play together only from verified dumps. One of the two ROMs is another dump.",
+    "the reason names both cartridges")
   eq(ids(bm), "back,switch", "the partner's RED is offered")
   eq(bm:items()[2].label, "USE RED", "USE RED")
   eq(bm:items()[bm.cursor].id, "switch", "and preselected")

@@ -135,17 +135,21 @@ end
 -- The campaign's state from its file, or a new one; nil and
 -- { why, backup } when the file is refused (design A3.5).  `fs` is
 -- CampaignFile's file calls.
+-- A campaign is its game's (the card's `game`): a Blue cartridge hosting a
+-- Red campaign keeps it in Red's folder (#9, design A13.2).
 function Session.openCampaign(fs, campaign, cartridge)
-  local state, info = CampaignFile.read(fs, cartridge.game, campaign.id)
+  local game = campaign.game or cartridge.game
+  local state, info = CampaignFile.read(fs, game, campaign.id)
   if state then return state, info end
   if info.why ~= "missing" then return nil, info end
   -- a new campaign's rival is the one its host named, if any (#22)
-  return Campaign.new({ id = campaign.id, title = campaign.title, game = cartridge.game,
-                        sha1 = cartridge.sha1, created = os.time(),
-                        rival = campaign.rival }), { new = true }
+  return Campaign.new({ id = campaign.id, title = campaign.title, game = game,
+                        sha1 = game == cartridge.game and cartridge.sha1 or "",
+                        created = os.time(), rival = campaign.rival }), { new = true }
 end
 
--- Host a campaign ({ id, title, players }) with this device's cartridge.
+-- Host a campaign ({ id, title, players, game, mix }) with this device's
+-- cartridge (the campaign's game or the other of its pair, #9).
 -- opts: name, port, shareLogs, listen (false: loopback only), beacon
 -- (false: none), onRoster(roster) when the players change, campaignFs
 -- (CampaignFile's file calls; the save folder's by default, false: no
@@ -178,6 +182,8 @@ function Session.startHost(opts)
     players = campaign.players, state = state, store = store,
     cartridge = s.cartridge, hostName = opts.name, port = s.port, log = s.log,
     device = s.identity.device, clock = opts.clock, hex = opts.hex,
+    -- "wild Pokémon from both versions", the campaign card's switch (#9)
+    mix = campaign.mix == true,
   })
   s.hub = s.host:serve(Transport.loopback())
   if opts.listen ~= false then
@@ -508,6 +514,8 @@ function Session:update(dt, game)
       require("src.coop.campaign.Items").openBag(game.data)
       self:_report(game)
       require("src.coop.game.SharedWorld").step(self.window, game)
+      -- this window's own wild slots, once a link (#9, design A13.4)
+      require("src.coop.game.WildMix").step(c, game.data)
       require("src.coop.game.Battles").step(game)
       require("src.coop.game.Scenes").step(game) -- rival scenes (#59)
     end

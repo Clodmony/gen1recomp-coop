@@ -62,7 +62,8 @@ The credit line of upstream's licence is not translated.
 | Import ROM | ROM importieren | |
 | PLAY SOLO | ALLEIN SPIELEN | |
 | PLAY SOLO → | ALLEIN SPIELEN → | |
-| %s → %s · Matching cartridge required today | %s → %s · Vorerst nur mit demselben Modul | |
+| %s plays with %s | %s spielt mit %s | |
+| %s or %s | %s oder %s | |
 | HOST A CAMPAIGN | KAMPAGNE HOSTEN | |
 | Your save. Friends can join anytime. | Dein Spielstand. Freunde kommen jederzeit dazu. | |
 | JOIN A FRIEND | BEI FREUNDEN MITSPIELEN | |
@@ -319,6 +320,18 @@ The credit line of upstream's licence is not translated.
 | CANCEL | ABBRECHEN | |
 | DELETE AND KEEP BACKUP | LÖSCHEN, SICHERUNG BEHALTEN | |
 
+### #9: wild Pokémon from both versions
+
+| English | German now | Better German |
+| --- | --- | --- |
+| WILD POKéMON | WILDE POKéMON | |
+| BOTH VERSIONS | BEIDE EDITIONEN | |
+| THIS VERSION ONLY | NUR DIESE EDITION | |
+| CHANGE | WECHSELN | |
+| The other version's wild Pokémon appear in half of their places. Changeable later on the campaign's card. | Die wilden Pokémon der anderen Edition erscheinen an der Hälfte ihrer Plätze. Später auf der Karte der Kampagne änderbar. | |
+| BOTH VERSIONS: ON | BEIDE EDITIONEN: AN | |
+| BOTH VERSIONS: OFF | BEIDE EDITIONEN: AUS | |
+
 ### Hosting
 
 | English | German now | Better German |
@@ -328,6 +341,8 @@ The credit line of upstream's licence is not translated.
 | Host · this device | Host · dieses Gerät | |
 | Connected trainer | Verbundener Trainer | |
 | You can enter now. Friends can join later. | Du kannst jetzt los. Freunde kommen später dazu. | |
+| Wild Pokémon from both versions: waiting for a %s player. | Wilde Pokémon beider Editionen: wartet auf jemanden mit %s. | |
+| Wild Pokémon from both versions: on. | Wilde Pokémon beider Editionen: an. | |
 | FRIENDS JOIN AT | FREUNDE TRETEN BEI UNTER | |
 | VPN | VPN | |
 | HOME NETWORK | HEIMNETZ | |
@@ -404,7 +419,8 @@ The credit line of upstream's licence is not translated.
 | JOIN WITH 2 PLAYERS | ZU ZWEIT BEITRETEN | |
 | USE %s | %s NEHMEN | |
 | The host plays %s in %s, this game is %s in %s. Both need the same language. | Der Host spielt %s auf %s, dieses Spiel ist %s auf %s. Beide brauchen dieselbe Sprache. | |
-| The host plays %s. This game is %s. | Der Host spielt %s. Dieses Spiel ist %s. | |
+| The host plays %s. This game is %s. %s plays with %s only. | Der Host spielt %s. Dieses Spiel ist %s. %s spielt nur mit %s. | |
+| %s and %s play together only from verified dumps. One of the two ROMs is another dump. | %s und %s spielen nur als geprüfte Dumps zusammen. Eines der beiden ROMs ist ein anderer Dump. | |
 | The host's %s ROM is another dump than this one. | Das %s-ROM des Hosts ist ein anderer Dump als dieses. | |
 | The host runs another version of this co-op game. Both need the same one. | Der Host hat eine andere Version dieses Koop-Spiels. Beide brauchen dieselbe. | |
 | The session is full. | Die Sitzung ist voll. | |

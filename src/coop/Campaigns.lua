@@ -11,6 +11,7 @@
 --   Campaigns.rename(c.id, "KANTO")
 --   Campaigns.delete(c.id)       -- keeps coop/campaigns/<id>.json.bak
 --   Campaigns.restore(c.id)      -- the card back from its backup (#38)
+--   Campaigns.setMix(c.id, true) -- wild Pokémon from both versions (#9)
 
 local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
@@ -41,6 +42,8 @@ local function clean(data)
     via = type(data.via) == "string" and data.via:sub(1, 64) or nil,
     -- the rival's name the host gave (#22); none: Oak's speech asks
     rival = Protocol.name(data.rival) and data.rival or nil,
+    -- "wild Pokémon from both versions" (#9, design A13.3): off by default
+    mix = data.mix == true or nil,
     players = {},
   }
   if not c.game then return nil end
@@ -96,7 +99,18 @@ function Campaigns.create(opts)
     title = (opts.title and opts.title ~= "") and opts.title or "CO-OP",
     game = opts.game, created = Campaigns.now(), players = {},
     rival = Protocol.name(opts.rival) and opts.rival or nil,
+    mix = opts.mix == true or nil, -- #9
   }
+  Campaigns.save(c)
+  return c
+end
+
+-- "wild Pokémon from both versions" on or off (#9, design A13.3); the next
+-- time the campaign is hosted it plays so.  Returns the card, or nil.
+function Campaigns.setMix(id, on)
+  local c = Campaigns.get(id)
+  if not c then return nil end
+  c.mix = on == true or nil
   Campaigns.save(c)
   return c
 end

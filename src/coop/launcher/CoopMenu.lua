@@ -35,6 +35,7 @@ local Addresses = require("src.coop.session.Addresses")
 local Games = require("src.coop.launcher.Games")
 local Keypad = require("src.coop.launcher.Keypad")
 local Protocol = require("src.coop.session.Protocol")
+local Versions = require("src.coop.session.Versions")
 local L = require("src.coop.launcher.Text").get
 
 local CoopMenu = {}
@@ -52,6 +53,14 @@ local function languageName(version)
 end
 CoopMenu.languageName = languageName
 
+-- the games a campaign of `game` plays with, as the launcher names them
+-- (#9): "RED or BLUE", "YELLOW"
+function CoopMenu.togetherText(game)
+  local games = Versions.together(game)
+  if #games == 2 then return L("%s or %s", label(games[1]), label(games[2])) end
+  return label(game)
+end
+
 -- the sentence for a refusal (design A2.5: a mismatch is named exactly)
 function CoopMenu.reasonText(reason, lobby, version)
   if reason == "content_mismatch" and lobby then
@@ -59,8 +68,14 @@ function CoopMenu.reasonText(reason, lobby, version)
       return L("The host plays %s in %s, this game is %s in %s. Both need the same language.",
         label(lobby.game), languageName(lobby.game), label(version), languageName(version))
     end
+    -- Red with Blue (#9): a pair plays together from verified dumps only
+    if Versions.pair(lobby.game) == version then
+      return L("%s and %s play together only from verified dumps. One of the two ROMs is another dump.",
+        label(lobby.game), label(version))
+    end
     if lobby.game ~= version then
-      return L("The host plays %s. This game is %s.", label(lobby.game), label(version))
+      return L("The host plays %s. This game is %s. %s plays with %s only.", label(lobby.game),
+        label(version), label(lobby.game), CoopMenu.togetherText(lobby.game))
     end
     return L("The host's %s ROM is another dump than this one.", label(version))
   elseif reason == "protocol_mismatch" then
@@ -135,9 +150,15 @@ function CoopMenu:items()
   if s == "host" or s == "campaigns" then
     -- each card: HOST (its cartridge imported here), RENAME, DELETE
     for _, c in ipairs(self.campaigns or {}) do
-      add({ id = "campaign", campaign = c, label = L("HOST"), enabled = self.env.ready(c.game) })
+      add({ id = "campaign", campaign = c, label = L("HOST"),
+            enabled = self:_hostCartridge(c) ~= nil })
       add({ id = "rename", campaign = c, label = L("RENAME") })
       add({ id = "delete", campaign = c, label = L("DELETE") })
+      -- wild Pokémon from both versions, changeable later (#9, design A13.3)
+      if Versions.pair(c.game) then
+        add({ id = "mix", campaign = c, label = c.mix and L("BOTH VERSIONS: ON")
+              or L("BOTH VERSIONS: OFF") })
+      end
     end
     if self.deleted then add({ id = "restore", label = L("RESTORE BACKUP") }) end
     add({ id = "new", label = L("NEW CAMPAIGN"), enabled = self.env.ready(self.version) })
@@ -152,6 +173,12 @@ function CoopMenu:items()
     add({ id = "you", label = L("TRAINER NAME"), value = self.form.you })
     -- the rival's name, or asked in Oak's speech (#22, design A2.3, A4.5)
     add({ id = "rival", label = L("RIVAL NAME"), value = self.form.rival or L("ASK IN THE GAME") })
+    -- wild Pokémon from both versions (#9, design A13.3): off by default,
+    -- for a game with a pair
+    if Versions.pair(self.version) then
+      add({ id = "mix", label = L("WILD POKéMON"),
+            value = self.form.mix and L("BOTH VERSIONS") or L("THIS VERSION ONLY") })
+    end
     add({ id = "go", label = L("CREATE AND HOST") })
   elseif s == "hosting" then
     for _, a in ipairs(self:_hostAddresses()) do
@@ -196,14 +223,39 @@ function CoopMenu:items()
   return rows
 end
 
--- after a refusal for the cartridge: another imported one that fits
+-- after a refusal for the cartridge: another imported one that fits (the
+-- host's game, or the other of its pair, #9)
 function CoopMenu:_otherCartridge()
   local session = self.session
   if not session or session.status ~= "refused" or session.reason ~= "content_mismatch" then
     return nil
   end
-  local game = session.lobby and session.lobby.game
-  if game and game ~= session.cartridge.game and self.env.ready(game) then return game end
+  local lobby = session.lobby
+  if not (lobby and lobby.game) then return nil end
+  for _, game in ipairs(Versions.together(lobby.game)) do
+    if game ~= session.cartridge.game and self.env.ready(game) and CoopMenu.fits(lobby, game) then
+      return game
+    end
+  end
+  return nil
+end
+
+-- a host's lobby lets in this device's `game` (#9): its own game, or the
+-- other of its pair when the host's dump is a verified one (this device's
+-- import verified its own)
+function CoopMenu.fits(lobby, game)
+  if not lobby or not game then return false end
+  if game == lobby.game then return true end
+  return Versions.pair(lobby.game) == game and Versions.clean(lobby.game, lobby.sha1)
+end
+
+-- the cartridge this device hosts campaign `c` with: its game, or the
+-- other of its pair (a Blue cartridge hosts a Red campaign, A13.2); nil
+-- when neither is imported here
+function CoopMenu:_hostCartridge(c)
+  for _, game in ipairs(Versions.together(c.game)) do
+    if self.env.ready(game) then return game end
+  end
   return nil
 end
 
@@ -232,11 +284,13 @@ function CoopMenu.oneEach(hosts)
 end
 
 -- the cartridge of this device that fits a host's lobby: the picked one, or
--- another imported game (Red with Blue is #9)
+-- another imported game: the host's, or the other of its pair (#9)
 function CoopMenu:_fitFor(lobby)
   if not lobby or lobby.protocol ~= Protocol.VERSION then return nil end
-  if lobby.game == self.version then return self.version end
-  if self.env.ready(lobby.game) then return lobby.game end
+  if CoopMenu.fits(lobby, self.version) then return self.version end
+  for _, game in ipairs(Versions.together(lobby.game)) do
+    if self.env.ready(game) and CoopMenu.fits(lobby, game) then return game end
+  end
   return nil
 end
 
@@ -291,7 +345,9 @@ CoopMenu.settle = settle
 function CoopMenu:_openList(screen, focusId)
   screen = screen or self.root
   if screen ~= "campaigns" then screen = "host" end
-  self.campaigns = self.env.campaigns.list(screen == "host" and self.version or nil)
+  -- HOST lists the campaigns of both games of the pair (#9, design A13.2)
+  self.campaigns = self.env.campaigns.list(screen == "host" and Versions.together(self.version)
+    or nil)
   self:go(screen)
   if focusId then
     for i, r in ipairs(self:items()) do
@@ -351,7 +407,8 @@ end
 
 function CoopMenu:_startHost(campaign, name)
   local settings = self.settings
-  self.version = campaign.game or self.version
+  -- the campaign's game, or the other of its pair imported here (#9)
+  self.version = self:_hostCartridge(campaign) or campaign.game or self.version
   settings.name = name
   settings.last = { kind = "host", campaign = campaign.id, version = self.version }
   settings:save()
@@ -472,7 +529,10 @@ function CoopMenu:press(action)
     if id == "back" then return exit() end
     if id == "new" then
       self.form = { title = L("%s CO-OP", label(self.version)), you = self:_playerName() }
-      return self:go("new", 4)
+      self:go("new")
+      -- CREATE AND HOST is preselected
+      for i, r in ipairs(self:items()) do if r.id == "go" then self.cursor = i end end
+      return nil
     end
     if id == "restore" then
       local restored = self.env.campaigns.restore(self.deleted.id)
@@ -489,6 +549,14 @@ function CoopMenu:press(action)
         CoopMenu.TITLE_MAX)
     end
     if id == "delete" then return self:go("delete", 1) end
+    if id == "mix" then
+      self.env.campaigns.setMix(row.campaign.id, not row.campaign.mix)
+      self:_openList(s, row.campaign.id)
+      for i, r in ipairs(self:items()) do
+        if r.id == "mix" and r.campaign.id == row.campaign.id then self.cursor = i end
+      end
+      return nil
+    end
   elseif s == "new" then
     if id == "back" then return self:_openList(self.root) end
     if id == "title" then
@@ -500,9 +568,13 @@ function CoopMenu:press(action)
     if id == "rival" then
       return self:_entry("rival", L("RIVAL NAME"), "name", self.form.rival or "", CoopMenu.NAME_MAX)
     end
+    if id == "mix" then -- #9
+      self.form.mix = not self.form.mix
+      return nil
+    end
     if id == "go" then
       local c = self.env.campaigns.create({ title = self.form.title, game = self.version,
-                                            rival = self.form.rival })
+                                            rival = self.form.rival, mix = self.form.mix })
       return self:_startHost(c, self.form.you)
     end
   elseif s == "delete" then
@@ -648,7 +720,7 @@ end
 --   host/campaigns: { cards = self.campaigns, deleted = { id, title }? }
 --   delete:     { campaign }
 --   hosting:    { campaign, players = { { name, game, host } }, max,
---                 warning?, game }
+--                 warning?, game, mix = { waiting = game? }? (#9) }
 --   join:       { nearby = { { title, game, players, fit, needs } },
 --                 searching, nearbyOff }
 --   connecting: { address, title?, steps = { found, protocol, fits }
@@ -672,6 +744,10 @@ function CoopMenu:details()
     d.campaign = self.campaign
     d.game = session and session.cartridge.game or self.version
     d.max = session and session.host and session.host.maxPlayers or 8
+    -- wild Pokémon from both versions (#9): on, and the version it waits for
+    if session and session.host and session.host.mix then
+      d.mix = { waiting = session.host:wildWaiting() }
+    end
     if session and session.listenError then
       d.warning = L("The network port is busy: only this device can join.")
     elseif #self:_hostAddresses() == 0 then

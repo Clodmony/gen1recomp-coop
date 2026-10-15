@@ -57,8 +57,14 @@
 --
 -- Rival scenes (#59, design A10.5): src/coop/session/HostScenes.lua keeps
 -- one driver a map; `state.scenes` names them.
+--
+-- Red and Blue (#9, design A13, G33): a cartridge fits when it is the
+-- host's, or the other game of its pair with both verified dumps
+-- (Versions.lua); the host's log says why one did not.  With the
+-- campaign's "wild Pokémon from both versions" switch (opts.mix), each
+-- window's own wild slots (`wild`) are kept in memory only and passed to
+-- the players of the other version, once a link.
 
-local GameVersion = require("src.core.GameVersion")
 local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
 local Random = require("src.coop.session.Random")
@@ -68,6 +74,7 @@ local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
 local HostBattles = require("src.coop.battle.HostBattles")
 local HostScenes = require("src.coop.session.HostScenes")
+local Versions = require("src.coop.session.Versions")
 
 local Host = {}
 Host.__index = Host
@@ -128,6 +135,10 @@ function Host.new(opts)
     -- (design A3.7)
     battles = {}, joins = {},
     missed = {}, -- player id -> battles that ended while their link was down (#20)
+    -- Red and Blue (#9): the campaign's "wild Pokémon from both versions"
+    -- switch, each version's wild slots as a window of it sent them (in
+    -- memory, never stored), and the versions whose players have been in
+    mix = opts.mix == true, wild = {}, versionsIn = { [opts.cartridge.game] = true },
   }, Host)
   self.state = opts.state or Campaign.new({
     id = self.campaign.id, title = self.campaign.title,
@@ -167,14 +178,22 @@ function Host:_log(kind, data, player)
   if self.log then self.log:write("host", kind, data, player and player.id) end
 end
 
--- the cartridge rule: the same game and the same dump.  Red with Blue
--- (design A1.7, A13) is decided in #9.  Languages never mix (D95, #25):
--- German plays with German only, whatever #9 lets pair.
+-- the cartridge rule (design A1.7, A13, #9): the same game and the same
+-- dump, or the other game of the pair (Red with Blue, Rot with Blau) when
+-- both are verified dumps.  Languages never mix (D95, #25).  Returns
+-- whether it fits, and why not ("language", "game", "dump").
 function Host:cartridgeFits(game, sha1)
-  if GameVersion.language(game) ~= GameVersion.language(self.cartridge.game) then
-    return false
-  end
-  return game == self.cartridge.game and sha1 == self.cartridge.sha1
+  local why = Versions.misfit(self.cartridge.game, self.cartridge.sha1, game, sha1)
+  return why == nil, why
+end
+
+-- a cartridge that does not fit: refused, with why in the host's log
+function Host:_misfit(link, kind, game, sha1)
+  local fits, why = self:cartridgeFits(game, sha1)
+  if fits then return false end
+  self:_log("misfit", { kind = kind, game = game, why = why,
+                        host = self.cartridge.game }, link.player)
+  return true
 end
 
 -- lobby view: what a probe and the LAN beacon show
@@ -463,6 +482,44 @@ function Host:_opening(link, msg)
                          chose = chose and msg.chose or nil }, p)
 end
 
+-- Red and Blue (#9, design A13.3, A13.4) ---------------------------------
+
+-- A window's own wild slots: kept in memory for its version, never stored
+-- (no cartridge data in the campaign file or the log); a version without a
+-- pair has nothing to share
+function Host:_wild(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  local n = 0
+  for _ in pairs(msg.maps) do n = n + 1 end
+  local kept = Versions.pair(p.game) ~= nil
+  if kept then self.wild[p.game] = msg.maps end
+  self:_log("wild", { game = p.game, maps = n, kept = kept }, p)
+end
+
+-- the other version's tables, once a link, while the switch is on
+function Host:_sendWild(link, p)
+  if not self.mix or link.wildSent then return end
+  local other = Versions.pair(p.game)
+  local maps = other and self.wild[other]
+  if not maps then return end
+  link.wildSent = other
+  self:_log("wild_sent", { game = other }, p)
+  self:_send(link, { type = "wild", game = other, maps = maps })
+end
+
+-- With the switch on: the version of the pair whose player the host still
+-- waits for (until one of each has been in, every world keeps its own
+-- tables), or nil
+function Host:wildWaiting()
+  local games = Versions.together(self.cartridge.game)
+  if not self.mix or #games < 2 then return nil end
+  for _, game in ipairs(games) do
+    if not self.versionsIn[game] then return game end
+  end
+  return nil
+end
+
 -- messages --------------------------------------------------------------
 
 function Host:_probe(link, msg, protocolOk)
@@ -471,7 +528,7 @@ function Host:_probe(link, msg, protocolOk)
   view.refused = ""
   if not protocolOk then
     view.refused = "protocol_mismatch"
-  elseif not self:cartridgeFits(msg.game, msg.sha1) then
+  elseif self:_misfit(link, "probe", msg.game, msg.sha1) then
     view.refused = "content_mismatch"
   end
   local you = protocolOk and self:resolve(msg.known, msg.name)
@@ -482,7 +539,7 @@ end
 function Host:_hello(link, msg)
   if link.player then return self:_refuse(link, -1, "already_joined") end
   if self.status ~= "running" then return self:_turnAway(link, "shutting_down") end
-  if not self:cartridgeFits(msg.game, msg.sha1) then
+  if self:_misfit(link, "hello", msg.game, msg.sha1) then
     return self:_turnAway(link, "content_mismatch")
   end
   local p = self:resolve(msg.known, msg.name)
@@ -512,6 +569,7 @@ function Host:_hello(link, msg)
   self:_log("joined", { name = p.name, seat = p.seat, device = p.device,
                         logs = link.shareLogs }, p)
   self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+  self.versionsIn[p.game] = true -- #9: a player of this version has been in
   -- a player the campaign has no world for plays the opening (#22, design
   -- A4.8) until their window says otherwise
   p.opening = self.state:player(p.id).world == nil or nil
@@ -654,6 +712,7 @@ end
 local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    log = Host._logBatch, world = Host._world, patch = Host._patch,
                    holdings = Host._holdings, opening = Host._opening,
+                   wild = Host._wild, -- #9
                    battle_open = battleHandler(HostBattles.open),
                    battle_join = battleHandler(HostBattles.join),
                    battle_cmd = battleHandler(HostBattles.cmd),
@@ -686,7 +745,7 @@ function Host:_receive(link, raw)
   -- their handlers, as a summary; a window's battle reports are many
   local t = msg.type
   if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "holdings" and t ~= "battle_open"
-     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" then
+     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" and t ~= "wild" then
     self:_log("message", msg, link.player)
   end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
@@ -771,6 +830,7 @@ function Host:update()
       if p and p.link == link and not link.conn.closed then
         self:_sendStory(link, p)
         self:_sendGifts(link, p)
+        self:_sendWild(link, p) -- #9
         HostBattles.sendTo(self, link, p)
       end
     end

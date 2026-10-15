@@ -30,7 +30,9 @@ function Encounter.roll(encounterDef, rng)
     if pick < threshold then
       local slot = grass.slots[i]
       if slot then
-        return { species = slot.species, level = slot.level }
+        -- co-op (#9): the slot too, so the other version's Pokémon of the
+        -- same slot can stand in (src/coop/game/WildMix.lua)
+        return { species = slot.species, level = slot.level, slot = i }
       end
       return nil
     end

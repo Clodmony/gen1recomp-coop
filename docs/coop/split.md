@@ -38,7 +38,12 @@ function, finds that world's modules.
   main.lua's game, player 1, the launcher's modules.
 - **Shared** (one per process): `src.import.*` (the cartridge cache
   mounts), `src.core.GameVersion`, `src.core.Logger`, `src.link.Json`,
-  `src.coop.split.*`, `tests.*`.
+  `src.coop.split.*`, `tests.*`. So player 2 plays player 1's cartridge
+  (`Split.start` dials with the home session's): a Red and a Blue player
+  cannot share one device, and no screen offers a second cartridge (#9,
+  [versions.md](versions.md)). A pair on Blue joins a Red host like any
+  Blue player; with "wild Pokémon from both versions" each seat's own
+  session holds the other version's tables (not run).
 - **No workers.** Player 2's world runs without `love.thread`. The
   background workers' channels are process-global, so a second world's
   workers would take the first one's results. Every upstream module has a

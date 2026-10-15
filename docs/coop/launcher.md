@@ -25,7 +25,8 @@ language, under every page and every message.
 - **PLAY**: the hero ("One story. Two journeys."), the cartridges RED, BLUE,
   YELLOW, ROT, BLAU and GELB (Rote, Blaue and Gelbe Edition,
   [german.md](german.md)), each
-  READY or IMPORT ROM; what fits today (the same cartridge on both sides);
+  READY or IMPORT ROM; which games play together ("RED plays with RED or
+  BLUE", "YELLOW plays with YELLOW", #9: [versions.md](versions.md));
   PLAY SOLO; HOST A CAMPAIGN, JOIN A FRIEND, and COUCH CO-OP marked PLANNED
   and not offered until #4 and #11 work; IMPORT ROM for a cartridge with no
   ROM; LAST SESSION with HOST AGAIN or REJOIN.
@@ -132,21 +133,28 @@ HOST A CAMPAIGN, JOIN A FRIEND, LAST SESSION and the CAMPAIGNS tab open the
 co-op screens of the picked cartridge (#12, design A2). A session started
 there keeps running while the launcher shows it and on into the game.
 
-- **Choose your campaign** (HOST A CAMPAIGN) and **Your campaigns** (the
+- **Choose your campaign** (HOST A CAMPAIGN: the campaigns of this
+  cartridge and of its pair, #9) and **Your campaigns** (the
   CAMPAIGNS tab, every cartridge): one card per campaign, latest hosted first,
   with its cartridge, players and when it was hosted last, and HOST, RENAME and
-  DELETE. HOST is offered when the card's cartridge is imported here. DELETE
+  DELETE; a Red or Blue card also has BOTH VERSIONS: ON or OFF, "wild
+  Pokémon from both versions" for the next hosting (#9). HOST is offered
+  when the card's cartridge, or the other of its pair, is imported here; a
+  Blue cartridge hosts a Red campaign, whose file stays Red's. DELETE
   asks again and keeps the last state as `coop/campaigns/<id>.json.bak` in the
   save folder; RESTORE BACKUP brings the card back. NEW CAMPAIGN asks for the
   campaign's name, the trainer's (16 and 7 characters) and the rival's
   (RIVAL NAME: empty, ASK IN THE GAME, leaves him to Oak's speech; #22,
-  [opening.md](opening.md)) and hosts it.
+  [opening.md](opening.md)), for Red and Blue WILD POKéMON (THIS VERSION
+  ONLY or BOTH VERSIONS, #9) and hosts it.
 - **Hosting**: the players in (this device's player marked, a partner on
   another cartridge named with it) out of the host's player limit, the
   addresses partners join at (up to two, a VPN address first, then the home
   network, each labelled, the one a partner used last marked LAST USED; COPY
   copies one), a warning when the port is busy or no network was found (then
-  only this device can join), STOP HOSTING and ENTER THE WORLD (at any time;
+  only this device can join), with BOTH VERSIONS on "Wild Pokémon from
+  both versions: on." or the version it waits for (#9), STOP HOSTING and
+  ENTER THE WORLD (at any time;
   partners can join later). With a device claimed on CONTROLS for each of
   two players, ENTER WITH 2 PLAYERS (and JOIN WITH 2 PLAYERS on the
   connection check) asks PLAYER 2 NAME and enters in split-screen
@@ -155,7 +163,8 @@ there keeps running while the launcher shows it and on into the game.
   session."
 - **Join a friend**: the hosts heard on the LAN beacon (one card per
   campaign, with its cartridge, language and players, and whether this
-  device's cartridge fits, which other imported one joins, or which one it
+  device's cartridge fits (its own game or the other of the pair, #9), which
+  other imported one joins, or which ones it
   needs), BY ADDRESS (a host name or address with an optional `:port`), the
   recent addresses. A nearby host on another cartridge this device has
   imported is joined with that cartridge.
@@ -166,8 +175,10 @@ there keeps running while the launcher shows it and on into the game.
   (a VPN address: the VPN on both devices; a home address: the same network
   and the firewall; a public address: port forwarding). A device the host
   knows sees one JOIN AS <name>; a new player can type a NEW NAME first. A
-  refusal is named exactly ("The host plays RED. This game is BLUE.", another
-  language, another dump, another protocol, a full or closing session), with
+  refusal is named exactly ("The host plays YELLOW. This game is RED. YELLOW
+  plays with YELLOW only.", another language, another dump, Red and Blue
+  from a dump that is not a verified one, another protocol, a full or
+  closing session), with
   USE <GAME> when another imported cartridge fits. Once joined, the game
   starts.
 - **Text entry**: a grid in the style of the cartridge's naming screen, so a
@@ -375,3 +386,8 @@ the partner dialled, each campaign's save slot and the solo slot afterwards,
 the keypad and address kinds, and that every co-op page fits a 480 x 400
 launcher with the credit line. The ENet suite (`love tests/coop/enet`) has the
 late host over real sockets.
+`versions_launcher_test.lua` (#9) covers which games play together on PLAY,
+the refusals of Yellow and of an unverified pair, the cartridge that fits a
+nearby host, the switch of both versions on NEW CAMPAIGN and on the card,
+the Hosting line, and a Blue cartridge hosting a Red campaign
+([versions.md](versions.md)).

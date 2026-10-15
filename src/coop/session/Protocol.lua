@@ -30,8 +30,10 @@ local Protocol = {}
 -- opening (#22): a window's `opening` (in it or done, the rival's name,
 -- the starter chosen), and who is in it, the rival's name and the
 -- starter he counters in `state`.  11: rival scenes (#59): a window's
--- `scene` claim or release, and the claimed maps in `state`.
-Protocol.VERSION = 11
+-- `scene` claim or release, and the claimed maps in `state`.  12: Red
+-- and Blue (#9): a window's own wild slots (`wild`) to the host, the
+-- other version's (`wild`) to the window.
+Protocol.VERSION = 12
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -458,6 +460,17 @@ Protocol.STARTERS = { BULBASAUR = true, CHARMANDER = true, SQUIRTLE = true }
 Protocol.sceneKey = pattern("^[a-z0-9_]+$", 24)
 local sceneClaim = record({ map = Protocol.mapId, key = Protocol.sceneKey, by = Protocol.playerId })
 
+-- Red and Blue (#9, design A13.3, A13.4): a version's wild slots, map by
+-- map, its grass (or cave) and its water table in the cartridge's slot
+-- order; the encounter tables hold ten slots a table and fewer than 256
+-- maps
+Protocol.MAX_WILD_MAPS = 256
+Protocol.MAX_WILD_SLOTS = 10
+local wildSlots = listOf(record({ species = dataId, level = int(1, 100) }),
+                         Protocol.MAX_WILD_SLOTS)
+local wildMaps = mapOf(Protocol.mapId, record({}, { grass = wildSlots, water = wildSlots }),
+                       Protocol.MAX_WILD_MAPS)
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -529,6 +542,10 @@ Protocol.TO_HOST = {
   -- scene `key` on `map` (on true: a claim) or is past it (on false)
   scene = record(withType("scene", { seq = seq, map = Protocol.mapId, key = Protocol.sceneKey,
                                      on = bool })),
+
+  -- Red and Blue (#9): this window's own version's wild slots, after each
+  -- welcome (about 10 KB; the host keeps them in memory only)
+  wild = record(withType("wild", { seq = seq, maps = wildMaps })),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -606,6 +623,9 @@ Protocol.TO_CLIENT = {
     suggestions = listOf(record({ by = Protocol.playerId, cmd = cmd }), Protocol.MAX_PLAYERS),
     ended = enum(Protocol.RESULTS),
   }),
+  -- Red and Blue (#9): the other version's wild slots, once a link while
+  -- the campaign's "wild Pokémon from both versions" switch is on
+  wild = record(withType("wild", { game = Protocol.gameId, maps = wildMaps })),
 }
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))

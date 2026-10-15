@@ -4781,17 +4781,24 @@ local function sameEncounter(enc) return enc end
 -- table without calling next to force) and then encounter.species (which
 -- transforms a non-nil roll before repel filtering).  With no wrapper on
 -- either name this is the bare Encounter.roll, same RNG draws and all.
+-- co-op (#9): with "wild Pokémon from both versions" on, the other
+-- version's Pokémon of the same slot may stand in (src/coop/game/WildMix.lua)
+local function coopWild(enc, mapId, terrain)
+  if not enc then return enc end
+  return require("src.coop.game.WildMix").encounter(enc, mapId, terrain)
+end
+
 function OverworldState:rollEncounter(encDef, terrain)
   if not (Runtime.wantsHook("encounter.roll")
           or Runtime.wantsHook("encounter.species")) then
-    return Encounter.roll(encDef)
+    return coopWild(Encounter.roll(encDef), self.map.id, terrain) -- co-op (#9)
   end
   local ctx = { mapId = self.map.id, terrain = terrain, rng = love.math.random }
   local enc = Runtime.call("encounter.roll", rollVanilla, encDef, ctx)
   if enc then
     enc = Runtime.call("encounter.species", sameEncounter, enc, ctx)
   end
-  return enc
+  return coopWild(enc, self.map.id, terrain) -- co-op (#9)
 end
 
 function OverworldState.rollsIndoorEncounters(def, indoor)

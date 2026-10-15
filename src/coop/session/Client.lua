@@ -34,6 +34,10 @@
 -- (Client:dropBattle).  battleOpen/battleJoin/battleCmd/battleSuggest/
 -- battleAt send the intentions.
 --
+-- Red and Blue (#9): c:sendWild(maps) sends this window's own wild slots
+-- once a link (src/coop/game/WildMix.lua); c.wild is the other version's,
+-- { game, maps }, once the host passed them (the campaign's switch on).
+--
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
 --
@@ -75,6 +79,7 @@ function Client.new(conn, opts)
     gifts = {}, -- items the host owes this player, oldest first (#16)
     uids = {}, -- uids the host gave this player's rows: { box, slot, uid, fp } (#17)
     battles = {}, -- battles this player is in or joining, by id (#18)
+    wild = nil, -- the other version's wild slots: { game, maps } (#9)
     dropped = 0,
     onWelcome = opts.onWelcome,
     log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
@@ -157,6 +162,12 @@ end
 -- claims stand in state.scenes.  Returns the seq, or nil when not joined.
 function Client:sendScene(map, key, on)
   return self:send({ type = "scene", map = map, key = key, on = on and true or false })
+end
+
+-- Red and Blue (#9, design A13.4): this window's own version's wild slots
+-- (WildMix.tables).  Returns the seq, or nil when not joined.
+function Client:sendWild(maps)
+  return self:send({ type = "wild", maps = maps })
 end
 
 -- co-op battles (#18, design A8) ----------------------------------------
@@ -282,6 +293,8 @@ function Client:_handle(msg)
     self:_battle(msg)
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
+  elseif t == "wild" then
+    self.wild = { game = msg.game, maps = msg.maps } -- #9
   elseif t == "uids" then
     for _, u in ipairs(msg.list) do self.uids[#self.uids + 1] = u end
   elseif t == "saved" then

@@ -82,6 +82,10 @@ local VALID = {
     opening = { type = "opening", seq = 11, done = true, rival = "GARY", chose = "SQUIRTLE" },
     -- rival scenes (#59)
     scene = { type = "scene", seq = 12, map = "ROUTE_22", key = "route22_1", on = true },
+    -- #9: a window's own wild slots
+    wild = { type = "wild", seq = 12, maps = {
+      ROUTE_4 = { grass = { { species = "RATTATA", level = 10 }, { species = "EKANS", level = 6 } } },
+      SEAFOAM_ISLANDS_B4F = { water = { { species = "HORSEA", level = 30 } } } } },
   },
   client = {
     probe = { type = "probe", kind = "coop", protocol = Protocol.VERSION, build = "t",
@@ -128,6 +132,10 @@ local VALID = {
                ask = "replace", by = "p00000001",
                suggestions = { { by = "p00000002", cmd = { kind = "replace", index = 3 } } },
                ended = "lose" },
+    -- #9: the other version's wild slots
+    wild = { type = "wild", game = "blue", maps = {
+      ROUTE_4 = { grass = { { species = "SANDSHREW", level = 6 } },
+                  water = { { species = "KRABBY", level = 15 } } } } },
   },
 }
 
