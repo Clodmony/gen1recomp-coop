@@ -23,7 +23,8 @@ Last updated 2026-10-15 (after Group 7, PR #53).
   #20; part of #34.
   - Co-op battles are lockstep: every window runs the game's own battle
     from the host's record (opening, seed, numbered inputs); the host runs
-    no engine. Decision **G24** (proposed, the owner's to accept).
+    no engine. Decision **G24**, accepted by the owner 2026-10-15, with
+    the A11.10/A11.13/A9.1 adaptations as built.
     `docs/coop/battles.md` has everything.
   - New: `src/coop/battle/` (HostBattles, Replica, View),
     `src/coop/game/Battles.lua`, protocol 7, the session's in-game redial.
@@ -34,8 +35,9 @@ Last updated 2026-10-15 (after Group 7, PR #53).
   - Live (US Red, two ENet processes): see the PR and battles.md
     *Checked*. Not run: real pads, menus by hand, three players,
     split-screen battles, a trainer using items.
-  - Merge locally as Claude (`git merge --no-ff`), push, run verify, once
-    the owner says so.
+  - **Owner (2026-10-15): merge after their own check** in real windows
+    (join, leave, REJOIN, a loss). Once they say so, merge locally as
+    Claude (`git merge --no-ff`), push, run `tools/verify.sh`.
 
 ## Next candidates
 
@@ -44,7 +46,7 @@ Last updated 2026-10-15 (after Group 7, PR #53).
   goes to the player named in the ball's list; #17 adds the uid-matched
   party/PC sync, the Pokédex rule A7.7 for joiners and evolution checks.
 - **#34's rest** waits for #22 (the opening) and #23 (friend battles):
-  proposed to move #34 to Group 8.
+  moved to Group 8 (owner, 2026-10-15).
 - Group 8 (#21, #22, #23): unique encounters and the sight gate build on
   the battle record (`trainer:<class>:<index>` keys are not kept yet).
 - Group 2 still has #12 and #15 (owner-side checks).
