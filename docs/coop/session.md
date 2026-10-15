@@ -221,11 +221,23 @@ running from the launcher into the game:
 - Leaving from the game (the CO-OP menu's LEAVE SESSION) ends the session
   the same way and takes the game back to the launcher
   (`Session.takeLauncher`).
-- A session that ends under the game (the host stopped it, the link was
-  lost) makes main.lua go back to the launcher; leaving on purpose (the game
-  window closed, `love.quit`) sends a bye or ends the session for everyone.
-  Either way `coop/return.json` in the save folder carries the reason, and
-  the launcher shows it on the co-op screen if it opens within two minutes.
+- A joining game whose link drops under it reconnects (#20, design
+  A11.9): it redials as the same player every 2 s (`Session.REDIAL`) for
+  two minutes (`REDIAL_FOR`), saying "Lost the host: reconnecting..." over
+  the world and "Back in the session." when the host has it back. The world
+  keeps running and sends nothing meanwhile; the shared world's window and
+  the battle copies follow the new link; the first position after counts
+  as a warp. A game back from a pause (focus or visibility lost) longer than
+  3 s closes its link and dials at once (A11.10); a hosting game put away
+  saves its campaign (#13).
+- A session that ends under the game (the host stopped it, the link stayed
+  lost for two minutes) shows why over the world for 3 s (A11.11), then
+  main.lua goes back to the launcher; leaving on purpose (the game window
+  closed, `love.quit`) sends a bye or ends the session for everyone, and on
+  shutdown the host waits for the clients to leave for up to 2 s
+  (`Host.END_GRACE`). Either way `coop/return.json` in the save folder
+  carries the reason, and the launcher shows it on the co-op screen if it
+  opens within two minutes.
 
 ## Development entry
 
@@ -305,6 +317,8 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   through in every frame.
 - `tests/coop/session_dev_entry_test.lua`: the entry's arguments, addresses,
   and the moves a game's position becomes.
+- `tests/coop/session_reconnect_test.lua` (#20): a dropped link
+  reconnects, gives up after two minutes, and a long pause dials afresh.
 - `tests/coop/launcher_coop_test.lua` (#12): the running session as the
   launcher's co-op screens use it, over loopback; see
   [launcher.md](launcher.md).

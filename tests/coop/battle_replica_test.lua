@@ -282,4 +282,86 @@ do
   eq(battle.coop.roster[1].hp, 5, "the battle is untouched until the input comes back")
 end
 
+-- 7. a move to learn is asked of the Pokemon's owner; their answer is an
+-- input every copy applies (A8.6) -------------------------------------------------
+do
+  local host, red, green = setup()
+  local clients = { red, green }
+  local learner = Pokemon.new(Data, "FIXMON_A", 6)
+  learner.moves = { { id = "FIX_TACKLE", pp = 35 }, { id = "FIX_SCRATCH", pp = 35 },
+                    { id = "FIX_CUT", pp = 30 }, { id = "FIX_GROWL", pp = 40 } }
+  learner.exp = require("src.pokemon.Growth").expForLevel("MEDIUM_SLOW", 7) - 5
+  local redGame = newGame("RED", 1111, { learner })
+  local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 12) })
+  local games = { redGame, greenGame }
+  redGame.expect = 2
+  run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
+  local battle = openWild(red, redGame, "FIXMON_B", 3, function(mon) mon.hp = 1 end)
+  local id = bindOpener(host, red, redGame, battle, clients, games)
+  local gb = joinBattle(host, green, greenGame, id, clients, games)
+  run(host, clients, games, function()
+    local k = Replica.question(battle)
+    return k == "learn" or battle.coop.done
+  end, 20000)
+  local kind, by = Replica.question(battle)
+  eq(kind, "learn", "a fourth move to forget is a question")
+  eq(by, red.player, "of the Pokémon's owner (A8.6)")
+  eq(select(2, Replica.decider(gb)), red.player, "GREEN's copy waits for RED")
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and b.ask and b.ask.kind == "learn"
+  end, 200)
+  battle.coop.picking = battle.coop.applied
+  Replica.send(battle, { kind = "learn", forget = 2 })
+  run(host, clients, games, function() return battle.coop.done and gb.coop.done end, 20000)
+  eq(battle.coop.roster[1].moves[2].id, "FIX_EMBERISH", "RED's copy forgot the second move")
+  eq(gb.coop.roster[1].moves[2].id, "FIX_EMBERISH", "and GREEN's copy too")
+  eq(redGame.save.party[1].moves[2].id, "FIX_EMBERISH", "written back to RED's Pokémon")
+  eq(redGame.save.party[1].level, 7, "which grew to level 7")
+  eq(logged("battle_desync"), 0, "no desync")
+end
+
+-- 8. MIMIC's choice is the user's owner's (A8.6) ----------------------------------------
+do
+  Data.moves.FIX_MIMIC = { id = "FIX_MIMIC", index = 8, name = "FIX MIMIC", type = "NORMAL",
+                           power = 0, accuracy = 100, pp = 10, effect = "MIMIC_EFFECT" }
+  local host, red, green = setup()
+  local clients = { red, green }
+  local mimic = Pokemon.new(Data, "FIXMON_A", 12)
+  mimic.moves = { { id = "FIX_MIMIC", pp = 10 } }
+  local redGame = newGame("RED", 1111, { mimic })
+  local greenGame = newGame("GREEN", 2222, { Pokemon.new(Data, "FIXMON_C", 12) })
+  local games = { redGame, greenGame }
+  redGame.expect = 2
+  redGame.decide = function(b)
+    if b.coop.mimicked then return false end
+    b.coop.mimicked = true
+    return { kind = "move", slot = 1 }
+  end
+  greenGame.decide = function() return false end
+  run(host, clients, {}, function() return red.status == "joined" and green.status == "joined" end, 10)
+  local battle = openWild(red, redGame, "FIXMON_B", 8, function(mon)
+    mon.moves = { { id = "FIX_SCRATCH", pp = 35 }, { id = "FIX_GROWL", pp = 40 } }
+  end)
+  local id = bindOpener(host, red, redGame, battle, clients, games)
+  local gb = joinBattle(host, green, greenGame, id, clients, games)
+  run(host, clients, games, function()
+    return Replica.question(battle) == "mimic" or battle.coop.done
+  end, 20000)
+  local kind, by = Replica.question(battle)
+  eq(kind, "mimic", "MIMIC asks which move to copy")
+  eq(by, red.player, "of the owner of the Pokémon using it (A8.6)")
+  run(host, clients, games, function()
+    local b = host.battles[id]
+    return b and b.ask and b.ask.kind == "mimic"
+  end, 200)
+  Replica.send(battle, { kind = "mimic", index = 2 })
+  run(host, clients, games, function()
+    return Replica.question(battle) == "menu" and Replica.question(gb) == "menu"
+  end, 20000)
+  eq(battle.player.curMoves[1].id, "FIX_GROWL", "RED's copy copied the second move")
+  eq(gb.player.curMoves[1].id, "FIX_GROWL", "and GREEN's copy too")
+  eq(logged("battle_desync"), 0, "no desync")
+end
+
 T.finish()

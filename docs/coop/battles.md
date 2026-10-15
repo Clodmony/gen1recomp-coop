@@ -3,8 +3,9 @@
 Two or more players fight the game together: a wild Pokémon or a trainer
 one player's world met, with every player's team on the allied side (#18,
 area A8 in [design.md](design.md), decision G24), shown with the
-cartridge's own battle screen and menus (#19, area A9). Leaving and taking
-over (#20) and the CO-OP menu's battle rows (#34) build on it.
+cartridge's own battle screen and menus (#19, area A9); leaving it, coming
+back and taking over for a player who dropped (#20, area A11); and what the
+world shows of partners in a battle (#34, area A14).
 
 ## How a co-op battle runs (G24)
 
@@ -52,7 +53,10 @@ The battle only moves when the command comes back as an input.
   cartridge's screen (who decides, suggestions, the roster menu, the ball
   row, the join line, the self-moving last lines, the catch list).
 - `src/coop/game/Battles.lua`: the running game. The world's battles go to
-  the host; JOIN in the CO-OP menu; the end of a battle in the window.
+  the host; JOIN and REJOIN in the CO-OP menu; copies away from the screen;
+  a fight held while away; battles built again after coming back; the end
+  of a battle in the window.
+- `src/coop/game/Presence.lua`: partners in a battle in the world (#34).
 - `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7.
 
 Upstream files, with marked hooks:
@@ -192,6 +196,72 @@ never left their map: the return point is where they stood.
   so nothing of it can be applied twice (A8.21). A campaign does not save
   while a battle runs or a join waits (A3.7).
 
+## Leaving, coming back, taking over (#20)
+
+A participant is **present** or **absent**: absent because they left on
+purpose (LEAVE BATTLE) or because their link dropped. Leaving and dropping
+are one rule (A11.1): the absent player's Pokémon stay in the roster and
+fight on under whoever is present, and their results, experience and prize
+stay theirs. The battle ends for everyone only when it is decided, or when
+nobody is left.
+
+- **LEAVE BATTLE** (A9.5, A11.1, A11.2). RUN flees for the player whose
+  world opened the battle; for everyone else it asks "Leave the
+  battle? / Your team stays." (a partner who is not deciding gets the same
+  question from the RUN row they walk to). YES takes them back to their
+  world at once: it never moved, so the return point is where they stood.
+  The opener cannot leave (`opener_stays`).
+- **Out of sight** (A11.3). The copy of a player who left keeps playing the
+  record without a screen or sound (`Battles.step`, `Replica.runAway`), so
+  their Pokémon get exactly what the battle does to them. When it ends they
+  get one line ("The battle against RATTATA was won."), their Pokémon's
+  results, their evolutions and, after a loss, their whiteout. Meanwhile
+  they start and join nothing: the CO-OP menu has only REJOIN, and a fight
+  their world opens waits under "Your battle against X goes on. REJOIN?"
+  until that battle ends; then it starts.
+- **REJOIN** (A11.4) in the CO-OP menu (or that question) brings the copy
+  back on screen behind the battle transition, and the player decides for
+  their own Pokémon again. B on the joining box calls off a queued join.
+- **Who decides** (A11.5). The host derives it from the owner of the
+  Pokémon concerned: the owner when present; for an owner who left, the
+  first present participant at once; for an owner who dropped, nobody: the
+  battle waits (the others see "<NAME> / is away"), while everything else,
+  other battles and the world, goes on. A dropped player who was not asked
+  pauses nothing.
+- **TAKE OVER** (A11.6). After 30 s waiting for a dropped owner, each
+  present participant is asked "<NAME> is away. / TAKE OVER?" (YES/NO; NO
+  keeps waiting). The first YES stands in: they decide for that Pokémon,
+  the view names both ("FOR GREEN" on the box), and the results stay the
+  owner's. The owner decides again the moment they are back.
+- **Nobody left** (A11.7). A battle nobody is present in waits two minutes
+  (a redial's budget), then ends as fled; at shutdown every battle still
+  running ends as fled, and its players hear it before `ended`.
+- **The end while away** (A11.8). A join still queued is released; a player
+  whose link was down when their battle ended hears the end once back: the
+  window builds the battle from the record, plays it out of sight and ends
+  it with its line.
+- **Back after a drop.** A battle this player is in that the window has no
+  copy of (they came back) is built from the record and comes on screen at
+  the next quiet moment; a copy the window still has follows the new link
+  and asks its question again (a command lost with the old link is sent
+  again; the host refuses one it already took).
+
+## In the world (#34)
+
+[presence.md](presence.md) has the rest of area A14. For battles:
+
+- a partner in a battle their own world opened stands where it started,
+  under the cartridge's "!" bubble (A14.3); a partner who joined a battle
+  elsewhere is not drawn until it ends (A14.4);
+- the CO-OP menu offers JOIN <NAME> for each partner's battle with room, or
+  REJOIN for one this player left, and the box names a partner in a battle
+  IN A BATTLE (A14.8);
+- a partner's new battle this player is free to join is told over the
+  world: "BLUE is in a battle against wild PIDGEY. START > CO-OP to join."
+  (A14.10);
+- in a co-op battle SELECT opens nothing: the battle screen is on top and
+  its SELECT swaps moves as in the cartridge (A14.9).
+
 ## Protocol 7
 
 | Client to host | Fields |
@@ -200,11 +270,14 @@ never left their map: the return point is where they stood.
 | `battle_join` | `seq`, `battle`, `team`, optional `otId`, `expAll` |
 | `battle_cmd` | `seq`, `battle`, `rev`, `cmd` |
 | `battle_suggest` | `seq`, `battle`, `rev`, optional `cmd` (none takes it back) |
-| `battle_at` | `seq`, `battle`, `rev`, then `ask` and `by` (the question and whom it asks) with `hash`, or `ended` (`win`, `lose`, `run`, `caught`) |
+| `battle_at` | `seq`, `battle`, `rev`, then `ask` and `by` (the question and the owner of the Pokémon it is about) with `hash`, or `ended` (`win`, `lose`, `run`, `caught`) |
+| `battle_leave` | `seq`, `battle`: LEAVE BATTLE, or call off a queued join (#20) |
+| `battle_rejoin` | `seq`, `battle`: REJOIN (#20) |
+| `battle_takeover` | `seq`, `battle`, `owner`: stand in for a dropped owner (#20) |
 
 | Host to client | Fields |
 |---|---|
-| `battle` | `id`, `rev`, `seed`, `from`, `inputs` (from `from` on, at most 256 a message), `players` (`id`, `present`), the `open`ing with the first inputs (and `by`, who opened it), `ask` and `by`, `suggestions` (`by`, `cmd`), `ended` |
+| `battle` | `id`, `rev`, `seed`, `from`, `inputs` (from `from` on, at most 256 a message), `players` (`id`, `present`, `left`), the `open`ing with the first inputs (and `by`, who opened it), `ask`, `by` (who decides) and `owner` (whose Pokémon it is about), `offer` (a dropped owner the present players may take over for), `standins` (`owner`, `by`), `suggestions` (`by`, `cmd`), `ended` |
 | `state` | each player's `battle` (the one they fight in), and `battles`: `id`, `by`, `kind`, `foe`, `players`, `joinable` |
 
 A command is `kind` (`move`, `struggle`, `fight`, `switch`, `item`,
@@ -244,9 +317,16 @@ and the joining box removes itself wherever it is on the stack.
   RED's idle box alternated with "GREEN suggests / FIGHT" after GREEN's
   cursor rested on FIGHT (screenshots, kept local).
 
+- GREEN joined RED's battle and left it at once: back on the map, the copy
+  played on out of sight and ended with "The battle against RATTATA was
+  won." (#20);
+- GREEN's ENet link was closed under the running game: the game showed
+  `reconnecting`, redialled and was back as the same player (#20).
+
 Not run yet: real pads in a real window, the menus driven by hand (the
 drivers sent the replacement and the switch as commands), a move to learn,
-MIMIC, a catch, items and Pay Day with the cartridge, three players,
+MIMIC, a catch, items and Pay Day with the cartridge (the first four are
+covered by the ROM-free tests), three players,
 split-screen, and a trainer that uses items.
 
 ## Tests
@@ -264,13 +344,27 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   opener stands, no desync at any revision, experience and write-back, the
   trainer's prize for both, EXP.ALL per team, a loss for both, a switch
   handing control over, a catch going to the thrower once, a locked-in
-  turn taking no command, a POTION from the actor's bag, the bag's facade.
+  turn taking no command, a POTION from the actor's bag, the bag's facade,
+  a move to learn and MIMIC's choice asked of the owner and applied alike
+  in both copies.
 - `tests/coop/battle_view_test.lua` (#19): who decides, a suggestion from
   a resting cursor and its marks, the idle decider's alternating box, the
   join line in every copy, the roster six rows at a time with its owner,
   the viewer's own ball row, the catch list, the self-moving last lines.
+- `tests/coop/battle_leave_test.lua` (#20): LEAVE BATTLE and the copy
+  playing on out of sight to the same end, the first present player
+  deciding for an absent owner, REJOIN, a dropped owner pausing the battle
+  and TAKE OVER after 30 s with both named, a battle nobody is in ending as
+  fled with the copy away.
+- `tests/coop/session_reconnect_test.lua` (#20): a dropped link redials as
+  the same player, keeps its window, warps its first position; two minutes
+  without the host end it, shown over the world, then the launcher; a long
+  pause dials afresh.
 - `tests/coop/battle_game_test.lua`: the running fixture overworld with
   this device hosting: a battle the world opens becomes the host's and
   keeps the world's `onFinish`, a refused opening is fought alone, the
   battles that stay solo, JOIN in the CO-OP menu, a joiner sees no intro,
-  RUN by the opener.
+  RUN by the opener; leaving, REJOIN in the CO-OP menu, a fight held while
+  away and started after (#20); a partner's battle told in a notice, the
+  "!" over its opener, IN A BATTLE, a joiner from elsewhere not drawn
+  (#34).
