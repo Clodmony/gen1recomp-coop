@@ -64,6 +64,12 @@ function, finds that world's modules.
   takes its silent timing. A fanfare of player 2 ducks the `Music` of its
   own world only, so player 1's song does not pause under it.
 
+- **Mods.** Each world loads the mods itself (`Game:load`), so a mod's
+  state is per seat: with the Dramatic Shape Voxel Mod each player has
+  their own camera and OPTIONS, and its 3D scene is sized to the seat's
+  view (#30, [mods.md](mods.md), with the frame times of drawing the
+  world twice).
+
 ## Stepping, drawing and input
 
 `Split.start` wraps player 1's `Game.update` and `Game.draw` (its module

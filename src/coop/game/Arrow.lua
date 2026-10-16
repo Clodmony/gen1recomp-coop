@@ -284,10 +284,29 @@ function Arrow.walking(game, ow)
   return true
 end
 
+-- Where a world point (pixels) shows on the view, through `view(wx, wy)`
+-- (nil when the camera cannot see it: behind a pipeline's 3D camera, #30).
+-- A point the camera does not see, and a TOWN MAP direction, become a
+-- direction along the ground from the player: the nearest point of the way
+-- there that the view shows.
+local function onView(kind, wx, wy, px, py, from, view)
+  if kind ~= "town" then
+    local sx, sy = view(wx, wy)
+    if sx then return { kind = kind, x = sx, y = sy } end
+  end
+  for _, f in ipairs({ 1, 0.5, 0.25, 0.125, 0.0625 }) do
+    local sx, sy = view(px + (wx - px) * f, py + (wy - py) * f)
+    if sx then return { kind = "town", dx = sx - from.x, dy = sy - from.y } end
+  end
+  return nil
+end
+
 -- The arrows to show now: { { x, y, dir, place, id } } on the W x H view
 -- of the world (camera pixels).
--- partners: Presence.partners(); game/ow: the running game and overworld.
-function Arrow.arrows(game, ow, partners, W, H)
+-- partners: Presence.partners(); game/ow: the running game and overworld;
+-- view: a world pixel to the view's (default: the flat camera; a render
+-- pipeline's projection, #30).
+function Arrow.arrows(game, ow, partners, W, H, view)
   local out = {}
   if not Arrow.walking(game, ow) then return out end
   local data = game.data
@@ -298,8 +317,11 @@ function Arrow.arrows(game, ow, partners, W, H)
   local tilesets = FieldDefaults.field(data, "outsideTilesets")
   local function outside(def) return Map.isOutside(def, tilesets) end
   local cam = ow.camera or { x = 0, y = 0 }
+  view = view or function(wx, wy) return wx - cam.x, wy - cam.y end
   local p = ow.player
-  local from = { x = (p.px - cam.x + 8), y = (p.py - cam.y + 8) }
+  local px, py = p.px + 8, p.py + 8
+  local fx, fy = view(px, py)
+  local from = fx and { x = fx, y = fy } or { x = W / 2, y = H / 2 }
   local last = ow.lastOutdoor and ow.lastOutdoor.id
   local towns = data.field and data.field.townMap and data.field.townMap.locations or {}
   for _, partner in ipairs(partners) do
@@ -307,24 +329,29 @@ function Arrow.arrows(game, ow, partners, W, H)
       local target
       local actor = partner.actor
       if actor and actor.visible then
-        target = { kind = "exact", x = (actor.px - cam.x + 8), y = (actor.py - cam.y + 8) }
+        target = onView("exact", actor.px + 8, actor.py + 8, px, py, from, view)
       elseif maps[ow.map.id] and maps[partner.map] then
         local route = Arrow.route(maps, ow.map.id, partner.map, last, outside)
         if route.kind == "exact" then
-          target = { kind = "exact",
-                     x = (partner.x * 16 + route.ox - cam.x + 8),
-                     y = (partner.y * 16 + route.oy - cam.y + 8) }
+          target = onView("exact", partner.x * 16 + route.ox + 8,
+                          partner.y * 16 + route.oy + 8, px, py, from, view)
         elseif route.kind == "door" then
           local cells = ow.map.isWalkableCell and Arrow.reachable(ow.map, p.cellX, p.cellY)
           local d = Arrow.pickDoor(route, partner, { x = p.cellX, y = p.cellY }, cells, ow.map.id)
           if d then
-            target = { kind = "door", x = (d.x * 16 - cam.x + 8), y = (d.y * 16 - cam.y + 8) }
+            target = onView("door", d.x * 16 + 8, d.y * 16 + 8, px, py, from, view)
           end
         end
       end
       if not target then
         local a, b = towns[ow.map.id], towns[partner.map]
-        if a and b then target = { kind = "town", dx = b.x - a.x, dy = b.y - a.y } end
+        if a and b then
+          local dx, dy = b.x - a.x, b.y - a.y
+          local len = math.sqrt(dx * dx + dy * dy)
+          if len > 0 then
+            target = onView("town", px + dx / len * 64, py + dy / len * 64, px, py, from, view)
+          end
+        end
       end
       local at = target and Arrow.layout(target, from, W, H)
       if at then
@@ -371,24 +398,49 @@ function Arrow.image(place, dir)
   return ok and made or nil
 end
 
-function Arrow.drawOne(a)
+-- one arrow; `scale`: a render pipeline's canvas pixels per world pixel
+-- (#30), where it is drawn in its own colours, with no palette zones to
+-- replay over
+function Arrow.drawOne(a, scale)
   local img = Arrow.image(a.place or 1, a.dir)
   if not img then return end
   love.graphics.setColor(1, 1, 1, 1)
+  if scale then
+    love.graphics.push()
+    love.graphics.scale(scale, scale)
+    love.graphics.draw(img, a.x, a.y)
+    love.graphics.pop()
+    return
+  end
   love.graphics.draw(img, a.x, a.y)
   -- over the palette zones in every COLORS mode, like the sprites
   require("src.render.PaletteFX").markSpriteRedraw(img, nil, a.x, a.y)
 end
 
--- the overworld's world pass: the blinking arrows on the view's edges
-function Arrow.draw(game, ow, partners, frame)
+-- the overworld's world pass: the blinking arrows on the view's edges.
+-- With a render pipeline (#30), its field-effect pass draws them instead:
+-- `project(wx, wy)` maps a world pixel to its canvas (nil when not seen),
+-- `scale` is canvas pixels per world pixel, W x H the canvas.
+function Arrow.draw(game, ow, partners, frame, project, scale, W, H)
   if (frame or 0) % Arrow.BLINK >= Arrow.BLINK_ON then return end
-  local W, H = 160, 144
-  if game.renderer and game.renderer.worldViewSize then
-    local w, h = game.renderer:worldViewSize()
-    W, H = w or W, h or H
+  local view
+  if project then
+    view = function(wx, wy)
+      local sx, sy = project(wx, wy)
+      if not sx then return nil end
+      return sx / scale, sy / scale
+    end
+    W, H = W / scale, H / scale
+  else
+    W, H = 160, 144
+    if game.renderer and game.renderer.worldViewSize then
+      local w, h = game.renderer:worldViewSize()
+      W, H = w or W, h or H
+    end
   end
-  for _, a in ipairs(Arrow.arrows(game, ow, partners, W, H)) do Arrow.drawOne(a) end
+  for _, a in ipairs(Arrow.arrows(game, ow, partners, W, H, view)) do
+    Arrow.drawOne(a, project and scale or nil)
+  end
 end
 
 return Arrow

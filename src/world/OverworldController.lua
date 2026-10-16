@@ -1915,6 +1915,10 @@ function OverworldState:handleInput()
   end
 end
 
+-- co-op (#30): the engine's own handleInput, before any mod wraps it; a
+-- co-op session's SELECT comes here (src/coop/game/CoopMenu.lua claimSelect)
+OverworldState.coopBaseHandleInput = OverworldState.handleInput
+
 -- JoypadOverworld both make -- home/overworld.asm:382
 -- slopeMaps list -> { n = #list, ids = { [mapId] = true } }: update() asks
 -- every frame, so the list is indexed once instead of scanned per call.
@@ -6705,6 +6709,9 @@ function OverworldState:drawWorld()
         if self.fishing then
           at(fxRodFn, self.player.px + 8, self.player.py + 16)
         end
+        -- co-op (#30): the partner arrows and "!" bubbles, under the
+        -- pipeline's camera (src/coop/game/Presence.lua)
+        require("src.coop.game.Presence").drawFx(Game, self, at, project, scale)
       end)
     end
     override = Pipelines.drawWorld(pipelineId, ctx)

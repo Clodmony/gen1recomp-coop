@@ -69,6 +69,7 @@ end
 --   controls          -> the CONTROLS page's model (Controls.lua), or nil
 --   gameOptions       -> the game's options on SETTINGS (GameOptions.lua), or nil
 --   saves(version)    -> the SAVES page's model of a game (Saves.lua), or nil
+--   mods(version)     -> the MODS page's model of a game (Mods.lua, #30), or nil
 function Menu.new(opts)
   opts = opts or {}
   local self = setmetatable({
@@ -83,6 +84,7 @@ function Menu.new(opts)
     controls = opts.controls,
     gameOptions = opts.gameOptions,
     savesOf = opts.saves,
+    modsOf = opts.mods,
     screen = "play", tab = "play", cursor = 1, path = "",
     version = Menu.GAMES[1].id,
   }, Menu)
@@ -133,6 +135,10 @@ function Menu:items()
     if self.saves then
       for _, row in ipairs(self.saves:items()) do add(row) end
     end
+  elseif s == "mods" then
+    if self.mods then
+      for _, row in ipairs(self.mods:items()) do add(row) end
+    end
   elseif s == "controls" then
     if self.controls then
       for _, row in ipairs(self.controls:rows()) do add(row) end
@@ -145,6 +151,11 @@ function Menu:items()
     -- the game's options (#5), stored where the game reads them
     if self.gameOptions then
       for _, row in ipairs(self.gameOptions:rows()) do add(row) end
+    end
+    -- the mods of the picked game (#30)
+    if self.modsOf then
+      add({ id = "mods", group = "mods", label = L("MODS"),
+            detail = L("%s →", gameLabel(self.version)) })
     end
   elseif s == "help" then
     local settings = self.settings or {}
@@ -201,6 +212,7 @@ function Menu:openTab(tab)
   if self.coop then self:_leaveCoop() end
   if self.controls then self.controls:cancel() end
   self.saves = nil
+  self.mods = nil
   if tab == "campaigns" then
     self.tab = "campaigns"
     if self:openCoop(self.version, nil, "campaigns") then return end
@@ -215,12 +227,14 @@ end
 function Menu:notify(text)
   if self.coop then return self.coop:notify(text) end
   if self.screen == "saves" and self.saves then return self.saves:notify(text) end
+  if self.screen == "mods" and self.mods then return self.mods:notify(text) end
   self.notice = text
 end
 
 function Menu:currentNotice()
   if self.screen == "coop" and self.coop then return self.coop.notice end
   if self.screen == "saves" and self.saves then return self.saves.notice end
+  if self.screen == "mods" and self.mods then return self.mods.notice end
   return self.notice
 end
 
@@ -232,6 +246,22 @@ function Menu:openSaves(version)
   if not self.saves then return false end
   self.screen, self.cursor = "saves", 1
   return true
+end
+
+-- the MODS page of `version` (#30)
+function Menu:openMods(version)
+  if not self.modsOf then return false end
+  self.version = version or self.version
+  self.mods = self.modsOf(self.version)
+  if not self.mods then return false end
+  self.screen, self.cursor = "mods", 1
+  return true
+end
+
+local function closeMods(self)
+  self.mods = nil
+  self:go("settings")
+  self:_cursorTo("mods")
 end
 
 local function closeSaves(self)
@@ -361,6 +391,11 @@ function Menu:press(action)
     if command and command.kind == "saves_exit" then closeSaves(self) return nil end
     return command
   end
+  if screen == "mods" and self.mods then
+    local command = self.mods:press(action)
+    if command and command.kind == "mods_exit" then closeMods(self) return nil end
+    return command
+  end
   if screen == "importing" then return nil end
   if screen == "import" and action == "b" then
     self:go("play")
@@ -439,6 +474,10 @@ function Menu:press(action)
       self.gameOptions:step(row, 1)
       return nil
     end
+    if id == "mods" then
+      self:openMods(self.version)
+      return nil
+    end
     if id == "language" then
       local nextLanguage = Text.language == "de" and "en" or "de"
       Text.set(nextLanguage)
@@ -464,6 +503,7 @@ end
 function Menu:text(t)
   if self.screen == "coop" and self.coop then return self.coop:text(t) end
   if self.screen == "saves" and self.saves then return self.saves:text(t) end
+  if self.screen == "mods" and self.mods then return self.mods:text(t) end
   if self.screen ~= "import" or self.notice or not self.canType then return end
   self.path = self.path .. t
 end
@@ -471,6 +511,7 @@ end
 function Menu:erase()
   if self.screen == "coop" and self.coop then return self.coop:erase() end
   if self.screen == "saves" and self.saves then return self.saves:erase() end
+  if self.screen == "mods" and self.mods then return self.mods:erase() end
   if self.screen ~= "import" or self.notice then return end
   self.path = self.path:sub(1, -2)
   -- drop a whole UTF-8 sequence, not half of one

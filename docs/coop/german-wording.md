@@ -464,6 +464,42 @@ The credit line of upstream's licence is not translated.
 | No single-player save of this game on this device. | Kein Solo-Spielstand dieses Spiels auf diesem Gerät. | |
 | Your start could not be made: %s | Dein Start ließ sich nicht anlegen: %s | |
 
+### #30: mods
+
+| English | German now | Better German |
+| --- | --- | --- |
+| MODS | MODS | |
+| %s → | %s → | |
+| The mods installed on this device, each on or off for this game. | Die Mods auf diesem Gerät, jeder an oder aus für dieses Spiel. | |
+| Mods for %s | Mods für %s | |
+| Mods installed on this device. A change takes effect when the game starts. | Auf diesem Gerät installierte Mods. Eine Änderung wirkt beim nächsten Spielstart. | |
+| Cannot load: %s | Lädt nicht: %s | |
+| PATCHES ENGINE CODE | ÄNDERT DEN SPIELCODE | |
+| CHANGES LINK PLAY | ÄNDERT DAS LINK-SPIEL | |
+| IMPORT FILE | DATEI IMPORTIEREN | |
+| Optional: %s · IMPORTED | Optional: %s · IMPORTIERT | |
+| Optional: %s · NOT IMPORTED | Optional: %s · NICHT IMPORTIERT | |
+| No mods on this device yet. | Noch keine Mods auf diesem Gerät. | |
+| 1 mod | 1 Mod | |
+| %d mods | %d Mods | |
+| A mod's code runs in the game with the game's rights. Install mods you trust. A mod that changes link play needs the same mod on every partner's device. | Der Code eines Mods läuft im Spiel mit den Rechten des Spiels. Installiere nur Mods, denen du traust. Ein Mod, der das Link-Spiel ändert, muss auf dem Gerät jedes Partners derselbe sein. | |
+| + INSTALL MOD | + MOD INSTALLIEREN | |
+| Install a mod | Einen Mod installieren | |
+| A mod's folder or its .zip, copied into this device's save folder. | Der Ordner eines Mods oder seine .zip, kopiert in den Speicherordner dieses Geräts. | |
+| Drop the mod's folder or .zip on this window, or type the path of its .zip and press ENTER. | Zieh den Ordner oder die .zip des Mods auf dieses Fenster, oder tippe den Pfad der .zip und drücke ENTER. | |
+| Drop the mod's folder or .zip on this window. | Zieh den Ordner oder die .zip des Mods auf dieses Fenster. | |
+| The mod is installed for every game; it is on until you turn it off. A mod already installed is replaced by the new copy. | Der Mod wird für jedes Spiel installiert und ist an, bis du ihn ausschaltest. Ein schon installierter Mod wird durch die neue Kopie ersetzt. | |
+| Import a file | Eine Datei importieren | |
+| %s for %s | %s für %s | |
+| Drop the file on this window, or type its path and press ENTER. | Zieh die Datei auf dieses Fenster, oder tippe ihren Pfad und drücke ENTER. | |
+| Drop the file on this window. | Zieh die Datei auf dieses Fenster. | |
+| The file is checked against the mod's manifest and copied into the mod's folder. Nothing is uploaded. | Die Datei wird mit dem Manifest des Mods geprüft und in den Ordner des Mods kopiert. Nichts wird hochgeladen. | |
+| Installed %s %s. It runs when the game starts. | %s %s ist installiert. Er läuft beim nächsten Spielstart. | |
+| Could not install %s: %s | %s ließ sich nicht installieren: %s | |
+| it is not a .zip this build opens | es ist keine .zip, die dieser Build öffnet | |
+| To install a mod, open SETTINGS > MODS and drop it there. | Zum Installieren eines Mods öffne OPTIONEN > MODS und zieh ihn dorthin. | |
+| Imported %s for %s. | %s für %s importiert. | |
+
 ### Text entry
 
 | English | German now | Better German |
