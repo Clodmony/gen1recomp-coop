@@ -334,4 +334,33 @@ do
   eq(HostCable.OFFER_WAIT, 30, "the offer wait")
 end
 
+-- a message of an earlier pairing never reaches the next one (the integrated
+-- build's live run: RED left the TRADE CENTER with B, its bye reached BLUE
+-- after BLUE's screen had closed, and BLUE's next link battle in the
+-- COLOSSEUM, round 1 again, took it and ended at once as "RED left")
+do
+  local host, hub = startHost()
+  local red, blue = join(hub, "RED", "d1"), join(hub, "BLUE", "d2")
+  local all = { red, blue }
+  pump(host, all, 6)
+  red:cableEnter("trade")
+  blue:cableEnter("trade")
+  pump(host, all, 4)
+  eq(blue.cable.mate, red.player, "paired in the TRADE CENTER")
+  red:cableLink(blue.cable.round, { type = "bye" })
+  red:cableEnter("none")
+  pump(host, all, 4)
+  eq(blue.cable.room, "none", "RED left: BLUE's cable is gone")
+  -- BLUE's screen had closed: nothing took the bye
+  red:cableEnter("colosseum")
+  blue:cableEnter("colosseum")
+  pump(host, all, 4)
+  eq(blue.cable.room, "colosseum", "paired again in the COLOSSEUM")
+  red:cableLink(blue.cable.round, { type = "hello" })
+  pump(host, all, 4)
+  local got = blue:takeCableLinks()
+  eq(#got, 1, "only the new pairing's message is waiting")
+  eq(got[1] and got[1].link.type, "hello", "the old bye was dropped")
+end
+
 T.finish("cable_host_test")

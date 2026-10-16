@@ -79,6 +79,7 @@ function Client.new(conn, opts)
     game = opts.game, sha1 = opts.sha1 or "",
     build = opts.build or "dev",
     device = opts.device or "0", seat = opts.seat or 1, window = opts.window,
+    start = opts.start, -- how a new player starts, said on hello (#66)
     known = opts.known or {}, via = opts.via,
     status = "idle", reason = nil,
     seq = 0, player = nil, campaign = nil,
@@ -124,6 +125,7 @@ function Client:join()
   hello.device, hello.seat, hello.via = self.device, self.seat, self.via
   hello.window = self.window
   hello.logs = { share = self:sharesLog() }
+  hello.start = self.start
   self.status = "joining"
   self.conn:send(hello)
 end
@@ -395,6 +397,12 @@ function Client:_handle(msg)
   elseif t == "battle" then
     self:_battle(msg)
   elseif t == "cable" then
+    -- another room, mate or round: the mate's messages still waiting
+    -- belong to the cable before (a new pairing starts at round 1 again)
+    local was = self.cable
+    if not was or was.room ~= msg.room or was.mate ~= msg.mate or was.round ~= msg.round then
+      self.cableLinks = {}
+    end
     self.cable = msg
   elseif t == "cable_link" then
     self.cableLinks[#self.cableLinks + 1] = msg

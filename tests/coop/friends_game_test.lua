@@ -156,6 +156,16 @@ do
   step(3)
   local inv, id = openInvite(blue)
   check(inv ~= nil and inv.kind == "trade", "TRADE BLUE invites BLUE to trade")
+  -- asking again while it waits says so, and sends nothing (found in the
+  -- integrated build's live run: it said "BLUE is busy.")
+  for _, it in ipairs(CoopMenu.new(Game).items) do
+    if it.label == "TRADE BLUE" then it.onSelect() end
+  end
+  step(3)
+  eq(lastNotice(), "Waiting for BLUE...", "a second ask while one waits says so")
+  local n = 0
+  for _, i in pairs(blue.invites) do if not i.answer then n = n + 1 end end
+  eq(n, 1, "and no second invitation went")
   -- the host's 60 s pass (A12.2)
   now = now + 61
   step(3)

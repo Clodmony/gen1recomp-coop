@@ -62,6 +62,9 @@ function Game:load(opts)
     self.mods:load(Data)
   end
   self.modStatus = self.mods:status()
+  -- co-op (#30): SELECT in a session stays the CO-OP menu's when a mod
+  -- wrapped the overworld's input for it (src/coop/game/CoopMenu.lua)
+  require("src.coop.game.CoopMenu").claimSelect(require("src.world.OverworldController"))
   -- co-op (#25): a German game's engine lines in the cartridge's words, its
   -- type names and its wider boxes, into Data.strings / type_chart /
   -- field.theme where no mod put anything (src/coop/game/German.lua); before

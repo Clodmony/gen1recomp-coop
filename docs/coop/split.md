@@ -64,6 +64,12 @@ function, finds that world's modules.
   takes its silent timing. A fanfare of player 2 ducks the `Music` of its
   own world only, so player 1's song does not pause under it.
 
+- **Mods.** Each world loads the mods itself (`Game:load`), so a mod's
+  state is per seat: with the Dramatic Shape Voxel Mod each player has
+  their own camera and OPTIONS, and its 3D scene is sized to the seat's
+  view (#30, [mods.md](mods.md), with the frame times of drawing the
+  world twice).
+
 ## Stepping, drawing and input
 
 `Split.start` wraps player 1's `Game.update` and `Game.draw` (its module
@@ -139,6 +145,16 @@ back.
   except player 2 opening and closing their START menu; at level 7 player
   2's sound sits on top of the song, which plays on. Player 2's music
   stayed off.
+- The integrated build (Group 11, 2026-10-16, US Red, offscreen, two fake
+  pads claimed; 14 driver checks, none failed): from the launcher, NEW
+  CAMPAIGN with BRING A SAVE for player 1, ENTER WITH 2 PLAYERS asked
+  PLAYER 2 NAME; both titles to the overworld (player 2 continued a save
+  the driver had put in the campaign's P2 slot, since seat 2 offers no HOW
+  YOU START); pad B walked player 2 only. Player 1's CO-OP menu listed
+  BATTLE BROCK and TRADE BROCK; TRADE BROCK, seat 2's YES with pad B, both
+  trade screens, PIDGEOTTO for KADABRA: seat 1's ALAKAZAM, seat 2's
+  PIDGEOTTO. The window then lost focus for 5 s and its visibility for
+  5 s; both seats' links stayed up.
 - Not run: real pads, a real window (its resize), listening on speakers,
   and a pair that joined a remote host.
 

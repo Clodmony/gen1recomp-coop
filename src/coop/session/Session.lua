@@ -126,6 +126,7 @@ function Session:_client(conn, hostKey, via)
     name = self.name, game = self.cartridge.game, sha1 = self.cartridge.sha1,
     device = identity.device, seat = self.seat, known = identity:known(hostKey, self.seat), via = via,
     window = self.windowId,
+    start = self.opts.start, -- how a new player starts (#66)
     clock = self.opts.clock,
     -- the host's own player: its lines are already in the host's log; one
     -- link per device carries the log, the first seat's (#11)
@@ -261,8 +262,10 @@ end
 
 -- the hello on the probed link; `name` replaces the player's name (a new
 -- player names themself)
-function Session:join(name)
+-- start: how a new player starts ("opening", "pallet", "save"; #66)
+function Session:join(name, start)
   if self.kind ~= "join" or self.status ~= "probed" then return false end
+  if start then self.opts.start = start; self.client.start = start end
   if Protocol.name(name) then
     self.name = name
     self.client.name = name

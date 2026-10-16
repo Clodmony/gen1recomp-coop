@@ -178,6 +178,27 @@ function CoopMenu.startRow(game, items, reopen)
   end }
 end
 
+-- SELECT in a session is the CO-OP menu's even when a mod took SELECT on
+-- the map for itself (#30, design G34: the Dramatic Shape Voxel Mod steps
+-- its camera with it, in a wrap of OverworldState.handleInput outside the
+-- engine's).  Game:load calls this once the mods are in (a marked hook): in
+-- a session a frame with SELECT pressed goes to the engine's own
+-- handleInput (OverworldState.coopBaseHandleInput), whose marked hook opens
+-- the menu; solo play keeps the mods' wraps.
+function CoopMenu.claimSelect(OW)
+  local base, chain = OW.coopBaseHandleInput, OW.handleInput
+  if not base or chain == base or chain == OW.coopSelectClaim then return end
+  local function claim(self, ...)
+    local Game = require("src.core.Game")
+    local input = Game.input
+    if Presence.session() and input and input.wasPressed and input:wasPressed("select") then
+      return base(self, ...)
+    end
+    return chain(self, ...)
+  end
+  OW.handleInput, OW.coopSelectClaim = claim, claim
+end
+
 -- SELECT on the map (OverworldState:handleInput's marked hook): true when
 -- the CO-OP menu opened
 function CoopMenu.select(game)

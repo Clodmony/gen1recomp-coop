@@ -41,6 +41,14 @@ Upstream files have one marked hook each (`co-op (#15)`):
   that palette in every COLORS mode, and replays it over the palette zones
   as OG RED's sprites are.
 
+With a world-pipeline mod (#30, [mods.md](mods.md)) four more marked hooks
+(`co-op (#30)`): the overworld's `ctx.drawFx` calls `Presence.drawFx`,
+which draws the arrows and the "!" under the pipeline's camera (the world
+pass skips them then); `SpriteRenderer:resolveImage` wears a player's
+colour; `OverworldState.coopBaseHandleInput` keeps the engine's own
+`handleInput`, and `Game:load` calls `CoopMenu.claimSelect` once the mods
+are in, so SELECT in a session reaches the CO-OP menu past a mod's wrap.
+
 ## Rules and what was done
 
 | A14 rule | Here |

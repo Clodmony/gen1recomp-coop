@@ -81,6 +81,13 @@ local KIND_TEXT = {
 
 function Friends.invite(game, id, kind, name)
   local c = client()
+  -- this player's own invitation still waits: say so, send nothing
+  for _, inv in pairs(c and c.invites or {}) do
+    if inv.from == c.player and not inv.answer then
+      Notices.push(Strings("Waiting for %s...", nameOf(c, inv.to)))
+      return
+    end
+  end
   local seq = c and c:invite(id, kind)
   if not seq then return end
   Friends.sent[seq] = name or nameOf(c, id)

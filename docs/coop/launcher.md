@@ -89,6 +89,16 @@ language, under every page and every message.
   launcher and the game always show the same value and the game applies
   them at boot as it applies its own (decision G18 in
   [design.md](design.md)). A phone or console has no WINDOW row.
+- **MODS** (#30, from SETTINGS, for the cartridge picked on PLAY): the
+  mods on this device as cards (name, version, description, PATCHES ENGINE
+  CODE, CHANGES LINK PLAY, an optional file IMPORTED or NOT IMPORTED); a
+  press turns one ON or OFF for that game (the per-game flag in
+  `options.lua` the game's mod loader reads at boot); + INSTALL MOD takes a
+  mod's .zip, dropped or its path typed or pasted, or its folder dropped,
+  and copies it into the save folder's `mods/<id>/` (a mod already there
+  is replaced); IMPORT FILE takes a mod's optional file, checked by size
+  and MD5 against its manifest. A .zip dropped on the MODS page is a mod;
+  anywhere else it is a ROM, as before. See [mods.md](mods.md).
 - **HELP**: how partners connect, SHARE LOGS (on by default; session logs go
   to the session's players and hold trainer names and addresses) and OPEN LOGS
   FOLDER on desktop, and the credits: the credit line, the fork, the AI
@@ -234,6 +244,11 @@ says so and names its backup instead of hosting it.
   PLAY, NEW SAVE, DELETE and its question, IMPORT .SAV (typed, pasted or
   dropped, the oversized question) and EXPORT of any slot (made active for
   upstream's export, the active slot put back).
+- `Mods.lua` (#30): the MODS page's model: the installed mods, ON/OFF,
+  the install and the optional file screens. The mods themselves are
+  `src/coop/mods/Installed.lua`, on the GPL mod modules (`Manifest`,
+  `SaveData`'s mod flags, `RequiredImports`); `Launcher.lua` mounts a
+  .zip or a dropped folder and copies it through it.
 - `GameOptions.lua` (#5): the game's options on SETTINGS: each row's key
   in `options.lua`, its value's label and how it steps, read and written
   through `SaveData`.
@@ -259,7 +274,9 @@ each boot path above. `LauncherWindow.lua` (the launcher's window size and
 fullscreen memory) is not on the licence's list and stays.
 
 Upstream features that only its launcher reaches are not offered yet: mod
-management and mod updates before a shortcut boot (`main.lua` asks for none),
+updates, profiles and indexes (the MODS page turns mods on and off and
+installs them, #30) and mod updates before a shortcut boot (`main.lua` asks
+for none),
 the save editor, the skin studio, the touch-controls editor, the Box, carts and
 the other games. Mobile is #7; the game's CONTROLS and OPTIONS menus stay
 in the game and agree with the launcher's pages (#4, #5), and the save
@@ -306,6 +323,13 @@ restart path); no upstream launcher module was loaded. The co-op screens
 (#12) were run in two game processes on one machine (host, nearby join, enter
 the world, the host closing the session, LAST SESSION on both sides). Two
 machines on a LAN, pads, touch, Windows, macOS and phones have not been run.
+
+The MODS page (#30) was run the same way on Linux desktop (LÖVE 11.5,
+offscreen) by a frame driver from a restart into the launcher: SETTINGS >
+MODS listed the bundled example mods, + INSTALL MOD with a typed path to a
+.zip of the Dramatic Shape Voxel Mod (the mod in one repository folder)
+installed it, OFF and ON wrote its flag, and CONTINUE booted Red with the
+mod loaded; the page was looked at locally ([mods.md](mods.md)).
 
 The redesign (#38, #41) was run on Linux desktop (LÖVE 11.5, the offscreen
 video driver) by a frame driver that opened every page and saved each frame:
@@ -397,3 +421,8 @@ the refusals of Yellow and of an unverified pair, the cartridge that fits a
 nearby host, the switch of both versions on NEW CAMPAIGN and on the card,
 the Hosting line, and a Blue cartridge hosting a Red campaign
 ([versions.md](versions.md)).
+`launcher_mods_test.lua` (#30) drives SETTINGS > MODS on an in-memory save
+folder with a stand-in mod: the cards, ON/OFF as the game's mod loader
+reads it, installing from a repository folder and from the top of a .zip
+(a copy replaced, `.git` left behind, a missing manifest and a bad id
+refused) and a mod's optional file checked by MD5 ([mods.md](mods.md)).

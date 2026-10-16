@@ -29,7 +29,8 @@ decision G28; see *Other starts*).
 unset) is in the opening. A world from the campaign with a starter never is,
 wherever it stands. The host marks a player it has no world for as in the
 opening when they join, so the others are told "<NAME> joined the session in
-the opening."; the window's first look then confirms or clears it, and it
+the opening." (unless the hello says they start in Pallet Town or bring a
+save, `start`, #66); the window's first look then confirms or clears it, and it
 says so again on every new link (a done lost to a dropped link is sent
 again, with its starter). The first look waits for a world on screen: the
 title's save (before CONTINUE or NEW GAME) is not the player's, and taking

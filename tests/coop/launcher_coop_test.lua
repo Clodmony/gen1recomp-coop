@@ -108,10 +108,10 @@ local function device(name, opts)
     closeNearby = function() d.listening = false end,
     splitReady = function() return opts.split == true end,
     soloSaves = opts.saves and function(v) d.savesAsked = v; return opts.saves end or nil,
-    host = function(campaign, playerName, version)
+    host = function(campaign, playerName, version, start)
       return Session.startHost({
         campaign = campaign, cartridge = { game = version, sha1 = SHA[version] },
-        name = playerName, identity = d.identity, log = false, beacon = false,
+        name = playerName, identity = d.identity, log = false, beacon = false, start = start,
         clock = function() return clock end, hex = hex,
         listen = function()
           local hub = Transport.loopback()
@@ -468,6 +468,28 @@ do
     "the campaign has a card: HOST, RENAME, DELETE, and Red's switch of both versions (#9)")
   local d = fits(m, "campaign cards")
   eq(#d.cards[1].players, 2, "with its players")
+  -- a campaign's name has its 16 characters, not a player name's 10 (the
+  -- integrated build's live run: Enter did nothing on an 11-character name)
+  choose(m, "rename")
+  for _ = 1, 30 do m:erase() end
+  m:text("KANTO WITH BLUE")
+  m:press("start")
+  eq(m.screen, "host", "a 15-character campaign name finishes the entry")
+  eq(Campaigns.get(campaignId).title, "KANTO WITH BLUE", "and renames the campaign")
+  choose(m, "new")
+  choose(m, "title")
+  for _ = 1, 30 do m:erase() end
+  m:text("SIXTEEN CHARS OK")
+  m:press("start")
+  eq(m.screen, "new", "NEW CAMPAIGN takes a 16-character name")
+  eq(m.form.title, "SIXTEEN CHARS OK", "as the campaign's name")
+  choose(m, "you")
+  for _ = 1, 30 do m:erase() end
+  m:text("TOOLONG")
+  m:press("start")
+  eq(m.form.you, "TOOLONG", "a trainer name of 7")
+  m:press("b")
+  eq(m.screen, "host", "B leaves NEW CAMPAIGN")
   choose(m, "rename")
   for _ = 1, 30 do m:erase() end
   m:text("JOHTO")
@@ -795,6 +817,10 @@ do
   choose(again.menu, "how")
   choose(again.menu, "go")
   frames({ again })
+  local hs = again.menu.session
+  eq(hs.client.start, "pallet", "the host's hello says it starts in Pallet (#66)")
+  check(not (hs.client:playerView(hs.client.player) or {}).opening,
+        "so the host's own player is not in the opening (#66)")
   out = choose(again.menu, "enter")
   eq(out.start and out.start.how, "pallet", "START IN PALLET goes to the game")
   eq(out.start.starter, "BULBASAUR", "with the starter")
@@ -813,6 +839,9 @@ do
   frames({ H, P })
   check(P.command and P.command.kind == "coop_enter", "the partner enters")
   eq(P.command.start and P.command.start.how, "pallet", "starting in Pallet Town")
+  local pid = P.menu.session.client.player
+  check(not (H.menu.session.client:playerView(pid) or {}).opening,
+        "the host does not announce the partner in the opening (#66)")
   -- a returning player is asked nothing (A4.3)
   local R = device("ASH", { start = "join", saves = SAVES })
   R.identity = P.identity

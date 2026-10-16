@@ -1791,6 +1791,12 @@ function love.filedropped(file)
   if Importer then Importer:filedropped(file) end
 end
 
+-- co-op (#30): a mod's folder dropped on the fork's launcher (its MODS page)
+function love.directorydropped(path)
+  if splashBlocksInput() then return end
+  if Importer and Importer.directorydropped then Importer:directorydropped(path) end
+end
+
 local function pacingEnabled()
   if os.getenv("POKEPORT_DRIVER_PACED") == "1" then return true end
   if os.getenv("POKEPORT_AUTOPILOT") then return false end

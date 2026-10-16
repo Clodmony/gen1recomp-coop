@@ -46,7 +46,9 @@ local Protocol = {}
 -- 16: the team's League run and the Hall of Fame's continue (#55): a
 -- window's `league` (the lobby, an induction) and `restart`, and the
 -- host's `world` naming the restart it answers.
-Protocol.VERSION = 16
+-- 17: how a new player starts on `hello` (`start`), so one who starts in
+-- Pallet Town or brings a save is not announced in the opening.
+Protocol.VERSION = 17
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -535,7 +537,9 @@ Protocol.TO_HOST = {
   hello = record(withType("hello", extend(identity, {
     device = Protocol.deviceId, seat = int(1, 2),
   })), { known = known, via = text(64), logs = record({ share = bool }),
-         window = Protocol.deviceId }),
+         window = Protocol.deviceId,
+         -- how a new player starts (#57, #66): the opening, Pallet, a save
+         start = enum({ opening = true, pallet = true, save = true }) }),
   -- the client's own position; warp is true when its world changed map or
   -- jumped (a warp, a map connection, a fly); travel is how it moves (#15)
   move = record(withType("move", {

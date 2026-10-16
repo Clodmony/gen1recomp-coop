@@ -40,7 +40,7 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 16 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 17 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
@@ -52,7 +52,8 @@ tables of both versions, #9: [versions.md](versions.md); 13 added how a new
 player starts, #57: [opening.md](opening.md); 14 added the Cable Club,
 #60: [cable.md](cable.md); 15 added friend battles and trades, #23:
 [friends.md](friends.md); 16 added the team's League run and the Hall of
-Fame's continue, #55: [battles.md](battles.md)). Every message is a JSON object with a `type`. Every field from the
+Fame's continue, #55: [battles.md](battles.md); 17 added how a new player
+starts on `hello`, #66: [opening.md](opening.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -61,7 +62,7 @@ checks what the host sends.
 | Client to host | Fields |
 |---|---|
 | `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`, and optional `device`, `seat`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
-| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log), `window` (the game window's own id, the same on each link it redials; optional, so a host of protocol 16 without it ignores it) |
+| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log), `start` (optional: how a new player starts, `opening`, `pallet` or `save`, #66), `window` (optional: the game window's own id, the same on each link it redials) |
 | `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped), `travel` (`walk`, `run`, `bike`, `surf`) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
