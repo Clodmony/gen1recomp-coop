@@ -9,7 +9,7 @@ world shows of partners in a battle (#34, area A14); the unique
 encounters, trainers and static Pokémon met once per campaign (#21, area
 A10, decision G26); the rival's scenes, one driver a map (#59, A10.5,
 decision G29); and the team's League run and the Hall of Fame's
-continue (#55, A10.6, A10.7, decision G30, proposed).
+continue (#55, A10.6, A10.7, decision G30).
 
 ## How a co-op battle runs (G24)
 

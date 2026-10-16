@@ -26,7 +26,7 @@ on.
 - Default branch `gen1recomp-coop`; `main` = upstream main.
 - Milestones: Group 8 holds #22 (done by #58). **Group 11** holds #57,
   #59, #55, #23, #60, #9, #34, #30, #65 and #66, all done by #61.
-  **Group 12: Group 11 follow-ups** holds #62, #63, #64. Group 2 still has
+  **Group 12: Group 11 follow-ups** holds #62, #63, #64, #67. Group 2 still has
   #12 and #15 (owner-side checks); Group 10 holds #7 (mobile) and #27
   (launcher entries).
 
@@ -38,9 +38,9 @@ on.
   #57, #59, #55, #23, #60, #9, #34, #30, #65, #66. Protocol 17 (11
   scenes, 12 Red and Blue, 13 starts, 14 Cable Club, 15 friends, 16
   League, 17 the hello's `start`); campaign file version 4. Decisions
-  G28, G32, G33 accepted; G29, G30, G31, G34 (the 3D mod) and G35 (a
-  window that comes back is its own player; a unique encounter nobody is
-  in is fought afresh) proposed.
+  G28 to G35 all accepted by the owner (2026-10-16); G34 is the 3D mod,
+  G35 a window that comes back is its own player and a unique encounter
+  nobody is in is fought afresh.
   - Verify ALL PASSED at ee8d6289 (37/37 tiers); co-op tier 52/52 at the
     head. luacheck has not run (not installed here; CI does not run on a
     stacked PR): it runs once #61 targets `gen1recomp-coop`.
@@ -98,7 +98,10 @@ good (#9's answer); a gift lost on a reset is accepted and documented
 3. "Every connected player inducted" literal (includes players in the opening/elsewhere) [rec] / only players who entered the League this run.
 4. A gift landed after the last holdings is lost on a reset: accept and document [rec] / follow-up: host re-sends owed gifts after a restart.
 
-### Round 2 (integrated tests, #30, the itest agents): asked 2026-10-16
+### Round 2 (integrated tests, #30, the itest agents): owner, 2026-10-16, every recommendation taken
+
+Forfeit EXP became #67 (Group 12). Owner: merge #58 and #61 now; next is Group 12.
+
 - Forfeit EXP farm (A12.5 pays "won or lost"; RUN on turn 1 paid 621 EXP): no EXP to the side that forfeits [rec] / only after a full turn / keep.
 - Flood rule also hits the host's own loopback player at inhuman rates: leave [rec] / exempt loopback.
 - G34 (the 3D mod) as written: accept [rec] / change.
@@ -112,7 +115,7 @@ good (#9's answer); a gift lost on a reset is accepted and documented
 
 ## Next candidates
 
-- Group 12 (#62, #63, #64) once #61 is merged.
+- **Group 12** (#62, #63, #64, #67), the owner's pick (2026-10-16).
 - Group 10 (#7 mobile, #27 launcher entries) needs owner decisions per
   feature; Group 2's #12 and #15 are owner-side checks.
 

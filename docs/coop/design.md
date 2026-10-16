@@ -678,11 +678,11 @@ cartridge's bag stays, refusing the rest; accepted by the owner,
 A10.1 to A10.4 and A10.8 are in place (#21, [battles.md](battles.md), G26),
 with this adaptation: an encounter is named by its map object. A10.5 is
 in place (#59, split from #55 by the owner on 2026-10-16;
-[battles.md](battles.md), G29 proposed), with this adaptation: with no
+[battles.md](battles.md), G29), with this adaptation: with no
 map-script bytes (G21) a scene is a script the runner starts on a
 scene's map that fights the rival while his flag is unset, and it ends
 when that script ends. A10.6 and A10.7 are in place (#55,
-[battles.md](battles.md), G30 proposed), with these adaptations: the
+[battles.md](battles.md), G30), with these adaptations: the
 run's clear is asked by every lobby entry, and a reset reopens the world
 as the host last had it.
 
@@ -1432,7 +1432,7 @@ sibling's D-numbers.
   a Yellow player plays the opening or brings a save. A second seat on a
   split-screen device plays the opening. Details: [opening.md](opening.md).
 - **G29. A rival scene is the script that fights him** (#59, 2026-10-16,
-  proposed). A10.5 starts a scene when the window's map-script byte
+  accepted by the owner the same day). A10.5 starts a scene when the window's map-script byte
   enters the scene's states. The engine keeps no such bytes (G21): each
   scene is a hand-ported script (the map's ambush on its cells, or the
   rival's talk script). So a scene is a script the script runner starts on
@@ -1454,7 +1454,7 @@ sibling's D-numbers.
   map waits, however far from the rival. Protocol 11. Details:
   [battles.md](battles.md).
 - **G30. The League run lives on the host; a reset reopens the co-op world**
-  (#55, 2026-10-16, proposed). A10.6: a League fight won is a unique
+  (#55, 2026-10-16, accepted by the owner the same day). A10.6: a League fight won is a unique
   encounter kept done (G26) until the run's clear, so a window walking
   into one, the Champion included, counts it as won at once; the members'
   beaten flags and beaten trainers are story entries, and the started bit
@@ -1484,7 +1484,7 @@ sibling's D-numbers.
   player inside holds nothing. Protocol 16.
   Details: [battles.md](battles.md).
 - **G31. Friend battles are upstream's link battle; the host trades once**
-  (#23, 2026-10-16, proposed). A12.3 left the engine to the issue: the
+  (#23, 2026-10-16, accepted by the owner the same day). A12.3 left the engine to the issue: the
   co-op battle record (G24) or upstream's lockstep link battle. A friend
   battle is upstream's link battle (`src/link/LinkBattle.lua`): each
   window runs the whole battle from its own side (its own team as allies,
@@ -1557,7 +1557,7 @@ sibling's D-numbers.
   with Yellow (G4); the answer is in A13. Protocol 12. Details:
   [versions.md](versions.md).
 - **G34. Engine-patching mods run on the fork's boot path; the player
-  installs them, the fork never ships them** (#30, 2026-10-16, proposed).
+  installs them, the fork never ships them** (#30, 2026-10-16, accepted by the owner the same day).
   The owner's co-op playthrough needs the Dramatic Shape Voxel Mod, whose
   licence forbids redistribution, so the fork carries no copy of it (its
   tests use a stand-in mod with the same manifest fields) and offers a
@@ -1580,7 +1580,7 @@ sibling's D-numbers.
   compare mods. Details: [mods.md](mods.md).
 - **G35. A window that comes back is its own player; a unique encounter
   nobody is in is fought afresh** (Group 11 live test, 2026-10-16,
-  proposed). Two refinements the integrated live run needed. A1.9: a
+  accepted by the owner the same day). Two refinements the integrated live run needed. A1.9: a
   device whose remembered player is still connected joins as someone new,
   but a host window frozen for 45 s made every guest's redial a second
   player, and a guest that crashed and restarted before the host noticed
