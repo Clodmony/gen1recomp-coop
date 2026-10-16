@@ -418,7 +418,13 @@ nobody is left.
   owner's. The owner decides again the moment they are back.
 - **Nobody left** (A11.7). A battle nobody is present in waits two minutes
   (a redial's budget), then ends as fled; at shutdown every battle still
-  running ends as fled, and its players hear it before `ended`.
+  running ends as fled, and its players hear it before `ended`. A unique
+  encounter's battle nobody is present in ends as fled at once when
+  another player meets that encounter, who then fights it afresh: a
+  walk-in could not go in (no one is there to bring the battle to a
+  question), so the player waited the two minutes on a silent screen
+  (found in the integrated live run: the rival scene's driver quit during
+  the battle's intro).
 - **The end while away** (A11.8). A join still queued is released; a player
   whose link was down when their battle ended hears the end once back: the
   window builds the battle from the record, plays it out of sight and ends

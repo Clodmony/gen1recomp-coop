@@ -181,6 +181,36 @@ HostBattles.endAll(host)
 pump()
 eq(host.state.encounters[MEWTWO], nil, "a shutdown releases it too")
 
+-- a battle nobody is present in, walked into: the walker fights it afresh
+-- (found live: the rival's opener quit during the battle's intro, before
+-- any question, and a partner meeting the rival waited two silent minutes
+-- for the abandon, A11.7)
+do
+  local RIVAL = "trainer:ROUTE_22_obj_1"
+  local R = { kind = "trainer", enemy = { mon("PIDGEY") }, map = "ROUTE_22", foe = "GARY",
+              trainer = { class = "OPP_RIVAL1", index = 5 }, encounter = RIVAL }
+  clear()
+  green:battleOpen(R, team("g", 1), 2, false)
+  pump()
+  local gid = opened(green)
+  for _, p in ipairs(host.battles[gid].players) do p.present = false end -- GREEN's link dropped
+  blue.rejections = {}
+  blue:battleOpen(R, team("b", 1), 3, false)
+  pump()
+  eq(lastRejection(blue), nil, "BLUE's meeting with him is not refused")
+  eq(host.joins[blue.player], nil, "BLUE does not queue for a battle nobody is in")
+  local bid = opened(blue)
+  check(bid ~= nil and bid ~= gid, "BLUE's own fight against him opens at once")
+  local why
+  for _, l in ipairs(logLines) do
+    if l.kind == "battle_end" and l.data.battle == gid then why = l.data.result .. "/" .. tostring(l.data.why) end
+  end
+  eq(why, "run/abandoned", "the battle nobody was in ends as fled (A11.7)")
+  eq(battleCount(), 1, "still one instance of the encounter")
+  HostBattles.endAll(host)
+  pump()
+end
+
 -- a walk-in into a full battle is refused (A8.5) ------------------------------
 clear()
 local GIO = "trainer:VIRIDIAN_GYM_obj_1"
