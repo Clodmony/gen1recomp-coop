@@ -31,7 +31,10 @@ wherever it stands. The host marks a player it has no world for as in the
 opening when they join, so the others are told "<NAME> joined the session in
 the opening."; the window's first look then confirms or clears it, and it
 says so again on every new link (a done lost to a dropped link is sent
-again, with its starter).
+again, with its starter). The first look waits for a world on screen: the
+title's save (before CONTINUE or NEW GAME) is not the player's, and taking
+it for one put a returning player in the opening until they next stood
+outside Oak's lab (found in the integrated live run).
 
 **A private story** (A4.4). While a window plays the opening it sends no
 patch, takes nothing of the campaign's story, lands no gifts and sends no
