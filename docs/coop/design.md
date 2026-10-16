@@ -127,7 +127,9 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
    recognised by typing the same name (D26, D48, D49). Split-screen needs two
    remembered identities per device (one per local seat). Here (#11) both
    seats remember theirs in one identity, under the host's key and the seat
-   ([split.md](split.md)).
+   ([split.md](split.md)). A redial from the same window, and a game
+   restarted on the same device and seat whose old link is dead, come back
+   as their own player (G35, [session.md](session.md)).
 10. **carry** Windows stay trusted (owner, D72): the host checks only step length (up
     to two cells on the same map, a ledge hop), trusts the warps a window
     reports and the enemies its world prepared; collision is the window's own;
@@ -1576,3 +1578,19 @@ sibling's D-numbers.
   the mod's OPTIONS row. A mod's options are each player's own and graphics
   only, nothing is synced (`affects_link: false`), and a session does not
   compare mods. Details: [mods.md](mods.md).
+- **G35. A window that comes back is its own player; a unique encounter
+  nobody is in is fought afresh** (Group 11 live test, 2026-10-16,
+  proposed). Two refinements the integrated live run needed. A1.9: a
+  device whose remembered player is still connected joins as someone new,
+  but a host window frozen for 45 s made every guest's redial a second
+  player, and a guest that crashed and restarted before the host noticed
+  got a duplicate on REJOIN. Now the hello carries a per-window id, and a
+  redial from the same window takes its player back; a hello or probe from
+  the same device and seat makes the host check the old link for up to
+  5 s (`Host.HOLD`): if it dies the new window is that player, if it stays
+  alive the new window joins as someone new, as A1.9 says. A11.7: a unique
+  encounter's battle that nobody is present in ends as fled at once when
+  another player meets that encounter, who fights it afresh, instead of
+  waiting two minutes on a silent screen. Details:
+  [session.md](session.md) *Identity*, [battles.md](battles.md)
+  *Nobody left*.
