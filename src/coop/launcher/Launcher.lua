@@ -221,9 +221,10 @@ function Launcher:_coopEnv(version)
       if launcher.nearby then launcher.nearby:close() end
       launcher.nearby, launcher.nearbyError = nil, nil
     end,
-    host = function(campaign, name, v)
+    host = function(campaign, name, v, start)
       return Session.startHost({
         campaign = campaign, cartridge = Session.cartridge(v), name = name,
+        start = start, -- how the host's own player starts (#66)
         shareLogs = settings.shareLogs,
         onRoster = function(roster) Campaigns.record(campaign.id, roster) end,
       })

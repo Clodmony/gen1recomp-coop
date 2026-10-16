@@ -378,6 +378,13 @@ function CoopMenu:_start()
   return self.start
 end
 
+-- how a new player starts, said on hello (#66): nil for a player the host
+-- knows (they open the campaign's world)
+function CoopMenu:_startHow(you)
+  if you and you.player then return nil end
+  return self.start and self.start.how or nil
+end
+
 -- the ways this game offers, in the order HOW YOU START steps through them
 function CoopMenu:_hows(version)
   local out = { "opening" }
@@ -490,7 +497,9 @@ function CoopMenu:_entryDone(text)
     self.split = true
     if self.screen == "hosting" then return self:_enter() end
     local you = self.session and self.session.lobby and self.session.lobby.you
-    if self.session then self.session:join((you and you.player) and you.name or self.joinName) end
+    if self.session then
+      self.session:join((you and you.player) and you.name or self.joinName, self:_startHow(you))
+    end
   end
 end
 
@@ -512,7 +521,8 @@ function CoopMenu:_startHost(campaign, name)
   self.campaign = self.env.campaigns.get(campaign.id) or campaign
   self.addressList = nil
   self.deleted = nil
-  local session, refused = self.env.host(self.campaign, name, self.version)
+  local session, refused = self.env.host(self.campaign, name, self.version,
+                                         self.start and self.start.how or nil) -- #66
   if not session then
     -- the campaign's file cannot be read, or is of a newer build: it is
     -- left as it is and its backup named (#13, design A3.5)
@@ -756,7 +766,7 @@ function CoopMenu:press(action)
     elseif id == "join" then
       self.split = nil
       local you = self.session.lobby and self.session.lobby.you
-      self.session:join((you and you.player) and you.name or self.joinName)
+      self.session:join((you and you.player) and you.name or self.joinName, self:_startHow(you))
     elseif id == "name" then
       return self:_entry("joinname", L("TRAINER NAME"), "name", self.joinName, CoopMenu.NAME_MAX)
     elseif self:_startPress(id, self.session.cartridge.game) then

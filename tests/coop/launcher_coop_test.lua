@@ -108,10 +108,10 @@ local function device(name, opts)
     closeNearby = function() d.listening = false end,
     splitReady = function() return opts.split == true end,
     soloSaves = opts.saves and function(v) d.savesAsked = v; return opts.saves end or nil,
-    host = function(campaign, playerName, version)
+    host = function(campaign, playerName, version, start)
       return Session.startHost({
         campaign = campaign, cartridge = { game = version, sha1 = SHA[version] },
-        name = playerName, identity = d.identity, log = false, beacon = false,
+        name = playerName, identity = d.identity, log = false, beacon = false, start = start,
         clock = function() return clock end, hex = hex,
         listen = function()
           local hub = Transport.loopback()
@@ -817,6 +817,10 @@ do
   choose(again.menu, "how")
   choose(again.menu, "go")
   frames({ again })
+  local hs = again.menu.session
+  eq(hs.client.start, "pallet", "the host's hello says it starts in Pallet (#66)")
+  check(not (hs.client:playerView(hs.client.player) or {}).opening,
+        "so the host's own player is not in the opening (#66)")
   out = choose(again.menu, "enter")
   eq(out.start and out.start.how, "pallet", "START IN PALLET goes to the game")
   eq(out.start.starter, "BULBASAUR", "with the starter")
@@ -835,6 +839,9 @@ do
   frames({ H, P })
   check(P.command and P.command.kind == "coop_enter", "the partner enters")
   eq(P.command.start and P.command.start.how, "pallet", "starting in Pallet Town")
+  local pid = P.menu.session.client.player
+  check(not (H.menu.session.client:playerView(pid) or {}).opening,
+        "the host does not announce the partner in the opening (#66)")
   -- a returning player is asked nothing (A4.3)
   local R = device("ASH", { start = "join", saves = SAVES })
   R.identity = P.identity

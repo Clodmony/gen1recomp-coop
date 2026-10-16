@@ -170,6 +170,32 @@ do
   eq(host.state.chose, "SQUIRTLE", "the second finisher does not change the rival's starter")
 end
 
+-- a new player who starts in Pallet or brings a save is not "in the opening"
+-- when they join (found in the integrated build's live run: the join notice
+-- said "joined the session in the opening") ----------------------------------
+do
+  local host, hub = startHost()
+  local c = Client.new(hub:dial(), { name = "MISTY", game = "red", sha1 = SHA, build = "test",
+                                     device = "d7", clock = now, start = "pallet" })
+  c:join()
+  local watcher = Client.new(hub:dial(), { name = "BROCK", game = "red", sha1 = SHA,
+                                           build = "test", device = "d8", clock = now })
+  watcher:join()
+  for _ = 1, 6 do
+    clock = clock + 1 / 60
+    c:update(); watcher:update(); host:update(); c:update(); watcher:update()
+  end
+  eq(c.status, "joined", "MISTY joined")
+  check(not (watcher:playerView(c.player) or {}).opening,
+        "a player who chose START IN PALLET is not announced in the opening")
+  check((c:playerView(watcher.player) or {}).opening,
+        "one who chose nothing (the opening) still is")
+  local bad = Protocol.sanitize({ type = "hello", protocol = Protocol.VERSION, build = "t",
+                                  name = "X", game = "red", sha1 = SHA, device = "d9", seat = 1,
+                                  start = "nowhere" }, "host")
+  eq(bad, nil, "an unknown start is dropped whole")
+end
+
 -- a returning player is never in the opening ------------------------------------
 do
   local host, hub = startHost()

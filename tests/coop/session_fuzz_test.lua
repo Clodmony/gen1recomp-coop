@@ -48,7 +48,7 @@ local VALID = {
     hello = { type = "hello", protocol = Protocol.VERSION, build = "t", name = "FUZZ",
               game = "red", sha1 = SHA, device = "d9", seat = 1,
               known = { [CAMPAIGN] = "p00000009" }, via = "loopback",
-              logs = { share = true } },
+              logs = { share = true }, start = "pallet" },
     move = { type = "move", seq = 1, map = "ROUTE_1", x = 3, y = 4,
              facing = "up", warp = true, travel = "walk" },
     bye = { type = "bye", seq = 1 },

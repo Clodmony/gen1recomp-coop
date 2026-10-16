@@ -624,7 +624,9 @@ function Host:_hello(link, msg)
   self.versionsIn[p.game] = true -- #9: a player of this version has been in
   -- a player the campaign has no world for plays the opening (#22, design
   -- A4.8) until their window says otherwise
-  p.opening = self.state:player(p.id).world == nil or nil
+  -- (#66: unless their hello says they start in Pallet or bring a save)
+  p.opening = (self.state:player(p.id).world == nil
+               and (msg.start == nil or msg.start == "opening")) or nil
   self:_sendWorld(link, p)
   self:_sendLogBacklog(link)
   HostBattles.back(self, p)
