@@ -44,6 +44,8 @@ Read before working:
   battles and direct trades between partners.
 - [docs/coop/cable.md](docs/coop/cable.md): the Cable Club over the
   session (trades by pairing, the Colosseum, the continue position).
+- [docs/coop/mods.md](docs/coop/mods.md): mods in the fork's build (the
+  3D Dramatic Shape Voxel Mod, #30), the launcher's MODS page.
 - [docs/coop/versions.md](docs/coop/versions.md): Red and Blue in one
   campaign, wild Pokémon from both versions, why Yellow stays apart.
 - [docs/coop/split.md](docs/coop/split.md): split-screen, two players on one
