@@ -525,7 +525,10 @@ Protocol.RESTART_KINDS = { hall = true, reset = true }
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
-  probe = record(withType("probe", identity), { known = known }),
+  -- device, seat: which seat of which device asks (a game started again
+  -- after a crash learns it is still that player)
+  probe = record(withType("probe", identity), { known = known, device = Protocol.deviceId,
+                                                seat = int(1, 2) }),
   -- logs: whether this link carries the device's shared log lines (#31);
   -- window: this game window's own id, the same on every link it redials
   -- (a host that still holds the window's old link knows it for its own)

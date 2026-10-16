@@ -60,7 +60,7 @@ checks what the host sends.
 
 | Client to host | Fields |
 |---|---|
-| `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
+| `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`, and optional `device`, `seat`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
 | `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log), `window` (the game window's own id, the same on each link it redials; optional, so a host of protocol 16 without it ignores it) |
 | `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped), `travel` (`walk`, `run`, `bike`, `surf`) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
@@ -126,11 +126,13 @@ Rules (design A1):
   running for 45 s made every guest a second player); the old link lets
   go and the player comes back. A hello from another window of the same
   device and seat (a game started again after a crash, before the host saw
-  the old link die; found in the same run) waits up to 2 s
+  the old link die; found in the same run) waits up to 5 s
   (`Host.HOLD`) while the host makes sure of the old link (ENet times it
-  out within about a second unless it answers): one that closes was the
-  crashed game's, and the player comes back; one still there is a second
-  window, someone new. A device that lost its id is recognised by the
+  out within about two seconds unless it answers; ENet's own timeouts come
+  back after 6 s): one that closes was the crashed game's, and the player
+  comes back; one still there is a second window, someone new. A probe
+  from that seat (with its `device` and `seat`) already names the player,
+  so REJOIN joins at once. A device that lost its id is recognised by the
   same name. Split-screen has two seats, so a device remembers two players per
   campaign.
 - **Worlds** (#13). A `world` is kept only when it parses with the game's

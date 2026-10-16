@@ -156,6 +156,9 @@ do
     hostSession:update(1 / 60, nil)
     again:update(1 / 60, nil)
   end
+  eq(again.status, "probed", "the restarted game's REJOIN probes the host")
+  local you = again.lobby and again.lobby.you
+  eq(you and you.player, player, "the probe names the player, so REJOIN joins at once")
   again:join()
   for _ = 1, 60 * 3 do
     t = t + 1 / 60

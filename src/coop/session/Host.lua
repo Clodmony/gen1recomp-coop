@@ -584,6 +584,16 @@ function Host:_probe(link, msg, protocolOk)
     view.refused = "content_mismatch"
   end
   local you = protocolOk and self:resolve(msg.known, msg.name)
+  -- the same seat of the same device names a connected player: most likely
+  -- its game crashed and started again; its old link is made sure of now,
+  -- and the hello that follows waits for it (Host:_hold)
+  local id = protocolOk and type(msg.known) == "table" and msg.known[self.campaign.id] or nil
+  local p = id and self.byId[id]
+  if not you and p and p.connected and p.link and msg.device and p.device == msg.device
+     and p.seat == msg.seat then
+    p.link.conn:suspect()
+    you = p
+  end
   view.you = you and { player = you.id, name = you.name } or {}
   self:_send(link, view)
 end
@@ -655,7 +665,7 @@ end
 -- while the old link is made sure of: one that closes meanwhile was the
 -- crashed game's, and the player comes back; one still there is a second
 -- window, someone new.
-Host.HOLD = 2
+Host.HOLD = 5
 
 function Host:_hold(link, msg)
   if link.heldDone then return false end

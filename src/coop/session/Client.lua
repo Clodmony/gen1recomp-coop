@@ -110,7 +110,9 @@ end
 
 function Client:probe()
   self.status = "probing"
-  self.conn:send(self:_identity("probe"))
+  local probe = self:_identity("probe")
+  probe.device, probe.seat = self.device, self.seat
+  self.conn:send(probe)
 end
 
 function Client:sharesLog()
