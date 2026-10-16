@@ -46,7 +46,10 @@
 --   * Until a world or holdings from that window shows the trade, the host
 --     lays the swap over every one it sends (`Trade.layOver`), so a copy
 --     from before the window applied it cannot undo it or clone a row; a
---     copy that shows it ends the debt.
+--     copy that shows it played ends the debt.  A row the host put there
+--     carries `coopTrade` (the commit id) until a window played the trade:
+--     a window that restarted on the host's world finds it, plays the
+--     trade and takes the mark off.
 
 local SaveSerializer = require("src.core.SaveSerializer")
 local Campaign = require("src.coop.campaign.Campaign")
@@ -56,6 +59,11 @@ local LinkProtocol = require("src.link.Protocol")
 local Trade = {}
 
 Trade.UID = Campaign.UID_FIELD
+-- a received row the host put in a world (its stored copy, or laid over a
+-- window's) carries the commit id until a window has played the trade
+-- (its line, a trade evolution): a window that opens the host's world
+-- after a restart still plays it once (#63)
+Trade.PENDING = "coopTrade"
 -- a team's rows as text: six late-game rows are a few kilobytes
 Trade.MAX_TEXT = 64 * 1024
 
@@ -134,6 +142,7 @@ function Trade.swap(save, give, get)
   end
   local row = copy(get)
   row.traded = true -- boosted EXP for a foreign trainer id, as upstream's trade
+  row[Trade.PENDING] = nil -- the host marks its own copies (commit, layOver)
   list[i] = row
   return "swapped", nil, list == save.party and i or nil, row
 end
@@ -144,6 +153,15 @@ function Trade.evolution(data, mon)
   local def = data and data.pokemon and mon and data.pokemon[mon.species]
   for _, evo in ipairs(def and def.evolutions or {}) do
     if evo.method == "TRADE" then return evo.species end
+  end
+  return nil
+end
+
+-- the row of `save` that received owed trade `t` without playing it (it
+-- still carries the commit id), or nil
+function Trade.unplayed(save, t)
+  for _, at in ipairs(World.mons(save)) do
+    if at.mon[Trade.PENDING] == t.id and same(at.mon, t.get) then return at.mon end
   end
   return nil
 end
@@ -188,7 +206,9 @@ function Trade.commit(campaign, id, a, b)
     end
     for _, s in ipairs({ { pa, ga, gb }, { pb, gb, ga } }) do
       local p, give, get = s[1], s[2], s[3]
-      if p.world and Trade.swap(p.world, give, get) then mark(p.world, get.species) end
+      local how, _, _, row = Trade.swap(p.world, give, get)
+      if how then mark(p.world, get.species) end
+      if row then row[Trade.PENDING] = id end
       p.trades = p.trades or {}
       p.trades[#p.trades + 1] = { id = id, give = give, get = get }
     end
@@ -207,10 +227,13 @@ function Trade.layOver(campaign, playerId, save)
   if not (p and p.trades and #p.trades > 0) or type(save) ~= "table" then return {} end
   local keep, ended = {}, {}
   for _, t in ipairs(p.trades) do
-    local how = Trade.swap(save, t.give, t.get)
+    local how, _, _, row = Trade.swap(save, t.give, t.get)
     if how == "swapped" then
       mark(save, t.get.species)
+      row[Trade.PENDING] = t.id
       keep[#keep + 1] = t
+    elseif how == "already" and Trade.unplayed(save, t) then
+      keep[#keep + 1] = t -- the host's own copy, not played yet
     else
       ended[#ended + 1] = { id = t.id, how = how or "gone" }
     end

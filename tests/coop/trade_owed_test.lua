@@ -192,6 +192,7 @@ do
   red.save.party[1] = Trade.copy(host.state:player(blue.c.player).world.party[2])
   red.save.party[1].coopUid, red.save.party[1].species = rattata, "RATTATA"
   red.save.party[1].traded = true
+  red.save.party[1].coopTrade = nil -- a row from the link, not the host's copy
   red.busy = nil
 
   -- BLUE comes back with the world it had: RATTATA still in its team
@@ -276,6 +277,60 @@ do
   eq(standing(host.state, kadabra), 1, "for either")
   eq(#(host.state:player(gp).trades or {}), 0, "GREEN's world shows it: owed no more")
   eq(#(host.state:player(red.c.player).trades or {}), 0, "RED's too")
+end
+
+-- 3b. a window that restarted opens the host's world, which has the trade
+-- in it but never played (#63, found live): it still plays the trade once
+do
+  local host, hub, red, green = pairOfWindows(
+    { F.mon("KADABRA", 30, { ot = "RED", otId = 1 }) },
+    { F.mon("MACHOKE", 32, { ot = "BLUE", otId = 2 }) })
+  local all = { red, green }
+  local kadabra = red.save.party[1].coopUid
+  red.c:invite(green.c.player, "trade")
+  pump(host, all, 4)
+  local inv
+  for _, i in pairs(green.c.invites or {}) do inv = i end
+  green.c:answerInvite(inv.id, true)
+  pump(host, all, 4)
+  local pid
+  for k in pairs(host.friends.pairs) do pid = k end
+  red.busy, green.busy = "trade", "trade"
+  red.c:tradeTeam(pid, Trade.encodeTeam(red.save.party))
+  green.c:tradeTeam(pid, Trade.encodeTeam(green.save.party))
+  red.c:tradePick(pid, 1)
+  green.c:tradePick(pid, 1)
+  pump(host, all, 4)
+  red.c:tradeConfirm(pid, true)
+  green.c:tradeConfirm(pid, true)
+  red.c:update()
+  green.c:update()
+  host:update()
+  red.c:update()
+  green.c.conn:close() -- GREEN's game crashed
+  pump(host, { red }, 4)
+  Trade.swap(red.save, red.save.party[1], host.state:player(red.c.player).world.party[1])
+  red.busy = nil
+  -- GREEN's game starts again on the world the host has (the launcher
+  -- writes it into the campaign's slot): KADABRA is in it, never played
+  local gp = green.c.player
+  local opened = Trade.copy(host.state:player(gp).world)
+  eq(opened.party[1].coopUid, kadabra, "the host's world for GREEN has KADABRA")
+  local back = window(hub, "GREEN", "d2", green.c.known, opened)
+  back.busy = "title"
+  pump(host, { red, back }, 6)
+  -- its first holdings: the world as it opened, before a rest point played it
+  back.c:sendHoldings(World.split(Trade.copy(back.save)))
+  pump(host, { red, back }, 2)
+  eq(#Trade.owed(host.state, gp), 1, "a world with the trade not played still owes it")
+  back.busy = nil
+  pump(host, { red, back }, 12)
+  eq(table.concat(traded[back], ","), "KADABRA", "GREEN's window plays the trade (line, evolution)")
+  eq(back.save.party[1].coopTrade, nil, "and the row is played")
+  pump(host, { red, back }, Window.HOLDINGS_EVERY + 4)
+  eq(#Trade.owed(host.state, gp), 0, "then nothing is owed")
+  eq(table.concat(traded[back], ","), "KADABRA", "played once")
+  eq(standing(host.state, kadabra), 1, "no clone")
 end
 
 -- 4. the protocol -------------------------------------------------------------------

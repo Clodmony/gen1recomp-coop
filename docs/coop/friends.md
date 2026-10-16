@@ -155,7 +155,11 @@ laid over a world or holdings), `Client.lua`, `Protocol.lua`,
   takes its place with its uid, the Pokédex marks it, "Trade completed!
   RED received KADABRA!" over the map, a trade evolution, and a `link`
   save. No movie: the trade is over. A window that applied the trade on
-  its screen changes nothing.
+  its screen changes nothing. A window that crashed and opens the host's
+  world finds the received row already there, marked `coopTrade` (the
+  commit id: the host put it there and nobody played it); it plays the
+  trade the same way and takes the mark off, and the host owes the trade
+  until a world shows it played.
 - **CANCEL** (below the party), B before TRADE, or the partner's cancel:
   both screens close ("The trade was cancelled."), nothing traded. A
   disconnect before the commit ends it the same way ("The link was

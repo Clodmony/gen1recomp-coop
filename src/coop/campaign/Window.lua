@@ -50,8 +50,10 @@
 --     or it came back without its trade screen) lands at a rest point:
 --     the row it gave leaves, the row it gets takes its place with its
 --     uid, the Pokédex marks it, and `traded(row, gave)` lets the game
---     say so and run a trade evolution.  One the save shows already
---     changes nothing.
+--     say so and run a trade evolution.  A row the host put in the world
+--     this window opened (a restart) still carries the trade's commit id
+--     (`coopTrade`): it is played the same way and the mark taken off.
+--     One the save shows played already changes nothing.
 --   * Holdings (#17, design A7.2, A7.4, A7.5, G25): the party, current box,
 --     Pokédex, bag and money are looked at on the first rest frame after
 --     the player was held and every HOLDINGS_EVERY rest frames after (a
@@ -340,7 +342,13 @@ function Window:_trades(f)
     give, get = give and give[1], get and get[1]
     local how, _, _, row
     if give and get then how, _, _, row = Trade.swap(f.save, give, get) end
+    -- the world the host had, with the trade in it, never played here
+    if how == "already" then
+      row = Trade.unplayed(f.save, { id = t.id, get = get })
+      if row then how = "swapped" end
+    end
     if how == "swapped" then
+      row[Trade.PENDING] = nil
       Trade.mark(f.save, row.species)
       self.trades = self.trades + 1
       landed = true

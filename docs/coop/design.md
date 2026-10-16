@@ -1618,7 +1618,9 @@ sibling's D-numbers.
   sends. Each window applies its own side (G25): on its trade screen when
   it hears the host's yes, else at its next rest point from the owed list
   the host sends it (`trades`, protocol 18), with the trade's line, a trade
-  evolution and a save, but no movie. This closes #60's gap (a window
+  evolution and a save, but no movie. A row the host put in a world
+  carries the commit id (`coopTrade`) until a window played the trade, so
+  a window that restarted on the host's world still plays it once. This closes #60's gap (a window
   whose link dropped after the commit and before the yes brought the old
   row back with its next world: a clone) and the same gap in a direct
   trade, which also lost the host's lay-over on a host restart. Details:
