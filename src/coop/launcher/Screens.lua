@@ -1251,6 +1251,21 @@ function C.bring(p, coop, c)
   return y + 8
 end
 
+-- How player 2 starts (#64): ENTER WITH 2 PLAYERS and JOIN WITH 2 PLAYERS
+-- ask it after player 2's name, for a player the campaign does not know
+function C.start2(p, coop, c)
+  local rows = coop:items()
+  local y = c.y + heading(p, c, c.y, L("How player 2 starts"),
+    L("Player 2 is new to this campaign. Pick how their adventure begins."), true)
+  local close = panel(p, c.x, y, c.w)
+  local py = startRows(p, c, rows, y + 10)
+  close(py + 2)
+  y = py + 10
+  local gi, grow = rowOf(rows, "go2")
+  actionsRight(p, c, y, { { index = gi, row = grow, label = grow.label .. " →", style = "primary" } })
+  return y + 30
+end
+
 function C.entry(p, coop, c, ui)
   local d = coop:details()
   local k = d.keypad

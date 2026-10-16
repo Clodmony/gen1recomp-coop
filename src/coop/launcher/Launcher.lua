@@ -173,17 +173,7 @@ end
 -- the world a new player starts with (#57): in Pallet Town with their
 -- starter, or a solo save of this device; nil and why
 function Launcher:_startWorld(SaveData, version, start, s)
-  local Start = require("src.coop.campaign.Start")
-  if start.how == "pallet" then
-    local state = s.client and s.client.state
-    local name = tostring(s.name or ""):upper():sub(1, 7)
-    return Start.pallet({ version = version, starter = start.starter, name = name,
-                          rival = state and state.rival or nil })
-  end
-  local text = SaveData.readSlotSource(version, start.slot)
-  local ok, save = pcall(SaveData.decode, text or "")
-  if not ok or type(save) ~= "table" then return nil, "the save does not read" end
-  return Start.brought(save)
+  return require("src.coop.campaign.Start").make(SaveData, version, start, s)
 end
 
 -- This device's single-player saves of `version` for BRING A SAVE (#57):
@@ -219,6 +209,14 @@ function Launcher:_coopEnv(version)
     campaigns = Campaigns,
     addresses = function() return require("src.coop.session.Addresses").mine() end,
     splitReady = function() return Seats.complete(2) end,
+    -- this device's player 2 is one of that host's campaign's (#64)
+    seat2Known = function(address, campaign)
+      local s = Session.current
+      local id = s and s.identity
+      if not (id and address and campaign) then return false end
+      local known = id:known(address, 2)
+      return type(known) == "table" and known[campaign] ~= nil
+    end,
     soloSaves = function(v) return launcher:_soloSaves(v) end,
     nearby = function()
       if not launcher.nearby and not launcher.nearbyError then
@@ -405,7 +403,8 @@ function Launcher:_run(command)
     self.nearby = nil
     -- two players on this device (#11): the second joins once the game runs
     if command.split then
-      require("src.coop.split.Split").request({ settings = self:_coopSettings() })
+      require("src.coop.split.Split").request({ settings = self:_coopSettings(),
+                                                start = command.start2 }) -- #64
     end
     self:_boot(command.version)
   elseif command.kind == "copy" then

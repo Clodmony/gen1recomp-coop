@@ -4,6 +4,7 @@
 -- A solo game never gets here.
 --
 --   SharedWorld.step(window, game)     -- Session:update, every joined frame
+--   SharedWorld.traded(game, row, gave) -- an owed trade landed (#63)
 --   SharedWorld.busy(game)             -- what holds the player, or nil
 --   SharedWorld.keepsVermilionLocks(game) -- VERMILION_CITY.onEnter (marked hook)
 --
@@ -91,7 +92,34 @@ function SharedWorld.frame(game)
       local text = SharedWorld.giftText(gift, where, game and game.data)
       if text then require("src.coop.game.Notices").push(text) end
     end,
+    -- a trade owed to this window landed (#63)
+    traded = function(row, gave) SharedWorld.traded(game, row, gave) end,
   }
+end
+
+-- A trade the host committed that this window's trade screen never
+-- finished (#63, src/coop/campaign/Trade.lua) landed at a rest point: the
+-- trade screen's own line over the map, then a trade evolution, then the
+-- save the trade screen writes; no movie (the trade is over)
+function SharedWorld.traded(game, row, gave)
+  if not (game and game.stack and game.data) then return end
+  local Trade = require("src.coop.campaign.Trade")
+  local TextBox = require("src.render.TextBox")
+  -- PIKAHAPPY_TRADE (engine/link/cable_club.asm:801), as the trade screen
+  require("src.world.PikachuFollower").modifyHappiness(game.save, "TRADE", gave)
+  local def = game.data.pokemon and game.data.pokemon[row.species]
+  local name = row.nickname or (def and def.name) or row.species
+  local evoTo = Trade.evolution(game.data, row)
+  local function saved()
+    if game.writeSave then game:writeSave("link") end
+  end
+  game.stack:push(TextBox.new(game,
+    Strings("Trade completed!\f%s received\n%s!", game.save.player.name, name),
+    function()
+      if not evoTo then return saved() end
+      -- a trade evolution cannot be cancelled (#213)
+      require("src.pokemon.Evolution").evolve(game, row, evoTo, saved, "TRADE")
+    end))
 end
 
 -- the notice for a gift the window landed (`where`: Items.give's or

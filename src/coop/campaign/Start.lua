@@ -13,6 +13,8 @@
 --   Start.pallet({ version, starter, name, rival, newGame, rng })
 --   Start.bringable(save)                -- a solo save that can be brought
 --   Start.brought(save)                  -- that save, marked to start with
+--   Start.make(SaveData, version, start, session) -- the launcher's choice
+--                                        (and split-screen player 2's, #64)
 --
 -- A start world carries `coopStart` ("pallet" or "save") until its window
 -- has sent it; the host never keeps the mark.
@@ -174,6 +176,24 @@ function Start.brought(save)
   save.importedOptions = nil
   save[Start.MARK] = "save"
   return save
+end
+
+-- The world a new player starts with, as the launcher's choice says
+-- (`start`: { how = "pallet", starter } or { how = "save", slot }): in
+-- Pallet Town with their starter under the session's name and the
+-- campaign's rival, or a solo save of this device; nil and why.  The
+-- launcher calls it for player 1, Split for player 2 (#64).
+function Start.make(SaveData, version, start, s)
+  if start.how == "pallet" then
+    local state = s and s.client and s.client.state
+    local name = tostring(s and s.name or ""):upper():sub(1, 7)
+    return Start.pallet({ version = version, starter = start.starter, name = name,
+                          rival = state and state.rival or nil })
+  end
+  local text = SaveData.readSlotSource(version, start.slot)
+  local ok, save = pcall(SaveData.decode, text or "")
+  if not ok or type(save) ~= "table" then return nil, "the save does not read" end
+  return Start.brought(save)
 end
 
 return Start

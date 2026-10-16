@@ -464,6 +464,14 @@ The credit line of upstream's licence is not translated.
 | No single-player save of this game on this device. | Kein Solo-Spielstand dieses Spiels auf diesem Gerät. | |
 | Your start could not be made: %s | Dein Start ließ sich nicht anlegen: %s | |
 
+### #64: how split-screen player 2 starts
+
+| English | German now | Better German |
+| --- | --- | --- |
+| HOW PLAYER 2 STARTS | SO BEGINNT SPIELER 2 | |
+| How player 2 starts | So beginnt Spieler 2 | |
+| Player 2 is new to this campaign. Pick how their adventure begins. | Spieler 2 ist neu in dieser Kampagne. Wähle, wie sein Abenteuer beginnt. | |
+
 ### #30: mods
 
 | English | German now | Better German |

@@ -48,7 +48,9 @@ local Protocol = {}
 -- host's `world` naming the restart it answers.
 -- 17: how a new player starts on `hello` (`start`), so one who starts in
 -- Pallet Town or brings a save is not announced in the opening.
-Protocol.VERSION = 17
+-- 18: the host's `trades`, the trades a player is owed until a world of
+-- theirs shows them (#63).
+Protocol.VERSION = 18
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -114,6 +116,8 @@ Protocol.MAX_QTY = 999
 Protocol.MAX_ITEMS = 256
 -- the rows of a team and a PC (#17): 6 + 12 * 20
 Protocol.MAX_ROWS = 246
+Protocol.MAX_TRADES = 16      -- owed trades in one `trades` message (#63)
+Protocol.MAX_TRADE_ROW = 16 * 1024 -- one Pokémon row as save text
 
 -- co-op battles (#18, design A8): a team is at most six, the allied roster
 -- at most twelve; one `battle` message carries at most MAX_INPUTS of the
@@ -682,6 +686,13 @@ Protocol.TO_CLIENT = {
   -- items owed to this player (#16, design A6): sent once per link, in
   -- order; the window applies each seq once
   gifts = record(withType("gifts", { list = listOf(gift, Protocol.MAX_ITEMS) })),
+  -- trades owed to this player (#63, Trade.lua): sent once per link; the
+  -- window applies each at a rest point (a commit id, the row given and
+  -- the row received, each as save text)
+  trades = record(withType("trades", { list = listOf(record({
+    id = pattern("^[a-z_]+:[%w_%-%.:]+$", 96),
+    give = blob(Protocol.MAX_TRADE_ROW), get = blob(Protocol.MAX_TRADE_ROW),
+  }), Protocol.MAX_TRADES) })),
   -- the uids the host gave rows of this player's last holdings or world
   -- (#17, design A7.3): the row at box (0: the team) and slot, if it still
   -- has fingerprint fp

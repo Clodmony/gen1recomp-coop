@@ -352,8 +352,8 @@ do
   pump()
   rw = host.state:player(red.player).world
   eq(rw.party[1].species, "MACHAMP", "the window's evolution is kept")
-  eq(host.friends.owed[red.player], nil, "the window shows the swap: nothing owed")
-  check(host.friends.owed[green.player] ~= nil, "GREEN's window has not shown it yet")
+  eq(#host.state:player(red.player).trades, 0, "the window shows the swap: nothing owed")
+  eq(#host.state:player(green.player).trades, 1, "GREEN's window has not shown it yet")
   red:pairEnd(pid, "done")
   green:pairEnd(pid, "done")
   pump()

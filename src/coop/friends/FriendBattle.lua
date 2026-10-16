@@ -23,7 +23,8 @@
 --   * afterwards the team is healed (HP, PP, status) where it stood; no
 --     prize, no story, no whiteout;
 --   * each Pokémon gets the full trainer EXP and stat EXP of every distinct
---     opposing Pokémon it stood against, won or lost, not split among the
+--     opposing Pokémon it stood against, won or lost (but the side that
+--     forfeits gets none, #67), not split among the
 --     team; a traded Pokémon's boost, levels, moves to learn and evolution
 --     as the engine does them.  A Pokémon "stood against" a foe when both
 --     were out with HP left at the same time.
@@ -252,7 +253,10 @@ function FriendBattle.make(battle, w)
     return linkFinish(s)
   end
   battle.onFinish = function()
-    if w.opts.onEnd then w.opts.onEnd(battle.friend.result or "draw", FriendBattle.awards(battle)) end
+    local result = battle.friend.result or "draw"
+    -- the side that forfeits gets no EXP (#67, A12.5), only the heal
+    local awards = result == "forfeit" and {} or FriendBattle.awards(battle)
+    if w.opts.onEnd then w.opts.onEnd(result, awards) end
   end
 end
 

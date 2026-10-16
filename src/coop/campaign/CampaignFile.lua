@@ -33,7 +33,7 @@ local SaveSerializer = require("src.core.SaveSerializer")
 local CampaignFile = {}
 
 CampaignFile.FORMAT = "gen1recomp-coop campaign"
-CampaignFile.VERSION = 4
+CampaignFile.VERSION = 5
 CampaignFile.DIR = "coop/campaigns"
 -- twelve full PCs and more; a campaign file is never this long
 CampaignFile.MAX_FILE = 64 * 1024 * 1024
@@ -79,6 +79,15 @@ end
 -- counters (`rival`, `chose`); a file from before has neither yet, so the
 -- next player to name him or finish the opening sets them
 CampaignFile.MIGRATIONS[3] = function(data)
+  return data
+end
+
+-- 4 to 5 (#63): each player holds the trades they are owed until a world
+-- of theirs shows them (`trades`); a file from before owes none
+CampaignFile.MIGRATIONS[4] = function(data)
+  for _, entry in ipairs(type(data.players) == "table" and data.players or {}) do
+    if type(entry) == "table" then entry.trades = entry.trades or {} end
+  end
   return data
 end
 

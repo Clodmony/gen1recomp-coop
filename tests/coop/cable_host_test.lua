@@ -20,7 +20,7 @@ local Client = require("src.coop.session.Client")
 local Campaign = require("src.coop.campaign.Campaign")
 local Store = require("src.coop.campaign.Store")
 local World = require("src.coop.campaign.World")
-local CableTrade = require("src.coop.campaign.CableTrade")
+local Trade = require("src.coop.campaign.Trade")
 local HostCable = require("src.coop.session.HostCable")
 local LinkProtocol = require("src.link.Protocol")
 
@@ -231,9 +231,9 @@ do
   check(fs.writes > writes, "the host saved the campaign with the trade")
 
   -- the commit is once: the same swap again changes nothing
-  local again, why = CableTrade.swap(host.state, "cable:" .. red.player .. "-" .. blue.player .. ":1",
-                                     { player = red.player, uid = rattata },
-                                     { player = blue.player, uid = abra })
+  local again, why = Trade.commit(host.state, "cable:" .. red.player .. "-" .. blue.player .. ":1",
+                                  { player = red.player, give = rw.party[1] },
+                                  { player = blue.player, give = bw.party[2] })
   eq(again, false, "a repeated commit id")
   eq(why, "done", "is done already")
   eq(host.state:player(red.player).world.party[1].coopUid, rattata, "and moves nothing back")
@@ -306,8 +306,8 @@ do
   local c = Campaign.new({ id = CID, title = "T", game = "red" })
   c:addPlayer({ id = "p01", name = "RED", game = "red" })
   c:addPlayer({ id = "p02", name = "BLUE", game = "red" })
-  local ok, why = CableTrade.swap(c, "cable:p01-p02:1", { player = "p01", uid = "" },
-                                  { player = "p02", uid = "p02:1" })
+  local ok, why = Trade.commit(c, "cable:p01-p02:1", { player = "p01", give = nil },
+                               { player = "p02", give = Trade.rowOf(c, "p02", "p02:1") })
   eq(ok, false, "no rows on the host")
   eq(why, "unswapped", "is said")
   check(c:applied("cable:p01-p02:1"), "the trade still counts once")

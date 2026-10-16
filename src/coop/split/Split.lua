@@ -16,6 +16,10 @@
 --   * remembers its own player per host and campaign (Identity, seat 2);
 --   * plays in a save slot of its own, the campaign's slot for seat 2
 --     (CoopSettings:enterSlot, design A3.14), filled from the host's file;
+--   * starts as the launcher said (opts.start, #64): when the campaign
+--     does not know this player, the opening, Pallet Town with a starter
+--     or a trainer brought from a solo save (#57's choice, Start.make),
+--     said on its hello and written into its slot;
 --   * writes a session log of its own (SessionLog, "-seat2");
 --   * plays its sound effects in the window's one mix, beside player 1's;
 --     the music is player 1's alone (decision G23, #51).
@@ -72,7 +76,9 @@ end
 
 -- Ask for split-screen once the game runs.  opts: name (seat 2's trainer
 -- name for a host that does not know it yet), settings (a CoopSettings;
--- loaded from the save folder when absent); a test passes boot(sp), which
+-- loaded from the save folder when absent), start (how seat 2 starts when
+-- the host does not know it: { how = "pallet", starter } or { how =
+-- "save", slot }; nil: the opening, #64); a test passes boot(sp), which
 -- builds seat 2's game inside its world instead of Game:load.
 function Split.request(opts)
   Split.pending = opts or {}
@@ -111,6 +117,7 @@ function Split.start(game, opts)
     home = Worlds.home(), status = "dialling", reason = nil,
     version = home.cartridge.game, settingsFile = settings and settings.fs,
     name = opts.name or (settings and settings.name2) or Split.NAME,
+    start = opts.start, -- #64
     boot = opts.boot,
   }
   Split.current, Split.pending = sp, nil
@@ -159,6 +166,12 @@ local function enterSlot(sp, s)
   local slot = settings and campaign and settings:enterSlot(SaveData, sp.version, campaign, title, 2)
   if not slot then return false, "no save slot" end
   local save = s:takeWorld()
+  -- a player the campaign has no world for starts as the launcher said (#64)
+  if save == nil and sp.start then
+    local why
+    save, why = require("src.coop.campaign.Start").make(SaveData, sp.version, sp.start, s)
+    if not save then return false, "start: " .. tostring(why) end
+  end
   if save then
     local wrote, err = SaveData.writeSlot(sp.version, slot, save)
     if not wrote then return false, tostring(err) end
@@ -195,7 +208,10 @@ local function stepSeat2(sp, dt)
   end
   Session.tick(dt, nil)
   if s.status == "probed" then
-    s:join()
+    -- how a new player starts goes on the hello (#66); a known one opens
+    -- the campaign's world
+    local you = s.lobby and s.lobby.you
+    s:join(nil, not (you and you.player) and sp.start and sp.start.how or nil)
   elseif s.status == "joined" and s:worldReady() then
     local ok, why = enterSlot(sp, s)
     if not ok then

@@ -22,11 +22,13 @@
 -- window's screen goes back to the receptionist's menu.
 --
 -- Trades (A12.7): the host reads the trade's party, pick and confirm
--- messages.  A confirm is held until both confirmed; then the host swaps
--- the two Pokémon once in the stored worlds (CableTrade.swap, uids kept),
--- saves the campaign and only then hands each window the other's confirm
--- with the uid of the Pokémon it receives.  So a trade is either in both
--- worlds or in neither.  No offer within OFFER_WAIT seconds of the first,
+-- messages.  A confirm is held until both confirmed; then the host commits
+-- the trade once with the one trade core direct trades use too
+-- (Trade.commit, #62: the stored worlds swap, uids kept, and each player is
+-- owed their side), saves the campaign and only then hands each window the
+-- other's confirm with the uid of the Pokémon it receives.  So a trade is
+-- either in both worlds or in neither, and a window whose link dropped
+-- before it heard the yes applies the trade at its next rest point (#63).  No offer within OFFER_WAIT seconds of the first,
 -- or no answer within ANSWER_WAIT seconds of both offers, and the host
 -- moves the trade's round on: both screens go back to their lists, and
 -- messages of the old round are dropped.
@@ -35,7 +37,7 @@
 -- lead's seed, each against a copy of the other's team; the host passes
 -- its messages and keeps nothing (no co-op battle, no prize, no save).
 
-local CableTrade = require("src.coop.campaign.CableTrade")
+local Trade = require("src.coop.campaign.Trade")
 
 local HostCable = {}
 
@@ -197,16 +199,17 @@ local function commit(host, pair)
     local pick = t.picks[id]
     if type(pick) ~= "number" then return "" end
     local uid = (t.uids[id] or {})[pick]
-    if type(uid) == "string" and uid ~= "" and CableTrade.slotOf(host.state, id, uid) then
+    if type(uid) == "string" and uid ~= "" and Trade.rowOf(host.state, id, uid) then
       return uid
     end
-    return CableTrade.uidOf(host.state, id, (t.mons[id] or {})[pick])
+    return Trade.uidOf(host.state, id, (t.mons[id] or {})[pick])
   end
   local ua, ub = uidOf(pair.a), uidOf(pair.b)
   pair.trades = pair.trades + 1
   local id = ("cable:%s:%d"):format(pair.id, pair.trades)
-  local swapped, why = CableTrade.swap(host.state, id, { player = pair.a, uid = ua },
-                                       { player = pair.b, uid = ub })
+  local swapped, why = Trade.commit(host.state, id,
+                                    { player = pair.a, give = Trade.rowOf(host.state, pair.a, ua) },
+                                    { player = pair.b, give = Trade.rowOf(host.state, pair.b, ub) })
   host:_log("cable_trade", { pair = pair.id, commit = id, a = ua, b = ub,
                              swapped = swapped, why = why })
   -- the campaign is saved with the trade in it (design A12.7)

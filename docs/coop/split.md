@@ -13,8 +13,9 @@ online partners. The code is `src/coop/split/`.
   (`Seats.complete(2)`): the hosting screen shows **ENTER WITH 2 PLAYERS**
   beside ENTER THE WORLD, and the connection check shows **JOIN WITH 2
   PLAYERS** beside JOIN AS. Without two claimed devices the rows are not
-  there. Either row enters with `coop_enter { split = true }`. The launcher
-  then asks `Split.request` before the game boots.
+  there. Either row asks player 2's name, then how player 2 starts (below),
+  and enters with `coop_enter { split = true, start2 }`. The launcher then
+  asks `Split.request` before the game boots.
 - **Development entry.** `--coop-split[=NAME]` (`POKEPORT_COOP_SPLIT=NAME`,
   or `1`) with `--coop-host` or `--coop-join` adds player 2, named NAME
   when the host does not know them yet ([session.md](session.md)).
@@ -23,7 +24,8 @@ Player 1's game boots as in solo co-op. Once its session is in
 (`Dev.update`), `Split.frame` starts player 2. Player 2 dials, joins, enters
 a save slot of its own and boots its own game at the title, and its view
 says `JOINING...` until then. CONTINUE on player 2's title enters their
-world; a player new to the campaign starts a NEW GAME.
+world: the campaign's world for a player it knows, else the start player 2
+chose (a NEW GAME for the opening).
 
 ## Two worlds in one process
 
@@ -166,6 +168,25 @@ offering the name remembered on this device (`name2` in
 (#22, [opening.md](opening.md)). Oak's speech then uses that name. The
 development entry takes `--coop-split=NAME`; without a name the second
 seat is `PLAYER2` until a host knows them.
+
+## How player 2 starts (#64)
+
+After the name, a screen of its own asks **HOW PLAYER 2 STARTS** with
+#57's choices ([opening.md](opening.md)): THE OPENING (the default), START
+IN PALLET with a STARTER (Red and Blue), or BRING A SAVE from this device's
+solo saves. It is player 2's own choice: player 1's HOW YOU START is not
+touched. ENTER WITH 2 PLAYERS (or JOIN WITH 2 PLAYERS) on it goes on; B
+goes back with no second player.
+
+- The screen is skipped for a player 2 the campaign knows (this device's
+  seat-2 identity has a player in it, `env.seat2Known`): they open the
+  campaign's world, as a returning player does (A4.3).
+- `Split.request({ start })` carries the choice. Seat 2's hello says how
+  it starts (#66) when the host does not know it, and when the host has no
+  world for seat 2, `Start.make` (the launcher's own builder for player 1)
+  writes the start world into seat 2's slot: Pallet Town under player 2's
+  name with the campaign's rival, or the brought save. Seat 2's window then
+  sends it to the host whole (`start`), as player 1's does.
 
 ## Not yet
 

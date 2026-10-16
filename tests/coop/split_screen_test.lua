@@ -358,7 +358,9 @@ do
   love.gamepadreleased = function(j, b) game1:gamepadreleased(j, b) end
 
   local booted
-  Split.request({ name = "BLUE", settings = CoopSettings.load(fs), boot = function(sp)
+  -- player 2 starts in Pallet Town with SQUIRTLE (#64)
+  Split.request({ name = "BLUE", settings = CoopSettings.load(fs),
+                  start = { how = "pallet", starter = "SQUIRTLE" }, boot = function(sp)
     booted = fixtureGame("BLUE")
     -- what Split's own boot does around Game:load
     local S2 = require("src.coop.split.Split") -- shared: the same table
@@ -399,6 +401,17 @@ do
      "seat 2's player is remembered for seat 2 (for the next session)")
   local saved = CoopSettings.load(fs).slots[CID]
   check(saved and saved.slot2, "seat 2 entered a save slot of its own in the campaign")
+  -- how player 2 starts (#64): said on the hello, the start world in its slot
+  eq(sp.session.client.start, "pallet", "seat 2's hello says it starts in Pallet Town (#66)")
+  local slotSave = Worlds.run(sp.world, function()
+    local SaveData = require("src.core.SaveData")
+    local ok, save = pcall(SaveData.decode, SaveData.readSlotSource("red", saved.slot2) or "")
+    return ok and save or nil
+  end)
+  eq(slotSave and slotSave.coopStart, "pallet", "seat 2's slot holds a world started in Pallet Town")
+  eq(slotSave and slotSave.party and slotSave.party[1] and slotSave.party[1].species, "SQUIRTLE",
+     "with player 2's starter")
+  eq(slotSave and slotSave.player and slotSave.player.name, "BLUE", "under player 2's name")
 
   local function cell(game)
     local p = game.overworld.player

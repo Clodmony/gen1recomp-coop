@@ -804,6 +804,9 @@ proposed): invitations, a friend battle on upstream's lockstep link
 battle, a direct trade with the host's swap once; the Cable Club and the
 Colosseum (7 to 9) are #60.
 
+Both kinds of trade share one core and owe a committed trade until a
+world shows it (#62, #63, G37).
+
 In place for the Cable Club (#60, [cable.md](cable.md), G32): its trades,
 the continue position and the Colosseum (A12.7 to A12.9), with these
 adaptations: the room is chosen at the receptionist's link menu and a
@@ -833,7 +836,8 @@ center its town leads into, where upstream puts its added rooms' saves.
    money, story reward or whiteout; each Pokémon gets the full trainer EXP and
    stat EXP for every distinct opposing Pokémon it faced, won or lost, not
    split among teammates; traded boosts, levels, learning and evolution as the
-   engine does (D100, design).
+   engine does (D100, design). Amended by G36: the side that forfeits (RUN)
+   gets no EXP; the other side keeps it.
 6. **adapt** Direct trade: after acceptance both see the normal trade screen where they
    stand; the host swaps the two Pokémon exactly once, keeping uids and
    applying trade evolutions; CANCEL (below the party) returns both in place;
@@ -1594,3 +1598,30 @@ sibling's D-numbers.
   waiting two minutes on a silent screen. Details:
   [session.md](session.md) *Identity*, [battles.md](battles.md)
   *Nobody left*.
+- **G36. The side that forfeits a friend battle gets no EXP** (#67,
+  owner, 2026-10-16). A12.5 paid each Pokémon the EXP of every foe it
+  stood against "won or lost", so starting a friend battle and running on
+  turn 1 paid full trainer EXP (621 in the integrated live run): two
+  players could farm EXP. Now the player who forfeits (RUN) gets no EXP
+  and no stat EXP; their team is still healed. The partner who did not
+  run, a battle fought to the end on both sides and a released battle
+  (A12.4) pay as A12.5 says. Details: [friends.md](friends.md).
+- **G37. One trade core; a committed trade is owed until a world shows
+  it** (#62, #63, 2026-10-16, accepted by the owner the same day). Group 11 left two cores: #23's
+  direct trade (each window swaps its rows, the host commits once and lays
+  the swap over a window's copies, in host memory) and #60's Cable Club
+  (the host swaps its stored worlds by uid, the windows stamp the uid they
+  receive). Both now commit through `Trade.commit`: the stored worlds swap
+  once under the commit id, and each player is owed their side, kept in
+  the campaign file (version 5), until a world or holdings from their
+  window shows it; until then the host lays it over every one that window
+  sends. Each window applies its own side (G25): on its trade screen when
+  it hears the host's yes, else at its next rest point from the owed list
+  the host sends it (`trades`, protocol 18), with the trade's line, a trade
+  evolution and a save, but no movie. A row the host put in a world
+  carries the commit id (`coopTrade`) until a window played the trade, so
+  a window that restarted on the host's world still plays it once. This closes #60's gap (a window
+  whose link dropped after the commit and before the yes brought the old
+  row back with its next world: a clone) and the same gap in a direct
+  trade, which also lost the host's lay-over on a host restart. Details:
+  [friends.md](friends.md), [cable.md](cable.md).

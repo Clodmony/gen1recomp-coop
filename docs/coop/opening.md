@@ -81,7 +81,8 @@ shows while the player is in the opening.
   takes it at its rest points.
 - **Player 2** on a split-screen device names themself in the launcher (ENTER
   WITH 2 PLAYERS and JOIN WITH 2 PLAYERS ask PLAYER 2 NAME first, offering
-  the remembered `name2`), as any new player does ([split.md](split.md)).
+  the remembered `name2`), as any new player does, then chooses how they
+  start like any new player (#64, [split.md](split.md)).
 
 ## The rival's starter (A4.6)
 
@@ -162,8 +163,8 @@ with the old one) that the host refuses as `returning` went through on
 the old one. Any other refusal leaves the window closed: it sends
 nothing, so the host's world for the player stays as it was.
 
-Not covered: a second seat on a split-screen device plays the opening;
-a Pallet start into a campaign nobody named the rival in keeps the new
+A second seat on a split-screen device chooses its own start (#64,
+[split.md](split.md) *How player 2 starts*). Not covered: a Pallet start into a campaign nobody named the rival in keeps the new
 game's rival name until somebody names him in Oak's speech.
 
 ## Protocol and file

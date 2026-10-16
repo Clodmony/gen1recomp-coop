@@ -8,7 +8,8 @@
 -- window swaps on its own team (uids, original trainers, the Pokédex), the
 -- received KADABRA-like Pokémon evolves by trade with its uid; CANCEL and
 -- B return both with nothing traded; a dropped partner before the swap
--- ends it.
+-- ends it.  An owed trade landed at a rest point (#63): the line, the
+-- trade evolution, the save.
 --   luajit tests/coop/friends_trade_test.lua
 
 package.path = "./?.lua;./?/init.lua;" .. package.path
@@ -194,7 +195,33 @@ do
   run(host, clients, games, function() return host.friends.pairs[pid] == nil end, 60)
   eq(host.friends.pairs[pid], nil, "both sides done: the pairing is over")
   -- the host's copy of the worlds: owed until each window shows it
-  check(host.friends.owed[red.player] ~= nil, "RED owes the host a world with the swap")
+  eq(#host.state:player(red.player).trades, 1, "RED owes the host a world with the swap")
+end
+
+-- an owed trade landed at a rest point (#63): the line, the evolution, a save --------
+do
+  local SharedWorld = require("src.coop.game.SharedWorld")
+  local g = game("GREEN", 2222, { mon("FIXMON_A", 8, "p02:1", "GREEN", 2222) })
+  local writes = {}
+  g.writeSave = function(_, kind) writes[#writes + 1] = kind return true end
+  local got = mon("FIXMON_C", 30, "p01:1", "RED", 1111)
+  g.save.party[1] = got
+  SharedWorld.traded(g, got, mon("FIXMON_A", 8, "p02:1", "GREEN", 2222))
+  local box = g.stack:top()
+  local first = box and box.pages and box.pages[1]
+  local line = type(first) == "table" and table.concat(first, " ") or tostring(first)
+  check(line:find("Trade completed") ~= nil, "the trade's line over the map")
+  g.mash = true
+  for _ = 1, 3000 do
+    if #writes > 0 then break end
+    g.mashTick = g.mashTick + 1
+    local top = g.stack:top()
+    if top and top.update then top:update(1 / 60) end
+    g.taps = {}
+  end
+  eq(g.save.party[1].species, "FIXMON_B", "the received Pokémon evolves by trade")
+  eq(g.save.party[1].coopUid, "p01:1", "keeping its uid")
+  eq(writes[1], "link", "and the trade is saved")
 end
 
 -- CANCEL, B and a drop -------------------------------------------------------------
