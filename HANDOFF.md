@@ -6,35 +6,52 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (Group 11 built by six parallel agents: PR #61,
-stacked on #58).
+Last updated 2026-10-16 (Group 11 integrated and tested live, with the
+3D mod: PR #61, stacked on #58).
+
+## Testing rule (owner, 2026-10-16)
+
+The session tests everything itself, live with the cartridge, on the
+**integrated** branch: every scenario of a feature, through the fork's
+launcher and the game's menus, including desktop situations (two windows,
+focus lost and back, hidden and shown, a frozen or crashed window). It
+fixes what breaks (failing test first) before reporting. The owner does
+not playtest; they play through with a friend once most of the work is
+done. The Dramatic Shape 3D mod (#30) is a hard requirement for that
+playthrough, so every live run of a new feature also runs with the mod
+on.
 
 ## Repository state
 
 - Default branch `gen1recomp-coop`; `main` = upstream main.
-- Milestones: Group 8 holds #22 (done by #58). **Group 11: Story and
-  versions, in parallel** holds #57, #59, #55, #23, #60, #9 and #34, all
-  done by #61. Group 2 still has #12 and #15 (owner-side checks); Group
-  10 (#7, #27, #30) is open.
+- Milestones: Group 8 holds #22 (done by #58). **Group 11** holds #57,
+  #59, #55, #23, #60, #9, #34, #30, #65 and #66, all done by #61.
+  **Group 12: Group 11 follow-ups** holds #62, #63, #64. Group 2 still has
+  #12 and #15 (owner-side checks); Group 10 holds #7 (mobile) and #27
+  (launcher entries).
 
 ## Open pull requests (draft)
 
 - **#58** `coop/group8-opening` into `gen1recomp-coop`: closes #22.
-  Owner (2026-10-16): merge after their own check. G27 accepted.
+  G27 accepted. Tested live again inside #61's integrated runs.
 - **#61** `coop/group11` into `coop/group8-opening` (stacked): closes
-  #57, #59, #55, #23, #60, #9, #34. Six agents, one per issue, merged
-  one at a time; protocol 16 (11 scenes, 12 Red and Blue, 13 starts, 14
-  Cable Club, 15 friends, 16 League). Decisions G28, G32 and G33
-  accepted by the owner (2026-10-16); G29, G30 and G31 stay proposed for
-  a later look.
-  Verify ALL PASSED at ecb289d4 (37/37 tiers). luacheck has not run on
-  this code (not installed here, and CI does not run on a stacked PR):
-  it runs once #61 targets `gen1recomp-coop`.
-  - **Owner (2026-10-16): test #58 and #61 together** in real windows
-    with the session; prepared playtest: see *Playtest* below.
-  - Merge order afterwards: #58 first, then `gh pr edit 61 --base gen1recomp-coop`,
-    let CI (lint) pass, then merge #61 locally as Claude
-    (`git merge --no-ff`), push, run `tools/verify.sh`.
+  #57, #59, #55, #23, #60, #9, #34, #30, #65, #66. Protocol 17 (11
+  scenes, 12 Red and Blue, 13 starts, 14 Cable Club, 15 friends, 16
+  League, 17 the hello's `start`); campaign file version 4. Decisions
+  G28, G32, G33 accepted; G29, G30, G31, G34 (the 3D mod) and G35 (a
+  window that comes back is its own player; a unique encounter nobody is
+  in is fought afresh) proposed.
+  - Verify ALL PASSED at ee8d6289 (37/37 tiers); co-op tier 52/52 at the
+    head. luacheck has not run (not installed here; CI does not run on a
+    stacked PR): it runs once #61 targets `gen1recomp-coop`.
+  - Integrated live runs (round 2): every feature again on the merged
+    branch; seven bugs found and fixed (the PR body lists them). The 3D
+    mod on the merged build: co-op, battles, walk-in, friend battle,
+    split-screen. Not run: real windows and pads, Wayland minimizing,
+    two machines, Yellow, German cartridges, the mod's Stadium models.
+  - Merge order: #58 first, then `gh pr edit 61 --base gen1recomp-coop`,
+    let CI (lint) pass and fix what it finds, then merge #61 locally as
+    Claude (`git merge --no-ff`), push, run `tools/verify.sh`.
 
 ## Group 11's detail choices (owner, 2026-10-16: every recommendation taken)
 
@@ -81,21 +98,23 @@ good (#9's answer); a gift lost on a reset is accepted and documented
 3. "Every connected player inducted" literal (includes players in the opening/elsewhere) [rec] / only players who entered the League this run.
 4. A gift landed after the last holdings is lost on a reset: accept and document [rec] / follow-up: host re-sends owed gifts after a restart.
 
-## Playtest (prepared 2026-10-16, owner and session together)
-
-`~/dev-scratch/gen1recomp-coop/playtest/`: `play.sh a` (host) and
-`play.sh b` (guest) start the `coop/group11` worktree with private save
-folders (`XDG_DATA_HOME`); A has US Red, B US Red and Blue, each with four
-solo saves to BRING A SAVE (LEAGUE, TRADE, RIVAL, WILD; built by
-`prep.lua`). `CHECKLIST.md` lists the scenarios; the session reads
-`a/`/`b/` `console.log` and `love/gen1recomp-coop/coop/logs/`. Delete the
-folder once #61 is merged (it holds extracted cartridge data).
+### Round 2 (integrated tests, #30, the itest agents): asked 2026-10-16
+- Forfeit EXP farm (A12.5 pays "won or lost"; RUN on turn 1 paid 621 EXP): no EXP to the side that forfeits [rec] / only after a full turn / keep.
+- Flood rule also hits the host's own loopback player at inhuman rates: leave [rec] / exempt loopback.
+- G34 (the 3D mod) as written: accept [rec] / change.
+- SELECT in a co-op session opens the CO-OP menu, the mod's camera on "3" and its OPTIONS row [rec] / the mod keeps SELECT everywhere.
+- Own colour in 3D with SGB colours not shown on your own screen: accept and document [rec] / follow-up.
+- MODS page in SETTINGS only [rec] / also on each solo sheet.
+- T-SHIFT blur also blurs an arrow at the top/bottom edge: accept [rec] / follow-up.
+- G35 (same window / same seat takes its player back, 5 s hold): accept [rec] / strict A1.9 with duplicates.
+- G35 (a unique encounter nobody is in ends as fled when met again): accept [rec] / keep the 2-minute wait with a waiting box.
+- A brought save loses its own story entries when the campaign has a story (MISTY's POKéDEX row): keep per A4.3 [rec] / follow-up to keep key items like the Pokédex.
 
 ## Next candidates
 
 - Group 12 (#62, #63, #64) once #61 is merged.
-- Group 10 (#7 mobile, #27 launcher entries, #30 voxel mod) needs owner
-  decisions per feature; Group 2's #12 and #15 are owner-side checks.
+- Group 10 (#7 mobile, #27 launcher entries) needs owner decisions per
+  feature; Group 2's #12 and #15 are owner-side checks.
 
 ## Live-run recipe
 
@@ -174,6 +193,20 @@ folder once #61 is merged (it holds extracted cartridge data).
   tap A whenever something holds the player (the rival's walk-out lines).
   A test client with no world in the campaign is in the opening until it
   sends `sendOpening(true)`.
+- **Launcher-driven runs and the 3D mod.** The integrated tests drove the
+  fork's launcher: write `relaunch_to_launcher.txt` (`return { tab = "red" }`)
+  in the save folder, and the driver gets the launcher (`arg.menu`) first,
+  then the game. Set the ports in the driver (`Transport.DEFAULT_PORT`,
+  `Beacon.PORT`, the launcher's `CoopMenu.DEFAULT_PORT`). Install the mod
+  by hand per run: copy the owner's downloaded copy
+  (`~/dev-scratch/gen1recomp-coop/mod-dl/dsv`, never committed: its
+  licence forbids redistribution) to `<save folder>/mods/dsv`, then
+  `require("src.render.Pipelines").setLevel("voxel", 4)` in the driver.
+  Drivers and save templates of Group 11 are in
+  `~/dev-scratch/gen1recomp-coop/g11/` (`itest1/`, `itest2/`, `fin/`,
+  `tpl/a`, `tpl/b` with four solo saves each; `itest1/regress.sh` reruns
+  every itest1 scenario). Keep them until #61 is merged, then delete
+  `tpl/` (it holds extracted cartridge data).
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -187,11 +220,11 @@ folder once #61 is merged (it holds extracted cartridge data).
 - Main checkout on `gen1recomp-coop` (leave it; behind origin until pulled).
 - The Superset worktree `veiled-degree-…` holds `coop/group8-opening`.
 - `~/dev-scratch/gen1recomp-coop/wt/group11` holds `coop/group11`; remove
-  it once #61 is merged. The six agent branches and worktrees are
-  removed (all merged into `coop/group11`).
-- No background processes. Group 11's scratch (imports, drivers, logs)
-  is deleted; `~/dev-scratch/gen1recomp-coop/g11/` keeps only the brief,
-  the issue and PR bodies and the questions, deleted after the handoff.
+  it once #61 is merged. Every agent branch and worktree is removed (all
+  merged into `coop/group11`).
+- No background processes. `~/dev-scratch/gen1recomp-coop/g11/` keeps
+  the drivers, save templates and questions (see the recipe); the
+  playtest folder is deleted.
 
 ## Still open
 
