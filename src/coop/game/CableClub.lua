@@ -77,7 +77,7 @@ end
 -- the link transport --------------------------------------------------------------
 
 -- what tells a party row from its packed copy
-local key = require("src.coop.campaign.CableTrade").key
+local key = require("src.coop.campaign.Trade").key
 
 -- the uid of each packed Pokémon of a party message, "" for none
 function CableClub.uidsFor(party, mons)

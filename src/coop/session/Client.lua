@@ -26,7 +26,9 @@
 -- sends its holdings at rest points (c:sendHoldings(world, boxes), Window
 -- decides when); c.uids lists the uids the host gave its rows, for the
 -- window to stamp.  A new player's start (#57): c:sendStart(how, text), and
--- c.started holds the seq of the start the host kept.
+-- c.started holds the seq of the start the host kept.  Trades (#63):
+-- c.trades lists the trades the host says this player is owed ({ id,
+-- give, get }, rows as save text; Window.lua applies each and drops it).
 --
 -- Co-op battles (#18): c.battles holds each battle this player is in or
 -- joining, as the host sent it: { id, seed, open, inputs, rev, players, ask,
@@ -91,6 +93,7 @@ function Client.new(conn, opts)
     story = nil, -- the shared story as the host last sent it (#14)
     storyApplied = 0, storyRev = 0,
     gifts = {}, -- items the host owes this player, oldest first (#16)
+    trades = {}, -- trades the host owes this player, oldest first (#63)
     uids = {}, -- uids the host gave this player's rows: { box, slot, uid, fp } (#17)
     battles = {}, -- battles this player is in or joining, by id (#18)
     wild = nil, -- the other version's wild slots: { game, maps } (#9)
@@ -414,6 +417,8 @@ function Client:_handle(msg)
     self:_pairMsg(msg)
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
+  elseif t == "trades" then
+    for _, x in ipairs(msg.list) do self.trades[#self.trades + 1] = x end
   elseif t == "wild" then
     self.wild = { game = msg.game, maps = msg.maps } -- #9
   elseif t == "started" then

@@ -33,12 +33,12 @@
 -- Direct trade (A12.6): each window sends its team as its trade screen
 -- opens (`trade_team`), then the slot it offers (`trade_pick`) and its
 -- TRADE or CANCEL (`trade_confirm`).  Two TRADEs commit the trade once
--- (`trade:<pair>`): both players' worlds in the campaign get the swap
--- (src/coop/campaign/Trade.lua), and until a player's window shows it, the
--- swap is laid over every world or holdings that window sends, so a copy
--- sent before the window applied it cannot undo it (G25: the window stays
--- the writer of its own holdings).  CANCEL, or either player leaving
--- before the commit, ends the pairing for both (`cancel`, `left`).
+-- (`trade:<pair>`) with the one trade core the Cable Club uses too
+-- (src/coop/campaign/Trade.lua, #62): both players' worlds in the campaign
+-- get the swap, each player is owed their side until a world of theirs
+-- shows it, and a window that never heard the trade was done applies it
+-- at its next rest point (#63).  CANCEL, or either player leaving before
+-- the commit, ends the pairing for both (`cancel`, `left`).
 
 local Protocol = require("src.coop.session.Protocol")
 local HostBattles = require("src.coop.battle.HostBattles")
@@ -52,7 +52,7 @@ HostFriends.GRACE = 120  -- seconds a dropped partner has to come back (A12.4)
 local function state(host)
   local f = host.friends
   if not f then
-    f = { invites = {}, pairs = {}, owed = {} }
+    f = { invites = {}, pairs = {} }
     host.friends = f
   end
   return f
@@ -237,39 +237,17 @@ function HostFriends.pick(host, p, msg)
   return true
 end
 
--- the swap a player is owed: laid over `save` (their world or holdings);
--- forgotten once the save shows it
-local function layOver(host, pid, save)
-  local owed = state(host).owed[pid]
-  if not owed or type(save) ~= "table" then return end
-  local how = Trade.swap(save, owed.give, owed.get)
-  if how ~= "swapped" then
-    state(host).owed[pid] = nil
-    host:_log("trade_shown", { pair = owed.pair, how = how or "gone" }, host.byId[pid])
-  end
-end
-
--- a world or holdings from a window (Host:_world, Host:_holdings)
-function HostFriends.layOver(host, p, save)
-  layOver(host, p.id, save)
-end
-
 -- both offered and both said TRADE: the swap, once (A12.6)
 local function commit(host, pair)
   local a, b = pair.sides[1], pair.sides[2]
   local rowA = pair.teams[a].rows[pair.picks[a]]
   local rowB = pair.teams[b].rows[pair.picks[b]]
   local campaign = host.state
-  local done = campaign:commit("trade:" .. pair.id, function(c)
-    for _, s in ipairs({ { a, rowA, rowB }, { b, rowB, rowA } }) do
-      c:addPlayer({ id = s[1], name = host.byId[s[1]] and host.byId[s[1]].name or "?" })
-      state(host).owed[s[1]] = { pair = pair.id, give = s[2], get = s[3] }
-      local cp = c:player(s[1])
-      if cp and cp.world then
-        Trade.swap(cp.world, s[2], s[3])
-      end
-    end
-  end)
+  for _, pid in ipairs({ a, b }) do
+    campaign:addPlayer({ id = pid, name = host.byId[pid] and host.byId[pid].name or "?" })
+  end
+  local done = Trade.commit(campaign, "trade:" .. pair.id, { player = a, give = rowA },
+                            { player = b, give = rowB })
   pair.done = true
   host:_log("trade", { pair = pair.id, committed = done,
                        gave = { [a] = rowA.species, [b] = rowB.species },

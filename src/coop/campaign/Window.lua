@@ -10,7 +10,8 @@
 --                           still = true,  -- not between two cells
 --                           reload = function(map) … end,
 --                           refresh = function(map) … end,
---                           gifted = function(gift, where) … end })  -- optional
+--                           gifted = function(gift, where) … end,   -- optional
+--                           traded = function(row, gave) … end })  -- optional
 --   w:flush(save)   -- START > SAVE: the scene so far goes out now
 --
 -- Rules:
@@ -44,6 +45,13 @@
 --     last one taken (`coopGifts`), so a gift heard again after a rejoin
 --     is skipped unless the world it landed in was never saved.  A gift
 --     taken is not this window's own change.
+--   * Trades (#63, Trade.lua): a trade the host committed that this
+--     window's save does not show yet (its link dropped before the yes,
+--     or it came back without its trade screen) lands at a rest point:
+--     the row it gave leaves, the row it gets takes its place with its
+--     uid, the Pokédex marks it, and `traded(row, gave)` lets the game
+--     say so and run a trade evolution.  One the save shows already
+--     changes nothing.
 --   * Holdings (#17, design A7.2, A7.4, A7.5, G25): the party, current box,
 --     Pokédex, bag and money are looked at on the first rest frame after
 --     the player was held and every HOLDINGS_EVERY rest frames after (a
@@ -85,6 +93,7 @@ local Items = require("src.coop.campaign.Items")
 local World = require("src.coop.campaign.World")
 local Campaign = require("src.coop.campaign.Campaign")
 local Protocol = require("src.coop.session.Protocol")
+local Trade = require("src.coop.campaign.Trade")
 
 local Window = {}
 Window.__index = Window
@@ -105,6 +114,7 @@ function Window.new(client)
     bag = nil,       -- the bag at the last rest point (Items.bag)
     money = nil,     -- the money then
     gifts = 0,       -- gifts landed (a counter for the log and the tests)
+    trades = 0,      -- owed trades landed (#63)
     held = nil,      -- the holdings as last sent or noted (#17), as text
     heldBoxes = nil, -- the PC then, as text
     boxesTo = nil,   -- the client the PC last went to
@@ -316,6 +326,30 @@ function Window:_holdings(save, pc)
   return seq
 end
 
+-- the trades the host owes this player (#63): each lands once
+function Window:_trades(f)
+  local list = self.client.trades
+  if type(list) ~= "table" or #list == 0 then return end
+  self.client.trades = {}
+  -- what the window had before is the host's already (a first rest point
+  -- only notes it); the trade landed goes out at once
+  if not self.held then self.held, self.heldBoxes = holdingsKey(f.save), boxesText(f.save) end
+  local landed = false
+  for _, t in ipairs(list) do
+    local give, get = Trade.decodeTeam(t.give), Trade.decodeTeam(t.get)
+    give, get = give and give[1], get and get[1]
+    local how, _, _, row
+    if give and get then how, _, _, row = Trade.swap(f.save, give, get) end
+    if how == "swapped" then
+      Trade.mark(f.save, row.species)
+      self.trades = self.trades + 1
+      landed = true
+      if f.traded then f.traded(row, give) end
+    end
+  end
+  if landed then self:_holdings(f.save, true) end
+end
+
 -- the uids the host gave this window's rows (#17, design A7.3); the
 -- holdings stay noted as sent when only the uids moved
 function Window:_uids(save)
@@ -369,6 +403,7 @@ function Window:update(f)
   end
   self:_rival(f.save)
   self:_gifts(f)
+  self:_trades(f)
   self:_note(f.save)
   self:_uids(f.save)
   local since = self.rest - Window.REST_FRAMES

@@ -35,6 +35,10 @@
 -- a player is owed waits in their `gifts` ({ seq, item, qty, once, from,
 -- race }, qty < 0 takes), numbered by their `giftSeq`, until a world they
 -- save shows it taken (`coopGifts`, the last seq their window applied).
+--
+-- Trades (#62, #63, Trade.lua): what a player is owed of a committed trade
+-- waits in their `trades` ({ id, give, get }: the commit id, the row they
+-- gave and the row they get) until a world their window sends shows it.
 
 local SaveSerializer = require("src.core.SaveSerializer")
 local World = require("src.coop.campaign.World")
@@ -415,6 +419,15 @@ local function sortedKeys(t)
   return out
 end
 
+-- one Pokémon row from its save text (an owed trade's), or nil
+function Campaign.row(text)
+  if type(text) ~= "string" or #text > 64 * 1024 then return nil end
+  local ok, row = pcall(SaveSerializer.decode, text)
+  if not ok or type(row) ~= "table" then return nil end
+  if World.check({ player = {}, party = { row } }) then return nil end
+  return row
+end
+
 -- The campaign as plain data (CampaignFile writes it as JSON).  A player's
 -- world is the game's save text, the PC apart (`boxes`); `skipBoxes[id]`
 -- leaves that player's PC out (the journal, design A3.8).
@@ -422,7 +435,12 @@ function Campaign:snapshot(skipBoxes)
   local players = {}
   for i, p in ipairs(self.players) do
     local entry = { id = p.id, name = p.name, game = p.game, serial = p.serial,
-                    trainer = p.trainer, giftSeq = p.giftSeq or 0, gifts = p.gifts or {} }
+                    trainer = p.trainer, giftSeq = p.giftSeq or 0, gifts = p.gifts or {},
+                    trades = {} }
+    for k, t in ipairs(p.trades or {}) do
+      entry.trades[k] = { id = t.id, give = SaveSerializer.encode(t.give),
+                          get = SaveSerializer.encode(t.get) }
+    end
     if p.world then
       local rest, boxes = World.split(p.world)
       entry.world = rest
@@ -501,6 +519,14 @@ function Campaign.fromSnapshot(data, boxesOf)
     for _, g in ipairs(type(entry.gifts) == "table" and entry.gifts or {}) do
       local gift = Protocol.gift(g)
       if gift and gift.seq <= p.giftSeq then p.gifts[#p.gifts + 1] = gift end
+    end
+    -- the trades owed (#63): a row that does not read back is dropped
+    for _, t in ipairs(type(entry.trades) == "table" and entry.trades or {}) do
+      local give, get = Campaign.row(t.give), Campaign.row(t.get)
+      if Campaign.commitId(t.id) and give and get then
+        p.trades = p.trades or {}
+        p.trades[#p.trades + 1] = { id = t.id, give = give, get = get }
+      end
     end
     if entry.world ~= nil then
       local boxes = entry.boxes

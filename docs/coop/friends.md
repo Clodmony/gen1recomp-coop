@@ -142,21 +142,30 @@ laid over a world or holdings), `Client.lua`, `Protocol.lua`,
   completed!", and a trade evolution (KADABRA, MACHOKE, GRAVELER, HAUNTER;
   it cannot be cancelled), then saves again. One trade per pairing; both
   are back on the map.
-- **The window stays the writer** of its holdings (G25): until a player's
-  window sends a world or holdings that shows the swap, the host lays the
-  swap over every one it sends, so a copy sent before the window applied
-  it cannot undo it. The window's later copy wins (its evolution, for
-  example).
+- **The window stays the writer** of its holdings (G25): the commit owes
+  each player their side of the trade (kept in the campaign file, G37).
+  Until a player's window sends a world or holdings that shows the swap,
+  the host lays the swap over every one it sends, so a copy sent before
+  the window applied it cannot undo it or clone a row. The window's later
+  copy wins (its evolution, for example).
+- **A done that never reached a window** (#63, G37): a window whose link
+  dropped after the commit, before it heard the trade was done, gets the
+  trade it is owed from the host on its new link (`trades`) and applies
+  it at its next rest point: the row it gave leaves, the row it gets
+  takes its place with its uid, the Pokédex marks it, "Trade completed!
+  RED received KADABRA!" over the map, a trade evolution, and a `link`
+  save. No movie: the trade is over. A window that applied the trade on
+  its screen changes nothing.
 - **CANCEL** (below the party), B before TRADE, or the partner's cancel:
   both screens close ("The trade was cancelled."), nothing traded. A
   disconnect before the commit ends it the same way ("The link was
   broken."). A window that comes back to a committed trade it never
-  showed (it was started again) opens the world the host has, with the
-  swap.
+  showed lands it as above.
 
-## The swap core (`src/coop/campaign/Trade.lua`)
+## The trade core (`src/coop/campaign/Trade.lua`)
 
-For the Cable Club's trades (#60) to share:
+The one core for direct trades and the Cable Club's ([cable.md](cable.md);
+#62, G37):
 
 | Call | Does |
 |---|---|
@@ -166,6 +175,17 @@ For the Cable Club's trades (#60) to share:
 | `Trade.swap(save, give, get)` | one side of a trade on a save table (a window's live save or the host's copy of a world): `give` leaves the team and a copy of `get` takes its slot, marked `traded`. Returns `"swapped"` (and the slot), `"already"` (the save holds `get`, not `give`), or nil and `"gone"`. Idempotent. |
 | `Trade.evolution(data, mon)` | the species a trade evolves `mon` into, or nil |
 | `Trade.copy(v)` | a deep copy |
+| `Trade.commit(campaign, id, a, b)` | the host: the trade once under a commit id (`trade:<pair>`, `cable:<pair>:<n>`); `a`, `b` are `{ player, give }` with the row each gives. Both stored worlds swap (a world that does not hold the row yet gets it laid over when it comes), the receivers' Pokédexes mark it, and each player is owed their side. Returns true; false, `"done"` on a repeat; false, `"unswapped"` when a row is unknown (nothing moved or owed). |
+| `Trade.layOver(campaign, id, save)` | the host, on every world or holdings a window sends: each owed trade is laid over it; one the save shows already ends. Returns the ended ones (`trade_shown` in the log). |
+| `Trade.owed(campaign, id)` | the trades a player is owed: `{ id, give, get }` |
+| `Trade.key(packed)`, `Trade.rowOf(campaign, id, uid)`, `Trade.uidOf(campaign, id, packed)` | the Cable Club's packed rows: what tells one from another on the cable, a stored row by its uid, the uid of the stored row a packed one was made from |
+
+Who writes what, for both kinds (G25, G37): the host commits once and
+owes each side; each window applies its own side on its own save (on its
+trade screen when it hears the yes, else at its next rest point from what
+it is owed); the host lays an owed trade over every world or holdings
+until one shows it. `Trade.swap` finds the row given in the team, else
+in the PC (a row deposited before an owed trade landed).
 
 Rows are whole save rows, so a received Pokémon arrives exactly as its
 owner held it: uid, original trainer and id, DVs, stat EXP, moves, PP Ups,
@@ -189,6 +209,7 @@ nickname.
 | `pair` | `id`, `kind`, `partner`, `role` (`host` for the inviter, `guest`), `seed`, and `name` (the partner's), `away` (the partner's link is down), `ended` (`released`, `left`, `cancel`); a trade's `mine`, `theirs` (teams), `myPick`, `theirPick`, `confirmed`, `theirConfirmed`, `done` (committed) |
 | `pair_msg` | `pair`, `n`, `msg`: the partner's link battle messages, in order, again from the first on a new link |
 | `state` | each player's `meeting` (`battle`, `trade`) |
+| `trades` (protocol 18, #63) | `list` of `{ id, give, get }` (the commit id, the row given and the row received, each as save text): the trades this player is owed, once per link |
 
 Refusals (`rejected`): `no_partner`, `partner_away`, `partner_busy`,
 `invite_pending`, `in_battle` (the sender is not free), `no_invite`,

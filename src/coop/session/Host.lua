@@ -81,6 +81,7 @@ local HostScenes = require("src.coop.session.HostScenes")
 local Versions = require("src.coop.session.Versions")
 local HostCable = require("src.coop.session.HostCable")
 local HostFriends = require("src.coop.friends.HostFriends")
+local Trade = require("src.coop.campaign.Trade")
 local League = require("src.coop.battle.League")
 
 local Host = {}
@@ -419,7 +420,7 @@ function Host:_world(link, msg)
   local save, why = World.decode(msg.save)
   if save then
     self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
-    HostFriends.layOver(self, p, save) -- #23: a traded Pokémon stays traded
+    self:_layOver(p, save) -- #62, #63: a traded Pokémon stays traded
     local ok, bad = self.state:setWorld(p.id, save)
     if not ok then save, why = nil, bad end
     if ok then self:_sendUids(link, bad) end
@@ -446,6 +447,32 @@ function Host:_world(link, msg)
   end
 end
 
+-- The trades this player is owed, laid over a world or holdings their
+-- window sent (#62, #63, Trade.lua): a copy from before the window applied
+-- a trade cannot undo it; one that shows it ends the debt
+function Host:_layOver(p, save)
+  for _, t in ipairs(Trade.layOver(self.state, p.id, save)) do
+    self:_log("trade_shown", { commit = t.id, how = t.how }, p)
+  end
+end
+
+-- The trades this player is owed that this link has not heard (#63): the
+-- window applies each at its next rest point
+function Host:_sendTrades(link, p)
+  local list = {}
+  link.tradesSent = link.tradesSent or {}
+  for _, t in ipairs(Trade.owed(self.state, p.id)) do
+    if not link.tradesSent[t.id] and #list < Protocol.MAX_TRADES then
+      link.tradesSent[t.id] = true
+      list[#list + 1] = { id = t.id, give = Trade.encodeTeam({ t.give }),
+                          get = Trade.encodeTeam({ t.get }) }
+    end
+  end
+  if #list == 0 then return end
+  self:_log("trades", { n = #list, first = list[1].id }, p)
+  self:_send(link, { type = "trades", list = list })
+end
+
 -- The uids the host gave rows of a world or holdings this link sent (#17,
 -- design A7.3), so the window's rows carry them from then on
 function Host:_sendUids(link, assigned)
@@ -464,7 +491,7 @@ function Host:_holdings(link, msg)
   local world, why = World.join(msg.world, msg.boxes)
   if world then
     self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
-    HostFriends.layOver(self, p, world) -- #23
+    self:_layOver(p, world) -- #62, #63
     local ok, assigned = self.state:setHoldings(p.id, world)
     if ok then
       self:_log("holdings", { revision = self.state.revision, bytes = #msg.world,
@@ -961,6 +988,7 @@ function Host:update()
       if p and p.link == link and not link.conn.closed then
         self:_sendStory(link, p)
         self:_sendGifts(link, p)
+        self:_sendTrades(link, p) -- #63
         self:_sendWild(link, p) -- #9
         HostBattles.sendTo(self, link, p)
         HostFriends.sendTo(self, link, p) -- #23

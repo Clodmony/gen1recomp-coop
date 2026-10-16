@@ -13,9 +13,10 @@ is the link cable; a solo game keeps upstream's LAN link menu.
 - `src/coop/session/HostCable.lua`: the host. Who a player's cable
   reaches, passing link messages to the mate, the trade's yes held until
   both said it, and the 30 s and 60 s waits.
-- `src/coop/campaign/CableTrade.lua`: the swap on the campaign, once per
-  commit id, uids kept. A direct trade (#23) can share it: two
-  `{ player, uid }` and a stable commit id.
+- `src/coop/campaign/Trade.lua`: the one trade core direct trades (#23)
+  use too (#62, G37): the swap on the campaign once per commit id, uids
+  kept, each side owed until a world of theirs shows it
+  ([friends.md](friends.md) *The trade core*).
 
 Upstream files have one marked hook each (`co-op (#60)`):
 
@@ -59,7 +60,8 @@ In a co-op world:
 | Rule | Here |
 |---|---|
 | A12.7 the partner | An offer either side made (`cable`'s `with`; a player who offered the cable to a partner who is connected and free waits for them), then the room's waiting players in id order, two by two. A pair is kept while both stay; a third player waits without a cable. Rooms never mix, so "the first other free player" has no counterpart (G32). Nothing in the game sends `with` yet: it is the place for #23's invitations. |
-| A12.7 swapped once | The host reads the trade's `party` (with each Pokémon's uid; a row without one is found in the stored team by its packed content), `pick` and `confirm`. A yes is held until both said yes after both offers. Then `CableTrade.swap` moves the two rows between the stored teams once (commit `cable:<pair>:<n>`, uids kept, the receiver's Pokédex marked), the host saves, and only then each window hears the other's yes with the uid it receives. A mate who dropped before that trades nothing. |
+| A12.7 swapped once | The host reads the trade's `party` (with each Pokémon's uid; a row without one is found in the stored team by its packed content), `pick` and `confirm`. A yes is held until both said yes after both offers. Then `Trade.commit` moves the two rows between the stored teams once (commit `cable:<pair>:<n>`, uids kept, the receiver's Pokédex marked) and owes each player their side, the host saves, and only then each window hears the other's yes with the uid it receives. A mate who dropped before that trades nothing. |
+| A12.7 a yes that never arrived (#63, G37) | A window whose link dropped after the commit and before the host's yes reached it does not lose the trade, and its next world cannot bring the old row back: the host lays the owed trade over every world or holdings it sends, sends it the trade on its new link (`trades`), and the window applies it at its next rest point ("Trade completed!", a trade evolution, a `link` save; no movie). The debt ends when a world from that window shows the trade. |
 | A12.7 each window's copy | The window applies the trade as upstream does, stamps the received row with the host's uid (`onTraded`), plays the movie and any trade evolution, and its own save after the trade reaches the host. Its holdings were held meanwhile (anything above the map holds the player). |
 | A12.7 partners hidden | A player in a room is named in `state` (`cable`); the others do not draw them (Presence.lua). |
 | A12.7 30 s and 60 s | No second offer within 30 s of the first, or no answer within 60 s of both offers: the host moves the trade's round on, both screens start the round over at their lists (`LinkState:beginRound`), and messages of the old round are dropped (`stale`). |
