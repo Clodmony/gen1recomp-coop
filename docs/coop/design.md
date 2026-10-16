@@ -1607,7 +1607,7 @@ sibling's D-numbers.
   run, a battle fought to the end on both sides and a released battle
   (A12.4) pay as A12.5 says. Details: [friends.md](friends.md).
 - **G37. One trade core; a committed trade is owed until a world shows
-  it** (#62, #63, 2026-10-16, proposed). Group 11 left two cores: #23's
+  it** (#62, #63, 2026-10-16, accepted by the owner the same day). Group 11 left two cores: #23's
   direct trade (each window swaps its rows, the host commits once and lays
   the swap over a window's copies, in host memory) and #60's Cable Club
   (the host swaps its stored worlds by uid, the windows stamp the uid they

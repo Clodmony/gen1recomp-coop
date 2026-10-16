@@ -6,7 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (Group 12 done: draft PR #68 waits for the owner).
+Last updated 2026-10-16 (Group 12 merged as #68; Group 10 next).
 
 ## Testing rule (owner, 2026-10-16)
 
@@ -28,39 +28,27 @@ on.
   locally as Claude. CI passed every check on #61 (its first luacheck run
   found one W113 from #9, fixed). `tools/verify.sh` on `gen1recomp-coop`
   at 9741ed7d: ALL PASSED (37/37 tiers).
-- On `gen1recomp-coop`: protocol 17, campaign file version 4. Decisions
-  G1 to G35 accepted. PR #68 brings protocol 18, campaign file version 5,
-  G36 (owner's decision) and G37 (proposed).
-- Milestones: Groups 8 and 11 closed. **Group 12: Group 11 follow-ups**
-  (#62, #63, #64, #67) is done in PR #68; close the milestone once it is
-  merged. Group 2 has #12 and #15 (owner-side checks); Group 10 holds #7
+- **Merged 2026-10-16** (owner): #68 (Group 12: #62, #63, #64, #67),
+  locally as Claude. CI passed every check on it, luacheck included.
+- Protocol 18; campaign file version 5. Decisions G1 to G37 all accepted
+  (G36 the owner's own call on #67; G37 accepted as built, 2026-10-16).
+- Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15 (owner-side checks); Group 10 holds #7
   (mobile) and #27 (launcher entries). Group 9 has no issues.
 
 ## Open pull requests
 
-- **#68 (draft), Group 12: Group 11 follow-ups**, branch
-  `coop/group12-followups` into `gen1recomp-coop`. Closes #62, #63, #64
-  and #67. It waits for the owner's merge (locally as Claude); check
-  coop-ci's luacheck job on it first, since luacheck did not run locally.
-  - #67: a friend battle's forfeiting side gets no EXP; its team is still
-    healed (G36).
-  - #62, #63: one trade core (`src/coop/campaign/Trade.lua`; `CableTrade`
-    is gone). A committed trade is owed per player in the campaign
-    (`p.trades`) and sent in the new `trades` message (protocol 18,
-    campaign file 5). A window applies it at a rest point, also after a
-    drop or a crash; the `coopTrade` mark covers a window that restarted
-    on the host's copy (G37, proposed).
-  - #64: HOW PLAYER 2 STARTS in the launcher after PLAYER 2 NAME, skipped
-    for a player 2 the host already knows. Plus a launcher fix found live:
-    an ENTER pressed before the host's own world arrived is kept, not
-    lost.
-  - `tools/verify.sh` at f7162757: ALL PASSED, 37/37 tiers (local
-    luacheck skipped). Every scenario passed live with the cartridge and
-    the 3D mod. Not run: real pads, two real windows, Yellow, and player 2
-    playing the opening through.
-  - New German strings for the owner's later review: "SO BEGINNT
-    SPIELER 2", "So beginnt Spieler 2" and the subtitle, in
-    `german-wording.md`.
+None.
+
+## Group 12's answers (owner, 2026-10-16: every recommendation taken)
+
+- #68 merged; G37 accepted as built.
+- German "SO BEGINNT SPIELER 2", "So beginnt Spieler 2" and the subtitle:
+  kept, for the owner's later review of `german-wording.md`.
+- Cleanup: `g11/` scratch and the old local branches deleted; luacheck
+  installed locally. This worktree stays (the owner did not pick its
+  removal); it is on the merged `coop/group12-followups`.
+- What Group 12 did not run live: real pads, two real windows, Yellow,
+  and player 2 playing the opening through.
 
 ## Group 11's detail choices (owner, 2026-10-16: every recommendation taken)
 
@@ -124,7 +112,6 @@ Forfeit EXP became #67 (Group 12).
 
 ## Next candidates
 
-- First merge #68 (owner), then remove this worktree and branch.
 - **Group 10** (#7 mobile, #27 launcher entries): it needs the owner's
   decisions per feature; ask them first, with the issues' options.
 - Group 2's #12 and #15 are owner-side checks.
@@ -230,9 +217,9 @@ Forfeit EXP became #67 (Group 12).
   - After "The link was broken." a Cable Club guest is back at the Cable
     Club's menu, not on the map.
   - Set the voxel level after CONTINUE, not at the title.
-  - Group 12's drivers were deleted with its scratch when PR #68 opened.
-    Rebuild from `g11/itest1` and `docs/coop/friends.md` § the trade core
-    if needed.
+  - Group 11's and 12's drivers and save templates are deleted. A new
+    live run imports the cartridge again (*Import* above) and makes new
+    solo saves with `newGame`.
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -245,30 +232,25 @@ Forfeit EXP became #67 (Group 12).
 
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
-- The Superset worktree `veiled-degree-…` is on `coop/group12-followups`
-  (pushed, PR #68). Remove it once #68 is merged, then delete the branch
-  locally and on GitHub.
-- Leftover local branches in the shared clone, all merged and deleted on
-  GitHub: `coop/group8-opening`, `coop/group7a-party-pc` and
-  `veiled-degree-51672277`. Delete them with the owner's approval.
-- No background processes.
-- `~/dev-scratch/gen1recomp-coop/g11/` keeps Group 11's live drivers and
-  the save templates `tpl/a`, `tpl/b` (extracted cartridge data, local
-  only); delete it once #68 is merged unless the owner keeps it.
-  Group 12's scratch (`g12/`) is deleted. `mod-dl/dsv` is the owner's copy
-  of the 3D mod (never committed).
+- The Superset worktree `veiled-degree-…` is on the merged
+  `coop/group12-followups`; the owner kept it. Its branch is deleted on
+  GitHub; delete it locally when the worktree goes.
+- The old local branches (`coop/group8-opening`, `coop/group7a-party-pc`,
+  `veiled-degree-51672277`) are deleted. No background processes.
+- Scratch: `g11/` and `g12/` are deleted. `mod-dl/dsv` is the owner's
+  copy of the 3D mod (never committed); `verify/` holds verify logs.
 
 ## Still open
 
 - After each `main` sync: `gh workflow list -R Clodmony/gen1recomp-coop --all`
   and disable upstream's workflows.
-- Optional local tools: luacheck (JDK 17 is installed since 2026-10-16); with
-  six agents' code unlinted, installing it (`luarocks install luacheck`) is
-  worth it.
+- Local tools: luacheck is installed (2026-10-16), so `tools/verify.sh`
+  runs the lint gate too; JDK 17 is installed.
 
 ## Cleanup
 
 - Done 2026-10-15 (owner approved): every merged branch, locally and on
   GitHub (the two above excepted); the milestones of Groups 1 to 7a.
 - Done 2026-10-16: #58's and #61's branches on GitHub, Group 8's and
-  Group 11's milestones.
+  Group 11's milestones; after #68: its branch on GitHub, Group 12's
+  milestone, `g11/` and `g12/` scratch, the old local branches.
