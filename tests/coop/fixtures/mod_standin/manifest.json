@@ -18,7 +18,7 @@
       "id": "standin_rom",
       "name": "Stand-in optional ROM",
       "file": "baserom.bin",
-      "format": "n64",
+      "format": "raw",
       "md5": "00000000000000000000000000000000",
       "description": "Optional: never present in the tests."
     }
