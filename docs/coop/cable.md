@@ -111,6 +111,28 @@ desk on 1F of the Viridian Pokémon Center).
   VIRIDIAN_POKECENTER at (3, 3), before the nurse. The same save on the
   branch's base continued in the TRADE_CENTER, which has no way out.
 
+**The integrated build** (Group 11, 2026-10-16; three ENet processes,
+`POKEPORT_SPEED=4`, each joining through its own launcher with BRING A SAVE;
+34 driver checks, none failed, no `battle_desync`): ASH (Union Room on, the
+2F desk) and MISTY (off, the 1F desk) traded MACHOKE for HAUNTER (MACHAMP
+and GENGAR) with MISTY's window losing focus 6 s on the lists and ASH's
+visibility 5 s at the question, then KADABRA for GRAVELER in the next round
+(ALAKAZAM and GOLEM, uids kept, the host's worlds the same); ASH left with
+B, MISTY's screen closed, both back at the link menu; then the COLOSSEUM to
+its end (51 command menus, MISTY's window losing focus 5 s) and CANCEL,
+"Please come again!". A third player, BROCK, brought a save made in the
+TRADE CENTER: it continued before the nurse at (3, 3). On 2F he saw ASH at
+the desk, not while ASH was in the room, and again after; at the 2F desk
+with ASH and MISTY in the TRADE CENTER he waited with no cable ("reserved
+for 2 friends") and B took him back to the menu.
+
+The first run of it found that the COLOSSEUM after a trade ended at once
+("ASH left the battle."): ASH's bye from the trade reached MISTY after her
+screen had closed and waited in her client, and the Colosseum's pairing,
+round 1 again, took it. A `cable` message for another room, mate or round
+now drops the mate's messages still waiting (`Client.lua`;
+`cable_host_test.lua`).
+
 Not run: a partner in a room seen from the same map (the two desks were
 on different maps; the ROM-free test covers it), the 30 s and 60 s waits
 (ROM-free test), three players, a dropped link during a trade, Blue and

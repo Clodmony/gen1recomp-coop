@@ -392,6 +392,12 @@ function Client:_handle(msg)
   elseif t == "battle" then
     self:_battle(msg)
   elseif t == "cable" then
+    -- another room, mate or round: the mate's messages still waiting
+    -- belong to the cable before (a new pairing starts at round 1 again)
+    local was = self.cable
+    if not was or was.room ~= msg.room or was.mate ~= msg.mate or was.round ~= msg.round then
+      self.cableLinks = {}
+    end
     self.cable = msg
   elseif t == "cable_link" then
     self.cableLinks[#self.cableLinks + 1] = msg

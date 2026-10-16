@@ -225,6 +225,31 @@ RATTATA L20 and GRAVELER L25; the drivers pressed the buttons:
   refused as `no_pair` after the commit, harmless; the screen now sends
   its offer and its TRADE once, and the second run had no refusal.
 
+**The integrated build** (Group 11, 2026-10-16; Linux desktop, LÖVE 11.5,
+US Red, two ENet processes offscreen at `POKEPORT_SPEED=4`, each driving
+its own launcher: ASH hosted NEW CAMPAIGN and MISTY joined BY ADDRESS, both
+with BRING A SAVE of a solo save in the Viridian Pokémon Center with
+KADABRA, GRAVELER, MACHOKE, HAUNTER, WARTORTLE and PIDGEOTTO at level 20;
+58 driver checks, none failed; no `battle_desync`):
+
+- A on MISTY: BATTLE / TRADE / CANCEL, CANCEL back on the map. TRADE:
+  MISTY's NO, then the CO-OP menu's BATTLE MISTY and MISTY's B, each "MISTY
+  declined."; a third invitation left unanswered closed itself after 30 s
+  ("MISTY declined.") while MISTY's window had lost focus for 8 s, and her
+  link stayed up.
+- A friend battle to the end (61 command menus), each window losing focus
+  for 5 or 6 s in it: both teams healed, EXP to every Pokémon that stood
+  out (all six of ASH's, four of MISTY's, some to level 21), money
+  unchanged.
+  MISTY's RUN in the next battle: "MISTY forfeited the match!", ASH won.
+- TRADE: KADABRA for GRAVELER, MISTY's window losing focus for 6 s on the
+  lists and its visibility for 6 s at the question, ASH's visibility for
+  5 s at the question: "Trade completed!", ALAKAZAM and GOLEM, each with
+  the other player's uid. After both SAVEd the host's worlds held the same.
+  CANCEL on MISTY's lists: "The trade was cancelled." on both, nothing
+  moved. MISTY quit and came back with REJOIN on PLAY: her world from the
+  host had ALAKAZAM with ASH's uid and no GRAVELER.
+
 Not run with the cartridge: a dropped link during a friend battle and the
 two-minute release, the 30-second answer, a busy partner, a move learned
 or a forget list after a friend battle, CANCEL on the trade screen, a
