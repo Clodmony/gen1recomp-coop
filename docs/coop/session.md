@@ -124,8 +124,14 @@ Rules (design A1):
   the host still holds its old link, which timed out on the window's side
   only (found in the integrated live run: a host whose window stopped
   running for 45 s made every guest a second player); the old link lets
-  go and the player comes back. A device that lost its id is recognised
-  by the same name. Split-screen has two seats, so a device remembers two players per
+  go and the player comes back. A hello from another window of the same
+  device and seat (a game started again after a crash, before the host saw
+  the old link die; found in the same run) waits up to 2 s
+  (`Host.HOLD`) while the host makes sure of the old link (ENet times it
+  out within about a second unless it answers): one that closes was the
+  crashed game's, and the player comes back; one still there is a second
+  window, someone new. A device that lost its id is recognised by the
+  same name. Split-screen has two seats, so a device remembers two players per
   campaign.
 - **Worlds** (#13). A `world` is kept only when it parses with the game's
   own save parser and has a save's shape (a team of at most six, twelve
@@ -319,6 +325,22 @@ The run found three faults, now fixed and tested:
 Two machines on a LAN, the beacon across machines, Windows, macOS and mobile
 have not been run. The launcher's co-op screens were run the same way
 (#12); [launcher.md](launcher.md) says what was run.
+
+**Focus, visibility and stalls** (integrated Group 11 build, 2026-10-16;
+Linux desktop, LÖVE 11.5, US Red, offscreen, two processes over ENet, each
+entering through the fork's launcher with BRING A SAVE): the host's and
+the guest's windows lost focus (`love.focus(false)`) or were hidden
+(`love.visible(false)`) for 3 to 30 s while their frames ran, in the
+launcher's hosting and connection screens and in the game (the opening,
+a frozen rival scene, a joined League battle, the Hall of Fame's
+continue): every link was kept. Windows whose process stopped running
+(no frames, no network) for 10, 45 and 60 s: a guest that stalled closed
+its link on resuming and came back as the same player; guests whose host
+stalled timed out and redialled, and came back as the same players once
+the host ran again (a second player per guest before the `window` fix
+above). A guest killed and started again at once came back through
+REJOIN as the same player, over loopback. A real minimized window,
+Wayland and other systems have not been run.
 
 ## Tests
 

@@ -146,6 +146,22 @@ function Conn:update()
   if self.client then self:_serviceClient() end
 end
 
+-- The host doubts this link is still there (a hello from the same seat of
+-- the same device came on another link): a dead one closes soon.  ENet
+-- times the peer out within a second or so unless it answers; a loopback
+-- link whose other end is gone closes now.
+function Conn:suspect()
+  if self.closed then return end
+  if self.kind == "loopback" then
+    if not self.other then self:close() end
+    return
+  end
+  if self.peer then
+    pcall(self.peer.timeout, self.peer, 4, 300, 1200)
+    pcall(self.peer.ping, self.peer)
+  end
+end
+
 function Conn:close()
   if self.closed then return end
   self.closed = true

@@ -136,6 +136,39 @@ do
   check(hostSession.host:player(player).connected, "the player is connected on the new link")
 end
 
+-- the guest's game crashed and is started again at once (found live: the
+-- host had not noticed the dead link yet, so the new window's hello made
+-- a second player): the host makes sure of the old link first, and the
+-- player comes back
+do
+  local players = #hostSession.host.players
+  local oldHostLink = hostSession.host:player(player).link
+  oldHostLink.conn.other, guest.client.conn.other = nil, nil -- the process is gone
+  local again = Session.startDial({
+    address = "loop", name = "BLUE", cartridge = { game = "red", sha1 = SHA },
+    log = false, identity = guest.identity, clock = function() return t end,
+    dial = function() lastConn = hostSession.hub:dial() return lastConn end,
+  })
+  Session.current = nil
+  check(again.windowId ~= guest.windowId, "the new game is another window")
+  for _ = 1, 6 do
+    t = t + 1 / 60
+    hostSession:update(1 / 60, nil)
+    again:update(1 / 60, nil)
+  end
+  again:join()
+  for _ = 1, 60 * 3 do
+    t = t + 1 / 60
+    hostSession:update(1 / 60, nil)
+    again:update(1 / 60, {})
+  end
+  eq(again.status, "joined", "the restarted game is in")
+  eq(again.client.player, player, "as the same player")
+  eq(#hostSession.host.players, players, "no second player")
+  check(oldHostLink.conn.closed, "the dead link was let go")
+  guest = again
+end
+
 -- a host gone for good: two minutes, then the end over the world, then the launcher
 local hostWas = hostSession.hub.dial
 hostSession.hub.dial = function()

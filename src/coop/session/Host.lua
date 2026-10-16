@@ -595,6 +595,7 @@ function Host:_hello(link, msg)
     return self:_turnAway(link, "content_mismatch")
   end
   self:_takeBack(msg)
+  if self:_hold(link, msg) then return end
   local p = self:resolve(msg.known, msg.name)
   if not p then
     if #self.players >= self.maxPlayers then
@@ -646,6 +647,35 @@ function Host:_takeBack(msg)
   end
   self:_disconnect(old, "replaced")
   old.conn:close()
+end
+
+-- Another window of the same device and seat names a connected player: a
+-- game started again after a crash, whose old link the host has not seen
+-- die yet, or a second window (A1.9).  The hello waits up to HOLD seconds
+-- while the old link is made sure of: one that closes meanwhile was the
+-- crashed game's, and the player comes back; one still there is a second
+-- window, someone new.
+Host.HOLD = 2
+
+function Host:_hold(link, msg)
+  if link.heldDone then return false end
+  local id = type(msg.known) == "table" and msg.known[self.campaign.id] or nil
+  local p = id and self.byId[id]
+  local old = p and p.connected and p.link
+  if not (old and p.device == msg.device and p.seat == msg.seat) then return false end
+  old.conn:suspect()
+  link.held = { msg = msg, at = self.clock(), pid = p.id }
+  self:_log("hello_held", { name = p.name }, p)
+  return true
+end
+
+-- a held hello goes on once the old link closed or HOLD is over
+function Host:_holdStep(link)
+  local held = link.held
+  local p = self.byId[held.pid]
+  if p and p.connected and self.clock() - held.at < Host.HOLD then return end
+  link.held, link.heldDone = nil, true
+  self:_hello(link, held.msg)
 end
 
 -- per-player sequence numbers (design A1.5): strictly increasing; a number
@@ -891,6 +921,7 @@ function Host:update()
   local keep = {}
   for _, link in ipairs(self.links) do
     link.conn:update()
+    if link.held and not link.conn.closed then self:_holdStep(link) end
     if link.flooded then
       link.conn:discard()
     elseif not self:_meter(link, now) then
