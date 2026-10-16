@@ -122,7 +122,8 @@ folder, 2026-10-16:
 - **Online co-op**, two processes on one machine (host and guest, both
   with the mod): each sees the other in the diorama in their colour, the
   arrow at the screen's edge when the partner walked away east, the "!"
-  over a partner in a battle, the CO-OP menu on SELECT, a wild co-op
+  over a partner in a battle with its notice ("ASH is in a battle against
+  wild RATTATA...") over the diorama, the CO-OP menu on SELECT, a wild co-op
   battle in 3D-BTL in both windows with no `battle_desync` in the host's
   log, and a friend battle (A on the partner, BATTLE, YES) in 3D-BTL.
   Focus lost for 4 s and back, and hidden and shown, kept the link (no
