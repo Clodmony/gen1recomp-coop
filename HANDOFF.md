@@ -6,8 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (Group 11 integrated and tested live, with the
-3D mod: PR #61, stacked on #58).
+Last updated 2026-10-16 (#58 and #61 merged; Group 12 next).
 
 ## Testing rule (owner, 2026-10-16)
 
@@ -24,34 +23,21 @@ on.
 ## Repository state
 
 - Default branch `gen1recomp-coop`; `main` = upstream main.
-- Milestones: Group 8 holds #22 (done by #58). **Group 11** holds #57,
-  #59, #55, #23, #60, #9, #34, #30, #65 and #66, all done by #61.
-  **Group 12: Group 11 follow-ups** holds #62, #63, #64, #67. Group 2 still has
-  #12 and #15 (owner-side checks); Group 10 holds #7 (mobile) and #27
-  (launcher entries).
+- **Merged 2026-10-16** (owner): #58 (the private opening, #22) and #61
+  (Group 11: #57, #59, #55, #23, #60, #9, #34, #30, #65, #66), both
+  locally as Claude. CI passed every check on #61 (its first luacheck run
+  found one W113 from #9, fixed). `tools/verify.sh` on `gen1recomp-coop`
+  at 9741ed7d: ALL PASSED (37/37 tiers).
+- Protocol 17; campaign file version 4. Decisions G1 to G35 all accepted
+  (G28 to G35 on 2026-10-16).
+- Milestones: Groups 8 and 11 closed. **Group 12: Group 11 follow-ups**
+  holds #62, #63, #64, #67 (next, the owner's pick). Group 2 has #12 and
+  #15 (owner-side checks); Group 10 holds #7 (mobile) and #27 (launcher
+  entries). Group 9 has no issues.
 
-## Open pull requests (draft)
+## Open pull requests
 
-- **#58** `coop/group8-opening` into `gen1recomp-coop`: closes #22.
-  G27 accepted. Tested live again inside #61's integrated runs.
-- **#61** `coop/group11` into `coop/group8-opening` (stacked): closes
-  #57, #59, #55, #23, #60, #9, #34, #30, #65, #66. Protocol 17 (11
-  scenes, 12 Red and Blue, 13 starts, 14 Cable Club, 15 friends, 16
-  League, 17 the hello's `start`); campaign file version 4. Decisions
-  G28 to G35 all accepted by the owner (2026-10-16); G34 is the 3D mod,
-  G35 a window that comes back is its own player and a unique encounter
-  nobody is in is fought afresh.
-  - Verify ALL PASSED at ee8d6289 (37/37 tiers); co-op tier 52/52 at the
-    head. luacheck has not run (not installed here; CI does not run on a
-    stacked PR): it runs once #61 targets `gen1recomp-coop`.
-  - Integrated live runs (round 2): every feature again on the merged
-    branch; seven bugs found and fixed (the PR body lists them). The 3D
-    mod on the merged build: co-op, battles, walk-in, friend battle,
-    split-screen. Not run: real windows and pads, Wayland minimizing,
-    two machines, Yellow, German cartridges, the mod's Stadium models.
-  - Merge order: #58 first, then `gh pr edit 61 --base gen1recomp-coop`,
-    let CI (lint) pass and fix what it finds, then merge #61 locally as
-    Claude (`git merge --no-ff`), push, run `tools/verify.sh`.
+None.
 
 ## Group 11's detail choices (owner, 2026-10-16: every recommendation taken)
 
@@ -100,7 +86,7 @@ good (#9's answer); a gift lost on a reset is accepted and documented
 
 ### Round 2 (integrated tests, #30, the itest agents): owner, 2026-10-16, every recommendation taken
 
-Forfeit EXP became #67 (Group 12). Owner: merge #58 and #61 now; next is Group 12.
+Forfeit EXP became #67 (Group 12).
 
 - Forfeit EXP farm (A12.5 pays "won or lost"; RUN on turn 1 paid 621 EXP): no EXP to the side that forfeits [rec] / only after a full turn / keep.
 - Flood rule also hits the host's own loopback player at inhuman rates: leave [rec] / exempt loopback.
@@ -208,8 +194,9 @@ Forfeit EXP became #67 (Group 12). Owner: merge #58 and #61 now; next is Group 1
   Drivers and save templates of Group 11 are in
   `~/dev-scratch/gen1recomp-coop/g11/` (`itest1/`, `itest2/`, `fin/`,
   `tpl/a`, `tpl/b` with four solo saves each; `itest1/regress.sh` reruns
-  every itest1 scenario). Keep them until #61 is merged, then delete
-  `tpl/` (it holds extracted cartridge data).
+  every itest1 scenario; their worktree paths point at the removed
+  `wt/itest1`, so edit `WT` in `run.sh` to the new worktree). `tpl/`
+  holds extracted cartridge data: never commit it.
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -220,14 +207,17 @@ Forfeit EXP became #67 (Group 12). Owner: merge #58 and #61 now; next is Group 1
 
 ## Worktrees and background processes
 
-- Main checkout on `gen1recomp-coop` (leave it; behind origin until pulled).
-- The Superset worktree `veiled-degree-…` holds `coop/group8-opening`.
-- `~/dev-scratch/gen1recomp-coop/wt/group11` holds `coop/group11`; remove
-  it once #61 is merged. Every agent branch and worktree is removed (all
-  merged into `coop/group11`).
-- No background processes. `~/dev-scratch/gen1recomp-coop/g11/` keeps
-  the drivers, save templates and questions (see the recipe); the
-  playtest folder is deleted.
+- Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
+  it to the owner).
+- The Superset worktree `veiled-degree-…` still holds the merged
+  `coop/group8-opening` (local branch only; deleted on GitHub): remove
+  the workspace, then delete the branch.
+- Every other Group 8/11 branch and worktree is removed, locally and on
+  GitHub. No background processes.
+- `~/dev-scratch/gen1recomp-coop/g11/` keeps Group 11's live drivers and
+  the save templates `tpl/a`, `tpl/b` (extracted cartridge data, local
+  only) for Group 12's live runs; delete `g11/` when Group 12 is done.
+  `mod-dl/dsv` is the owner's copy of the 3D mod (never committed).
 
 ## Still open
 
@@ -241,4 +231,5 @@ Forfeit EXP became #67 (Group 12). Owner: merge #58 and #61 now; next is Group 1
 
 - Done 2026-10-15 (owner approved): every merged branch, locally and on
   GitHub (the two above excepted); the milestones of Groups 1 to 7a.
-- Once #58 is merged: its branch, locally and on GitHub.
+- Done 2026-10-16: #58's and #61's branches on GitHub, Group 8's and
+  Group 11's milestones.
