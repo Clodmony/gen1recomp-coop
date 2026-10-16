@@ -55,6 +55,7 @@ Game.input = Input; Input:init()
 Game.renderer = Renderer; Renderer:init()
 Game.stack = StateStack; StateStack:init()
 Game.save = SaveData.newGame()
+Game.save.flags.EVENT_GOT_STARTER = true -- past the opening (#22)
 Game.save.player.name, Game.save.player.id = "RED", 1111
 Game.save.party = { Pokemon.new(Data, "FIXMON_A", 30) }
 Game.save.money = 500

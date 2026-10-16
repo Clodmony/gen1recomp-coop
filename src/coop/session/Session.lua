@@ -139,8 +139,10 @@ function Session.openCampaign(fs, campaign, cartridge)
   local state, info = CampaignFile.read(fs, cartridge.game, campaign.id)
   if state then return state, info end
   if info.why ~= "missing" then return nil, info end
+  -- a new campaign's rival is the one its host named, if any (#22)
   return Campaign.new({ id = campaign.id, title = campaign.title, game = cartridge.game,
-                        sha1 = cartridge.sha1, created = os.time() }), { new = true }
+                        sha1 = cartridge.sha1, created = os.time(),
+                        rival = campaign.rival }), { new = true }
 end
 
 -- Host a campaign ({ id, title, players }) with this device's cartridge.

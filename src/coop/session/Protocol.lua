@@ -26,8 +26,11 @@ local Protocol = {}
 -- battle in `state`.  8: Pokémon, party and PC (#17): a window's
 -- `holdings` at its rest points, the host's `uids`, and each team's `room`
 -- for a catch.  9: unique encounters (#21): the `encounter` a battle's
--- opening is, and in `state`; a walk-in joins the running one.
-Protocol.VERSION = 9
+-- opening is, and in `state`; a walk-in joins the running one.  10: the
+-- opening (#22): a window's `opening` (in it or done, the rival's name,
+-- the starter chosen), and who is in it, the rival's name and the
+-- starter he counters in `state`.
+Protocol.VERSION = 10
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -313,6 +316,7 @@ local publicPlayer = record({
 }, {
   map = Protocol.mapId, x = cell, y = cell, facing = enum(FACINGS),
   travel = enum(TRAVELS), battle = pattern("^b[0-9a-f]+$", 17),
+  opening = bool, -- #22: playing the opening (design A4.8)
 })
 
 -- the lobby view of a player (probe answers and the LAN beacon)
@@ -443,6 +447,9 @@ local battleSummary = record({
   players = listOf(Protocol.playerId, Protocol.MAX_ROSTER),
 }, { foe = text(20), joinable = bool, encounter = encounter })
 
+-- the starters a rival counters (#22, design A4.6); Yellow's is #9
+Protocol.STARTERS = { BULBASAUR = true, CHARMANDER = true, SQUIRTLE = true }
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
@@ -475,6 +482,11 @@ Protocol.TO_HOST = {
   -- bag (#16): the window's bag change in the same rest-to-rest change
   patch = record(withType("patch", { seq = seq, set = storySet, unset = storyUnset }),
                  { bag = bagChange }),
+  -- the opening (#22, design A4.4 to A4.6): this window plays it (done
+  -- false) or finished it (done true, with the starter it chose); rival:
+  -- the name it gave the rival in Oak's speech
+  opening = record(withType("opening", { seq = seq, done = bool }),
+                   { rival = name, chose = enum(Protocol.STARTERS) }),
   -- co-op battles (#18, design A8): a battle this window's world opened,
   -- with this player's team (otId: their trainer id; expAll: an EXP.ALL in
   -- their bag)
@@ -526,7 +538,9 @@ Protocol.TO_CLIENT = {
     you = Protocol.playerId, last_seq = int(0, Protocol.MAX_SEQ),
     nearby = listOf(Protocol.playerId, Protocol.MAX_PLAYERS),
   }), { saved_ago = int(-1, Protocol.MAX_SEQ), busy = text(Protocol.MAX_REASON),
-         battles = listOf(battleSummary, Protocol.MAX_PLAYERS) }),
+         battles = listOf(battleSummary, Protocol.MAX_PLAYERS),
+         -- the campaign's rival: his name and the starter he counters (#22)
+         rival = name, chose = enum(Protocol.STARTERS) }),
   -- the player's world from the campaign, once after welcome (#13); none
   -- for a player who never saved in this campaign
   world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),

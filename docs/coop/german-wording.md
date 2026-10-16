@@ -301,9 +301,12 @@ The credit line of upstream's licence is not translated.
 | NEW CAMPAIGN | NEUE KAMPAGNE | |
 | + NEW CAMPAIGN | + NEUE KAMPAGNE | |
 | Start a shared adventure | Starte ein gemeinsames Abenteuer | |
-| Name the campaign and the trainer you will play. | Benenne die Kampagne und deinen Trainer. | |
 | CAMPAIGN NAME | KAMPAGNENNAME | |
 | TRAINER NAME | TRAINERNAME | |
+| RIVAL NAME | NAME DES RIVALEN | |
+| PLAYER 2 NAME | NAME VON SPIELER 2 | |
+| ASK IN THE GAME | IM SPIEL FRAGEN | |
+| Name the campaign, the trainer you will play and the rival. | Benenne die Kampagne, deinen Trainer und den Rivalen. | |
 | EDIT | ÄNDERN | |
 | CARTRIDGE | MODUL | |
 | A new campaign uses a save slot of its own. Your solo progress stays separate. | Eine neue Kampagne hat einen eigenen Speicherplatz. Dein Solo-Fortschritt bleibt getrennt. | |
@@ -761,6 +764,9 @@ characters, a menu row fewer.
 | %s was caught. | %s gefangen. | |
 | %s is in a battle against wild %s. START > CO-OP to join. | %s kämpft gegen ein wildes %s. START > KOOP zum Helfen. | |
 | %s is in a battle against %s. START > CO-OP to join. | %s kämpft gegen %s. START > KOOP zum Helfen. | |
+| %s joined the session in the opening. | %s ist der Sitzung beigetreten und spielt den Anfang. | |
+| IN THE OPENING | IM SPIELANFANG | |
+| The opening can't / be saved. / Leave OAK's LAB / first! | Der Anfang wird / nicht gesichert. / Verlasse erst / EICHs LABOR! | |
 
 #### battle
 

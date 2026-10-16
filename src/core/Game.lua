@@ -1372,6 +1372,8 @@ function Game:writeSave(kind)
   if ModRuntime.call("save.write", function() return true end, self) == false then
     return false
   end
+  -- co-op (#22): the opening plays without writing a save (design A4.9)
+  if require("src.coop.game.CampaignSave").vetoes(self) then return false end
   if self.overworld and self.overworld.captureSave then
     self.overworld:captureSave(self.save)
   end

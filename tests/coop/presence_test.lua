@@ -46,6 +46,7 @@ Game.input = Input; Input:init()
 Game.renderer = Renderer; Renderer:init()
 Game.stack = StateStack; StateStack:init()
 Game.save = SaveData.newGame()
+Game.save.flags.EVENT_GOT_STARTER = true -- past the opening (#22)
 Game.save.party = { Pokemon.new(Data, "FIXMON_A", 20) }
 local stack = Game.stack
 
@@ -121,10 +122,15 @@ Presence.partner = blue
 blue:join()
 step(3)
 eq(blue.status, "joined", "BLUE joined")
-eq(Notices.texts()[1], "BLUE joined the session.", "a notice says BLUE joined")
+-- BLUE has no world in the campaign: a new player, in the opening (#22, A4.8)
+eq(Notices.texts()[1], "BLUE joined the session in the opening.", "a notice says BLUE joined")
 eq(#partnerActors(), 0, "a partner with no position yet is not drawn")
 
 blue:move("FIX_TOWN", 3, 6, "down", true, "walk")
+step(2)
+eq(#partnerActors(), 0, "a partner in the opening is not drawn (#22, A4.4)")
+eq(CoopMenu.lines(Game, s, "10.0.0.5")[7], " IN THE OPENING", "the CO-OP box says so (A4.8)")
+blue:sendOpening(true)
 step(2)
 local actors = partnerActors()
 eq(#actors, 1, "BLUE on this map is drawn")

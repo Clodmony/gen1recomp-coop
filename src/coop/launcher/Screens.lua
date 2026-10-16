@@ -834,10 +834,10 @@ end
 function C.new(p, coop, c)
   local rows = coop:items()
   local y = c.y + heading(p, c, c.y, L("Start a shared adventure"),
-    L("Name the campaign and the trainer you will play."), true)
+    L("Name the campaign, the trainer you will play and the rival."), true)
   local close = panel(p, c.x, y, c.w)
   local py = y + 10
-  for _, id in ipairs({ "title", "you" }) do
+  for _, id in ipairs({ "title", "you", "rival" }) do
     local i, row = rowOf(rows, id)
     p:text(c.x + 10, py, row.label, "ink")
     py = py + LINE + 2

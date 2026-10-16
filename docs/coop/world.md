@@ -116,7 +116,8 @@ A partner's entry lands at the next rest point:
 
 ## Opening a world (A5.2, A5.19)
 
-A window's first rest point takes the campaign's story. The world's own
+A window's first rest point takes the campaign's story (one that plays
+the opening waits until the opening is over, [opening.md](opening.md)). The world's own
 story entries give way, and nothing is pushed: a window opened late never
 spreads its blank or stale state. Only a campaign with no story yet takes
 the first window's entries.
@@ -160,8 +161,10 @@ values takes the first player's. The worlds then lose those entries.
   ([battles.md](battles.md)).
 - Story items reaching every player, and the gift race: done in #16,
   [items.md](items.md).
-- A new player's private opening: #22. Today a new player's window takes
-  the campaign's story at its first rest point.
+- A new player's private opening: done in #22 ([opening.md](opening.md)).
+  A window in the opening takes nothing at its first rest point; it opens
+  as a late window once the opening is over, and the first to finish
+  seeds a new campaign's story.
 
 ## Checked
 

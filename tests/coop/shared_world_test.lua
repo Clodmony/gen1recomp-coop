@@ -186,6 +186,7 @@ local function fakeClient(story)
     return #self.sent
   end
   function c:sendHoldings() return nil end -- holdings are holdings_test.lua's
+  function c:sendOpening() return nil end -- the opening is opening_test.lua's
   return c
 end
 
@@ -323,7 +324,8 @@ do
 
   local c2 = fakeClient({})
   local w2 = Window.new(c2)
-  local first = F.save("RED", { flags = { EVENT_GOT_POKEDEX = true } })
+  -- (past the opening: a starter; the opening's seed is opening_test.lua's)
+  local first = F.save("RED", { flags = { EVENT_GOT_STARTER = true, EVENT_GOT_POKEDEX = true } })
   rest(w2, first)
   eq(#c2.sent, 0, "a new campaign's first window opens")
   rest(w2, first, nil, 1)

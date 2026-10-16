@@ -150,6 +150,8 @@ function CoopMenu:items()
   elseif s == "new" then
     add({ id = "title", label = L("CAMPAIGN NAME"), value = self.form.title })
     add({ id = "you", label = L("TRAINER NAME"), value = self.form.you })
+    -- the rival's name, or asked in Oak's speech (#22, design A2.3, A4.5)
+    add({ id = "rival", label = L("RIVAL NAME"), value = self.form.rival or L("ASK IN THE GAME") })
     add({ id = "go", label = L("CREATE AND HOST") })
   elseif s == "hosting" then
     for _, a in ipairs(self:_hostAddresses()) do
@@ -319,6 +321,8 @@ function CoopMenu:_entryDone(text)
     self.form.title = text
   elseif p == "you" then
     self.form.you = text
+  elseif p == "rival" then
+    self.form.rival = text ~= "" and text or nil
   elseif p == "rename" then
     local c = self.env.campaigns.rename(self.campaign.id, text)
     if c then self.campaign = c end
@@ -327,7 +331,22 @@ function CoopMenu:_entryDone(text)
     self:_dial(text, self.version)
   elseif p == "joinname" then
     self.joinName = text
+  elseif p == "name2" then
+    -- player 2 names themself, then the two enter or join (#22, #11)
+    self.settings.name2 = text
+    self.settings:save()
+    self.split = true
+    if self.screen == "hosting" then return self:_enter() end
+    local you = self.session and self.session.lobby and self.session.lobby.you
+    if self.session then self.session:join((you and you.player) and you.name or self.joinName) end
   end
+end
+
+-- ENTER WITH 2 PLAYERS and JOIN WITH 2 PLAYERS: player 2 names themself
+-- first, as any new player does (#22); the remembered name is offered
+function CoopMenu:_name2()
+  return self:_entry("name2", L("PLAYER 2 NAME"), "name", self.settings.name2 or "",
+    CoopMenu.NAME_MAX)
 end
 
 function CoopMenu:_startHost(campaign, name)
@@ -428,9 +447,11 @@ function CoopMenu:press(action)
     local result = e.keypad:press(action)
     if result == "done" then
       local text = e.keypad.text:gsub("^%s+", ""):gsub("%s+$", "")
-      if text == "" then return nil end
-      if e.keypad.kind == "name" and not Protocol.name(text) then return nil end
-      self:_entryDone(text)
+      -- an empty rival's name leaves him to Oak's speech (#22)
+      if text == "" and e.purpose ~= "rival" then return nil end
+      if text ~= "" and e.keypad.kind == "name" and not Protocol.name(text) then return nil end
+      local command = self:_entryDone(text)
+      if e.purpose == "name2" then return command end
     elseif result == "cancel" then
       self.screen, self.cursor = e.back, e.backCursor
       self.entry = nil
@@ -451,7 +472,7 @@ function CoopMenu:press(action)
     if id == "back" then return exit() end
     if id == "new" then
       self.form = { title = L("%s CO-OP", label(self.version)), you = self:_playerName() }
-      return self:go("new", 3)
+      return self:go("new", 4)
     end
     if id == "restore" then
       local restored = self.env.campaigns.restore(self.deleted.id)
@@ -476,8 +497,12 @@ function CoopMenu:press(action)
     if id == "you" then
       return self:_entry("you", L("TRAINER NAME"), "name", self.form.you, CoopMenu.NAME_MAX)
     end
+    if id == "rival" then
+      return self:_entry("rival", L("RIVAL NAME"), "name", self.form.rival or "", CoopMenu.NAME_MAX)
+    end
     if id == "go" then
-      local c = self.env.campaigns.create({ title = self.form.title, game = self.version })
+      local c = self.env.campaigns.create({ title = self.form.title, game = self.version,
+                                            rival = self.form.rival })
       return self:_startHost(c, self.form.you)
     end
   elseif s == "delete" then
@@ -497,8 +522,9 @@ function CoopMenu:press(action)
     end
     return self:_openList(self.root, self.campaign.id)
   elseif s == "hosting" then
-    self.split = id == "enter2" or nil
-    if id == "enter" or id == "enter2" then return self:_enter() end
+    if id == "enter2" then return self:_name2() end
+    self.split = nil
+    if id == "enter" then return self:_enter() end
     if id == "address" then
       self:notify(L("Copied %s.", row.address))
       return { kind = "copy", text = row.address }
@@ -539,8 +565,10 @@ function CoopMenu:press(action)
     local st = self.session and self.session.status
     if id == "retry" then
       self.session:retryNow()
-    elseif id == "join" or id == "join2" then
-      self.split = id == "join2" or nil
+    elseif id == "join2" then
+      return self:_name2()
+    elseif id == "join" then
+      self.split = nil
       local you = self.session.lobby and self.session.lobby.you
       self.session:join((you and you.player) and you.name or self.joinName)
     elseif id == "name" then

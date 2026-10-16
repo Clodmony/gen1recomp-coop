@@ -45,6 +45,7 @@ Game.stack = StateStack; StateStack:init()
 Game.save = SaveData.newGame()
 Game.save.player.name = "HOST"
 Game.save.party = { Pokemon.new(Data, "FIXMON_A", 20) }
+Game.save.flags.EVENT_GOT_STARTER = true -- past the opening (#22)
 local stack = Game.stack
 stack:push(OW, "FIX_TOWN", 5, 6, "down")
 Game.overworld = stack:top()
@@ -119,6 +120,7 @@ local c = Client.new(s.hub:dial(), { name = "BLUE", game = "red", sha1 = SHA, de
 c:join()
 partner = { c = c, w = Window.new(c), save = SaveData.newGame(), map = "FIX_ROUTE" }
 partner.save.player.name = "BLUE"
+partner.save.flags.EVENT_GOT_STARTER = true
 step(8)
 eq(c.status, "joined", "BLUE joined")
 check(s.window and s.window:resting(), "the host's game has a window at a rest point")

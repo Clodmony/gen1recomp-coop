@@ -9,7 +9,9 @@
 --     save slot on this device, never to a solo save (A3.14).
 --   * START > SAVE (a marked hook in StartMenu) asks `refusal` before its
 --     YES/NO: while the host would refuse (a battle running), the save box
---     says so, writes nothing and asks nothing (A3.10).
+--     says so, writes nothing and asks nothing (A3.10).  While the player
+--     plays the opening (#22, A4.9) the box says to leave Oak's lab first,
+--     and Game:writeSave writes nothing at all (`vetoes`).
 --   * The notices say who saved (A3.12): "Campaign saved." for the saver,
 --     "<NAME> saved the campaign." for the others; the CO-OP box shows how
 --     long ago (`ago`).
@@ -34,9 +36,18 @@ function CampaignSave.written(game, kind)
   return s:sendWorld(game.save, true, kind)
 end
 
+-- true when the game may not write its save now: the player plays the
+-- opening, which writes nothing (#22, design A4.9)
+function CampaignSave.vetoes(game)
+  return session() ~= nil and require("src.coop.game.Opening").active()
+end
+
 -- the save box's text when the host would refuse a save now, or nil
 function CampaignSave.refusal(game)
   local s = session()
+  if s and require("src.coop.game.Opening").active() then
+    return Strings("The opening can't\nbe saved.\fLeave OAK's LAB\nfirst!")
+  end
   local why = s and s:saveRefusal()
   if not why then return nil end
   return Strings("A battle is in\nprogress!\fIt can't be saved\nright now.")

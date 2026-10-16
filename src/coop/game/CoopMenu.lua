@@ -13,8 +13,9 @@
 --
 -- The box also shows when the campaign was last saved and that it saves
 -- itself (#13).  JOIN <NAME> joins a partner's battle (#18), and a partner
--- in a battle shows IN A BATTLE (#34).  REJOIN comes with #20; BATTLE and
--- TRADE rows and "in the opening" with #23 and #22.
+-- in a battle shows IN A BATTLE (#34), one in the opening IN THE OPENING
+-- (#22, design A4.8).  REJOIN comes with #20; BATTLE and TRADE rows with
+-- #23.
 
 local Font = require("src.render.Font")
 local Menu = require("src.ui.Menu")
@@ -68,6 +69,7 @@ function CoopMenu.lines(game, s, address)
     end
     lines[#lines + 1] = p.name
     lines[#lines + 1] = " " .. (not p.connected and Strings("AWAY")
+                                or p.opening and Strings("IN THE OPENING") -- #22, A4.8
                                 or p.battle and Strings("IN A BATTLE") -- #34, A14.8
                                 or p.map and CoopMenu.areaName(game.data, p.map)
                                 or Strings("AWAY"))

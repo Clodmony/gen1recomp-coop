@@ -102,11 +102,14 @@ and changes nothing. Gifts (#16) and victories (#18, #21) use it.
 `coop/campaigns/<game>/<id>.campaign` in the save folder, beside the
 campaign's card (`coop/campaigns/<id>.json`, #12). It is JSON:
 
-- `format` (`"gen1recomp-coop campaign"`) and `version` (3; version 1,
+- `format` (`"gen1recomp-coop campaign"`) and `version` (4; version 1,
   from before the shared world, is migrated: [world.md](world.md); version
-  2, from before story items, gets empty gift lists: [items.md](items.md));
+  2, from before story items, gets empty gift lists: [items.md](items.md);
+  version 3, from before the opening, has no rival yet:
+  [opening.md](opening.md));
 - `saved` (unix time);
-- `campaign`, the campaign section;
+- `campaign`, the campaign section (since version 4 with the rival's name
+  `rival` and the starter he counters `chose`, once set, #22);
 - `players`, a list with one entry per player: their `world` (the game's
   save text without the PC) and `boxes` (the PC as text).
 

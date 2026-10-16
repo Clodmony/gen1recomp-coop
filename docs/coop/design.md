@@ -288,6 +288,11 @@ rival's name and how a new player starts (#22); the split-screen entry
 
 ### A4. New players and the opening
 
+In place (#22, [opening.md](opening.md), G27): the opening on a private
+story, the names, the rival's starter, a new campaign's story, "in the
+opening" and no save in it (A4.4 to A4.9). Split into #57 (owner,
+2026-10-15): the start in Pallet Town and bringing a save (A4.1 to A4.3).
+
 1. **adapt** Three ways to start: **play Oak's opening** (default); **start in Pallet
    Town** with a chosen starter at level 5 and 3000 money; **bring a trainer**
    from one of the device's single-player saves (team, PC with its boxes, bag,
@@ -1025,9 +1030,9 @@ Every carry and adapt rule belongs to one issue of this repository.
 | Area | Issue |
 |---|---|
 | A1 Session and connection core | #10 (done: [session.md](session.md)); log sharing #31, flood limits #32 |
-| A2 Launcher co-op flow | #12 ([launcher.md](launcher.md)); rival's name and how to start #22, both versions #9, split-screen entry #11 |
+| A2 Launcher co-op flow | #12 ([launcher.md](launcher.md)); the rival's name #22, how to start #57, both versions #9, split-screen entry #11 |
 | A3 Campaign state, saves and persistence | #13 ([campaign.md](campaign.md)) |
-| A4 New players and the opening | #22 |
+| A4 New players and the opening | #22 ([opening.md](opening.md)); the Pallet start and bringing a save #57 |
 | A5 Shared world | #14 ([world.md](world.md)); story items and the gift race #16 ([items.md](items.md)), party at rest points #17 |
 | A6 Items, bag, money and story gifts | #16 ([items.md](items.md)) |
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
@@ -1278,7 +1283,7 @@ sibling's D-numbers.
   a desktop); a world reaches the host each time the holdings change, not
   only on SAVE. Details: [campaign.md](campaign.md).
 - **G26. A unique encounter is its map object; a beaten one counts as won
-  in the world** (#21, 2026-10-15, proposed). A10.2 and A10.3 name a
+  in the world** (#21, 2026-10-15, accepted by the owner the same day). A10.2 and A10.3 name a
   trainer `trainer:<class>:<index>` and a one-off wild Pokémon
   `static:<species>:<map>`. This engine already keys a beaten trainer or
   static Pokémon by its map object (`defeatedTrainers/<MAP>_obj_<n>`, the
@@ -1292,3 +1297,25 @@ sibling's D-numbers.
   running encounters from `state`; a beaten trainer is the story's, which
   already stops it seeing anyone. The League's rooms are never kept done,
   so every run fights everyone again, until #55's team run (A10.6).
+- **G27. The opening's private story stays in the window** (#22,
+  2026-10-15, accepted by the owner on 2026-10-16; the split into #57 and
+  the seed from the first finished opening chosen by the owner on
+  2026-10-15). A4.4 has the host
+  keep a private copy of the story for a player in the opening and send it
+  to their window. Here the window keeps it: a window whose world has no
+  starter (`EVENT_GOT_STARTER`) sends and takes nothing of the campaign's
+  story, lands no gifts, sends no holdings, and the game writes no save
+  (A4.9), so nothing of the opening reaches the host and a player who
+  drops in it plays it again. The engine keeps no "left the lab" byte, so
+  the opening ends at a rest point once the player has a starter and
+  stands outside `OAKS_LAB`; the lab's rival battle stands between the
+  two. A4.7 asks for a canned post-opening story per version; instead a
+  new campaign has no story until its first player finishes the opening,
+  whose entries seed it as their cartridge left them (the Pallet start of
+  #57 will need the canned state). The host marks a player it has no
+  world for as in the opening when they join, so they are announced so,
+  until their window says otherwise. The campaign keeps the rival's name
+  (the first given in Oak's speech, or the host's at NEW CAMPAIGN) and
+  the starter he counters (the first finisher's); Red and Blue's later
+  rival battles pick his team from it. Protocol 10, campaign file 4.
+  Details: [opening.md](opening.md).

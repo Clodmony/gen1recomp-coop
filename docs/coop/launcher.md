@@ -138,7 +138,9 @@ there keeps running while the launcher shows it and on into the game.
   DELETE. HOST is offered when the card's cartridge is imported here. DELETE
   asks again and keeps the last state as `coop/campaigns/<id>.json.bak` in the
   save folder; RESTORE BACKUP brings the card back. NEW CAMPAIGN asks for the
-  campaign's name and the trainer's (16 and 7 characters) and hosts it.
+  campaign's name, the trainer's (16 and 7 characters) and the rival's
+  (RIVAL NAME: empty, ASK IN THE GAME, leaves him to Oak's speech; #22,
+  [opening.md](opening.md)) and hosts it.
 - **Hosting**: the players in (this device's player marked, a partner on
   another cartridge named with it) out of the host's player limit, the
   addresses partners join at (up to two, a VPN address first, then the home
@@ -147,7 +149,8 @@ there keeps running while the launcher shows it and on into the game.
   only this device can join), STOP HOSTING and ENTER THE WORLD (at any time;
   partners can join later). With a device claimed on CONTROLS for each of
   two players, ENTER WITH 2 PLAYERS (and JOIN WITH 2 PLAYERS on the
-  connection check) enters in split-screen ([split.md](split.md)). STOP HOSTING with a partner in asks first; the
+  connection check) asks PLAYER 2 NAME and enters in split-screen
+  ([split.md](split.md)). STOP HOSTING with a partner in asks first; the
   partner's game goes back to its launcher with "The host closed the
   session."
 - **Join a friend**: the hosts heard on the LAN beacon (one card per

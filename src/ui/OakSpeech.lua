@@ -340,6 +340,9 @@ end
 
 function OakSpeech:buildSteps()
   local steps = OakSpeech.defaultSteps(self)
+  -- co-op (#22): the player's name comes from the launcher, the rival's is
+  -- asked only until somebody named him (src/coop/game/Opening.lua)
+  steps = require("src.coop.game.Opening").speech(steps, self)
   local hooked = Runtime.call("intro.oak_speech.build",
     function(s) return s end, steps, self)
   if type(hooked) ~= "table" then
