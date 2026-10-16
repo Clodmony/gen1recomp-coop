@@ -621,7 +621,6 @@ local function savesList(p, saves, c)
     local bw = (idx.play and bws[1] + 6 or 0) + bws[2] + bws[3] + 6
     local inline = c.w - bw - 20 >= 180
     local ch = inline and 3 * LINE + 14 or 3 * LINE + 44
-    if mixI then ch = ch + 28 end
     p:rect(c.x, y, c.w, ch, slot.active and "lcd" or "paper")
     p:frame(c.x, y, c.w, ch, slot.active and "accent" or "line", slot.active and 2 or 1)
     local tw = inline and c.w - bw - 30 or c.w - 20
@@ -635,7 +634,7 @@ local function savesList(p, saves, c)
       or (slot.label and slot.label ~= "" and slot.label ~= slot.name and L("%s · %s", slot.id, slot.label) or slot.id)
     p:text(c.x + 10, y + 7 + 2 * LINE, Ui.fit(line3, tw), "muted")
     local bx = inline and c.x + c.w - bw - 10 or c.x + 10
-    local by = inline and y + math.floor((ch - (mixI and 28 or 0) - 22) / 2) or y + 3 * LINE + 14
+    local by = inline and y + math.floor((ch - 22) / 2) or y + 3 * LINE + 14
     if idx.play then
       rowButton(p, bx, by, bws[1], 22, idx.play, rows[idx.play], { style = "primary" })
       bx = bx + bws[1] + 6
