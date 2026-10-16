@@ -16,6 +16,14 @@ mod.exports.romImporter = (pcall(require, "src.import.RomImporter"))
 mod.exports.pixelDimensions = function() return love.graphics.getPixelDimensions() end
 mod.exports.dimensions = function() return love.graphics.getDimensions() end
 
+-- a mod may swap a love.graphics function for the engine's next call (the
+-- voxel mod keeps the battle's white field off its 3D arena that way)
+mod.exports.swapGraphics = function(name, fn)
+  local old = love.graphics[name]
+  love.graphics[name] = fn
+  return old
+end
+
 -- what each frame of the world pass saw
 mod.exports.frames = {}
 

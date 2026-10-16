@@ -111,6 +111,11 @@ GameViewport.forced = nil
 GameViewport.finish()
 GameViewport.reset()
 eq((exports.pixelDimensions()), winW, "after the view, the window again")
+local function noFill() end
+local realRectangle = exports.swapGraphics("rectangle", noFill)
+check(love.graphics.rectangle == noFill, "a function a mod swaps in love.graphics is the engine's too")
+exports.swapGraphics("rectangle", realRectangle)
+check(love.graphics.rectangle == realRectangle, "and so is the one it puts back")
 
 -- the world pass in a co-op session --------------------------------------
 

@@ -40,7 +40,8 @@ function Gate.denial(name)
   return nil
 end
 
--- the game's view (GameViewport) while it has one, else nil
+-- the game's view (GameViewport) while it has one, else nil.  Everything
+-- else, writes included, is the real love.graphics.
 local function view()
   local ok, Viewport = pcall(require, "src.render.GameViewport")
   if ok and type(Viewport) == "table" and Viewport.active and Viewport.active() then
@@ -78,7 +79,13 @@ function Gate.graphics(real)
       if v then return select(2, v.dimensions()) end
       return real.getHeight()
     end,
-  }, { __index = real })
+  }, {
+    __index = real,
+    -- a function a mod swaps in is the engine's too (the voxel mod swaps
+    -- rectangle around the battle's draw to keep its white field off the
+    -- 3D arena)
+    __newindex = function(_, key, value) real[key] = value end,
+  })
   proxies[real] = proxy
   return proxy
 end
