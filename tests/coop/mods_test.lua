@@ -148,12 +148,26 @@ Game.overworld = ow
 
 local function step(n)
   for _ = 1, n or 1 do
+    Input:step()
     if Session.current then Session.current:update(1 / 60, Game) end
     if Presence.partner then Presence.partner:update() end
     stack:update(1 / 60)
     Presence.step(Game)
   end
 end
+
+-- SELECT in solo play: the mod's (its wrap of the overworld's input)
+local CoopMenu = require("src.coop.game.CoopMenu")
+CoopMenu.claimSelect(OW) -- what Game:load does once the mods are in
+local function pressSelect()
+  Input:sourcePress("select", "test")
+  step(1)
+  Input:sourceRelease("select", "test")
+  step(1)
+end
+pressSelect()
+eq(exports.selects, 1, "solo: SELECT on the map is the mod's")
+eq(stack:top(), ow, "and opens nothing of the game's")
 
 local function memoryStore()
   local text
@@ -197,6 +211,13 @@ local function frame()
   check(ok, "the overworld draws: " .. tostring(err))
   return drawn
 end
+
+-- SELECT in a session: the CO-OP menu's, as without the mod (design row 9)
+pressSelect()
+eq(exports.selects, 1, "in a session the mod does not take SELECT")
+check(stack:top() ~= ow and stack:top().coopMenu, "SELECT opens the CO-OP menu")
+while stack:top() ~= ow do stack:pop() end
+step(2)
 
 eq(Arrow.arrows(Game, ow, Presence.partners(), 160, 144)[1].dir, "up",
    "flat: BLUE far up the route, the arrow points up")

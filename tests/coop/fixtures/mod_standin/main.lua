@@ -24,6 +24,21 @@ mod.exports.swapGraphics = function(name, fn)
   return old
 end
 
+-- SELECT on the map steps the mod's camera, as the voxel mod's does: a wrap
+-- of the overworld's input, outside the engine's own
+do
+  local OverworldState = require("src.world.OverworldController")
+  local inner = OverworldState.handleInput
+  function OverworldState:handleInput(...)
+    local Game = require("src.core.Game")
+    if Game.input and Game.input:wasPressed("select") then
+      mod.exports.selects = (mod.exports.selects or 0) + 1
+      return
+    end
+    return inner(self, ...)
+  end
+end
+
 -- what each frame of the world pass saw
 mod.exports.frames = {}
 

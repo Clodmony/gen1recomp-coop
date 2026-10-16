@@ -1915,6 +1915,10 @@ function OverworldState:handleInput()
   end
 end
 
+-- co-op (#30): the engine's own handleInput, before any mod wraps it; a
+-- co-op session's SELECT comes here (src/coop/game/CoopMenu.lua claimSelect)
+OverworldState.coopBaseHandleInput = OverworldState.handleInput
+
 -- JoypadOverworld both make -- home/overworld.asm:382
 -- slopeMaps list -> { n = #list, ids = { [mapId] = true } }: update() asks
 -- every frame, so the list is indexed once instead of scanned per call.
