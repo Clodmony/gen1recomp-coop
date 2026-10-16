@@ -833,7 +833,8 @@ center its town leads into, where upstream puts its added rooms' saves.
    money, story reward or whiteout; each Pokémon gets the full trainer EXP and
    stat EXP for every distinct opposing Pokémon it faced, won or lost, not
    split among teammates; traded boosts, levels, learning and evolution as the
-   engine does (D100, design).
+   engine does (D100, design). Amended by G36: the side that forfeits (RUN)
+   gets no EXP; the other side keeps it.
 6. **adapt** Direct trade: after acceptance both see the normal trade screen where they
    stand; the host swaps the two Pokémon exactly once, keeping uids and
    applying trade evolutions; CANCEL (below the party) returns both in place;
@@ -1594,3 +1595,11 @@ sibling's D-numbers.
   waiting two minutes on a silent screen. Details:
   [session.md](session.md) *Identity*, [battles.md](battles.md)
   *Nobody left*.
+- **G36. The side that forfeits a friend battle gets no EXP** (#67,
+  owner, 2026-10-16). A12.5 paid each Pokémon the EXP of every foe it
+  stood against "won or lost", so starting a friend battle and running on
+  turn 1 paid full trainer EXP (621 in the integrated live run): two
+  players could farm EXP. Now the player who forfeits (RUN) gets no EXP
+  and no stat EXP; their team is still healed. The partner who did not
+  run, a battle fought to the end on both sides and a released battle
+  (A12.4) pay as A12.5 says. Details: [friends.md](friends.md).

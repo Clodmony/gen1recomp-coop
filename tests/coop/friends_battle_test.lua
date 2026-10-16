@@ -6,7 +6,8 @@
 -- the mirrored view (each player's own team as allies) and one outcome in
 -- both windows with no desync; the real teams untouched by the fight, then
 -- healed, no money; the full trainer EXP and stat EXP for every distinct
--- foe each Pokémon stood against, won or lost; RUN forfeits; a partner
+-- foe each Pokémon stood against, won or lost; RUN forfeits, and the side
+-- that forfeits gets no EXP (#67); a partner
 -- whose link dropped is waited for and the battle goes on once they are
 -- back; two minutes away release it, as a draw, and the team still heals;
 -- B on the waiting box calls it off for both.
@@ -200,7 +201,11 @@ do
   check(done ~= nil, "RUN ends it for both")
   eq(ends[redGame].result, "forfeit", "RED forfeited")
   eq(ends[greenGame].result, "win", "GREEN won")
-  eq(#ends[redGame].awards, 1, "RED's Pokémon still stood against GREEN's")
+  -- #67 (owner, 2026-10-16): the side that forfeits gets no EXP, so starting
+  -- and forfeiting friend battles farms nothing; the other side keeps A12.5's
+  check(ends[redGame].awards ~= nil, "RED's battle began: the team still heals")
+  eq(#ends[redGame].awards, 0, "RED forfeited: no EXP")
+  eq(#ends[greenGame].awards, 1, "GREEN's Pokémon stood against RED's: its EXP")
 end
 
 -- 3. a partner away: waited for, then back; and released --------------------------

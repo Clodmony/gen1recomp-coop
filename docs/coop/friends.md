@@ -123,7 +123,9 @@ laid over a world or holdings), `Client.lua`, `Protocol.lua`,
   cartridge's "gained ... EXP. Points!" and "grew to level" lines over the
   map, a move learned at each level (the forget list when it knows four),
   and the evolutions of the Pokémon that grew. A released battle pays the
-  same.
+  same. **The side that forfeits gets no EXP** (G36, #67): the player who
+  ran is healed and nothing more, so starting and forfeiting friend
+  battles farms nothing; the partner who did not run is paid as above.
 
 ## Direct trade (A12.6)
 
