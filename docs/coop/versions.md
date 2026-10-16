@@ -156,3 +156,18 @@ Yellow, as Blue with another dump and as Blaue Edition were refused
 Blue probe with the verified dump was not refused. Not run: the launcher's
 screens with a real cartridge, split-screen with the switch, a real step
 into the grass ending in a battle against a mixed Pokémon.
+
+The integrated build, 2026-10-16 (two ENet processes, `POKEPORT_SPEED=4`,
+each driving its own launcher; 23 driver checks, none failed, no
+`battle_desync`): ASH hosted NEW CAMPAIGN on RED with WILD POKéMON = BOTH
+VERSIONS; Hosting said "waiting for a BLUE player", then "on." with MISTY in
+on BLUE. MISTY's launcher first dialled with a Blue cartridge of another
+SHA-1 (faked in the driver) and was refused "RED and BLUE play together only
+from verified dumps. One of the two ROMs is another dump."; then JOIN A
+FRIEND listed the host's nearby card (fit BLUE) and she joined through it.
+Both brought a save in the Cerulean Pokémon Center, walked out into Route
+4's grass and to and fro there: ASH's first encounter was a SANDSHREW (level
+6), MISTY's seventh an EKANS (level 10, after RATTATA and SPEAROW). Each
+caught it with a POKé BALL, and a friend trade (CO-OP menu, TRADE MISTY)
+swapped them, the uids kept and each Pokédex marking the new one owned. Not
+run: a Yellow cartridge (none imported; the sentence is covered ROM-free).
