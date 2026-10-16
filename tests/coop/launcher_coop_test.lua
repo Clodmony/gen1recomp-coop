@@ -953,6 +953,28 @@ do
   eq(out.start2, nil, "with no start to choose")
 end
 
+-- ENTER before the host's own world arrived: kept, not lost (found in #64's live run)
+do
+  local H = device("OAK", { split = true, address = "192.168.1.54" })
+  choose(H.menu, "new")
+  choose(H.menu, "go") -- no frame yet: the host's world is still on its way
+  check(not H.menu.session:worldReady(), "the host's own world has not arrived")
+  choose(H.menu, "enter2")
+  H.menu:text("LEAF")
+  local out = H.menu:press("start")
+  out = out or choose(H.menu, "go2")
+  eq(out, nil, "nothing to enter yet")
+  frames({ H })
+  check(H.command and H.command.kind == "coop_enter", "the two enter once the world is there")
+  eq(H.command and H.command.split, true, "with player 2")
+  local E = device("OAK", { address = "192.168.1.55" })
+  choose(E.menu, "new")
+  choose(E.menu, "go")
+  eq(choose(E.menu, "enter"), nil, "a plain ENTER this early waits too")
+  frames({ E })
+  check(E.command and E.command.kind == "coop_enter", "and enters once the world is there")
+end
+
 -- the return note ----------------------------------------------------------
 
 do

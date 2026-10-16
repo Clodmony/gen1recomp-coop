@@ -597,8 +597,13 @@ end
 function CoopMenu:_enter()
   local s = self.session
   if not s then return nil end
-  -- the player's world from the campaign comes right after the welcome (#13)
-  if s.worldReady and not s:worldReady() then return nil end
+  -- the player's world from the campaign comes right after the welcome
+  -- (#13); an ENTER before it is kept and done once it is there
+  if s.worldReady and not s:worldReady() then
+    self.enterWaits = true
+    return nil
+  end
+  self.enterWaits = nil
   local campaign
   if s.kind == "host" then
     campaign = { id = self.campaign.id, title = self.campaign.title }
@@ -759,6 +764,7 @@ function CoopMenu:press(action)
       return { kind = "copy", text = row.address }
     end
     if id == "stop" or id == "back" then
+      self.enterWaits = nil
       if self.session and self.session:partners() > 0 then return self:go("stop", 1) end
       self:_cancelSession()
       return exit()
@@ -881,6 +887,7 @@ function CoopMenu:update(dt)
     if you and you.player then s:join(you.name) end
   end
   if s.kind == "join" and s.status == "joined" then return self:_enter() end
+  if s.kind == "host" and self.enterWaits and self.screen == "hosting" then return self:_enter() end
   if s.kind == "host" and (s.status == "ended" or s.status == "closed") then
     self.session = nil
     return exit(L("The session stopped."))
