@@ -108,6 +108,10 @@ local function device(name, opts)
     closeNearby = function() d.listening = false end,
     splitReady = function() return opts.split == true end,
     soloSaves = opts.saves and function(v) d.savesAsked = v; return opts.saves end or nil,
+    seat2Known = function(address, campaign)
+      local known = d.identity:known(address, 2)
+      return known ~= nil and campaign ~= nil and known[campaign] ~= nil
+    end,
     host = function(campaign, playerName, version, start)
       return Session.startHost({
         campaign = campaign, cartridge = { game = version, sha1 = SHA[version] },
@@ -737,8 +741,17 @@ do
   fits(m, "player 2's name")
   m:text("LEAF")
   out = m:press("start")
+  eq(out, nil, "then player 2 chooses how they start (#64)")
+  eq(m.screen, "start2", "on a screen of their own")
+  eq(ids(m), "how,go2", "HOW PLAYER 2 STARTS, then ENTER WITH 2 PLAYERS")
+  eq(m:items()[m.cursor].id, "go2", "ENTER WITH 2 PLAYERS preselected")
+  eq(cursorTo(m, "how").label, "HOW PLAYER 2 STARTS", "named for player 2")
+  eq(cursorTo(m, "how").value, "THE OPENING", "the opening by default")
+  fits(m, "how player 2 starts")
+  out = choose(m, "go2")
   check(out and out.kind == "coop_enter" and out.split == true,
         "then the two enter, a second player on this device")
+  eq(out.start2, nil, "player 2 plays the opening")
   eq(H.settings.name2, "LEAF", "player 2's name is remembered")
   local again = require("src.coop.launcher.CoopSettings").load(H.settings.fs)
   eq(again.name2, "LEAF", "on the device")
@@ -754,6 +767,9 @@ do
   eq(J.menu.screen, "entry", "JOIN WITH 2 PLAYERS asks player 2's name first")
   J.menu:text("KRIS")
   J.menu:press("start")
+  eq(J.menu.screen, "start2", "player 2 chooses how they start (#64)")
+  eq(cursorTo(J.menu, "go2").label, "JOIN WITH 2 PLAYERS", "then the two join")
+  choose(J.menu, "go2")
   frames({ H, J })
   check(J.command and J.command.kind == "coop_enter" and J.command.split == true,
         "JOIN WITH 2 PLAYERS enters with a second player on this device")
@@ -859,6 +875,82 @@ do
   choose(Y.menu, "new")
   choose(Y.menu, "how")
   eq(Y.menu.screen, "bring", "in Yellow the opening is followed by BRING A SAVE")
+end
+
+-- split-screen: how player 2 starts (#64) -----------------------------------
+
+do
+  local SAVES = {
+    { id = "slot1", name = "RED", badges = 3, dex = 20, time = "12:34", bringable = true },
+    { id = "slot3", name = "GOLD", badges = 1, dex = 9, time = "2:00", bringable = true },
+  }
+  local H = device("OAK", { split = true, address = "192.168.1.50", saves = SAVES })
+  local m = H.menu
+  choose(m, "new")
+  choose(m, "how") -- the host's own player starts in Pallet Town
+  choose(m, "go")
+  frames({ H })
+  choose(m, "enter2")
+  m:text("LEAF")
+  m:press("start")
+  eq(m.screen, "start2", "player 2 chooses how they start")
+  eq(cursorTo(m, "how").value, "THE OPENING", "their own choice, not the host player's")
+  choose(m, "how")
+  eq(cursorTo(m, "how").value, "START IN PALLET", "A steps to START IN PALLET")
+  choose(m, "starter")
+  eq(cursorTo(m, "starter").value, "CHARMANDER", "with a starter of their own")
+  fits(m, "player 2 starting in Pallet Town")
+  local out = choose(m, "go2")
+  check(out and out.kind == "coop_enter" and out.split == true, "the two enter")
+  eq(out.start and out.start.how, "pallet", "player 1 starts in Pallet")
+  eq(out.start.starter, "BULBASAUR", "with BULBASAUR")
+  eq(out.start2 and out.start2.how, "pallet", "player 2 starts in Pallet too (#64)")
+  eq(out.start2.starter, "CHARMANDER", "with CHARMANDER")
+
+  -- player 2 brings a save; player 1's choice stays
+  local B = device("OAK", { split = true, address = "192.168.1.51", saves = SAVES })
+  choose(B.menu, "new")
+  choose(B.menu, "go")
+  frames({ B })
+  choose(B.menu, "enter2")
+  B.menu:text("LEAF")
+  B.menu:press("start")
+  choose(B.menu, "how")
+  choose(B.menu, "how")
+  eq(B.menu.screen, "bring", "BRING A SAVE opens the solo saves for player 2")
+  choose(B.menu, "slot") -- slot1
+  eq(B.menu.screen, "start2", "back on player 2's screen")
+  eq(cursorTo(B.menu, "save").value, "RED", "naming the save")
+  out = choose(B.menu, "go2")
+  eq(out.start, nil, "player 1 plays the opening, untouched by player 2's pick")
+  eq(out.start2 and out.start2.how, "save", "player 2 brings a save")
+  eq(out.start2.slot, "slot1", "slot1")
+
+  -- B on player 2's screen goes back, with no second player
+  local C = device("OAK", { split = true, address = "192.168.1.52" })
+  choose(C.menu, "new")
+  choose(C.menu, "go")
+  frames({ C })
+  choose(C.menu, "enter2")
+  C.menu:text("LEAF")
+  C.menu:press("start")
+  C.menu:press("b")
+  eq(C.menu.screen, "hosting", "B goes back to the hosting screen")
+  out = choose(C.menu, "enter")
+  eq(out.split, nil, "and ENTER THE WORLD enters alone")
+
+  -- a player 2 the campaign knows opens their world: no choice
+  local K = device("OAK", { split = true, address = "192.168.1.53" })
+  choose(K.menu, "new")
+  choose(K.menu, "go")
+  frames({ K })
+  K.identity:remember("loopback", 2, K.menu.campaign.id, "p0000000000000002")
+  choose(K.menu, "enter2")
+  K.menu:text("LEAF")
+  out = K.menu:press("start")
+  check(out and out.kind == "coop_enter" and out.split == true,
+        "a known player 2: the two enter at once")
+  eq(out.start2, nil, "with no start to choose")
 end
 
 -- the return note ----------------------------------------------------------

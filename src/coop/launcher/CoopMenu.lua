@@ -25,13 +25,17 @@
 --                          two players (split-screen, #11)
 --   env.soloSaves(version) -> this device's single-player saves of that game,
 --                          { id, name, badges, time, bringable } (#57)
+--   env.seat2Known(address, campaign) -> true when this device's player 2
+--                          is a player of that host's campaign (#64)
 --
 -- Actions: "up", "down", "left", "right", "a", "b", "start".  A press or
 -- update() may return a command for the launcher:
 --   { kind = "coop_enter", version = v, campaign = { id, title }, split = true?,
---     start = { how = "pallet", starter } or { how = "save", slot }? }
+--     start = { how = "pallet", starter } or { how = "save", slot }?,
+--     start2 = the same, for player 2? }
 --   (split: a second player on this device joins once the game runs, #11;
---   start: how a new player starts, #57)
+--   start: how a new player starts, #57; start2: how player 2 starts when
+--   the campaign does not know them, #64)
 --   { kind = "copy", text = "…" }
 --   { kind = "coop_exit", notice = text? }   back to PLAY
 
@@ -203,6 +207,11 @@ function CoopMenu:items()
     for _, a in ipairs(self.settings.recent) do
       add({ id = "recent", address = a, label = a })
     end
+  elseif s == "start2" then
+    -- how player 2 starts (#64): the rows of #57's HOW YOU START
+    self:_startRows(add, self.start2, L("HOW PLAYER 2 STARTS"))
+    add({ id = "go2", label = (self.start2 and self.start2.from == "hosting")
+          and L("ENTER WITH 2 PLAYERS") or L("JOIN WITH 2 PLAYERS") })
   elseif s == "bring" then
     -- the device's solo saves of this game (#57, design A4.1)
     for _, sv in ipairs(self.bringList or {}) do
@@ -393,9 +402,11 @@ function CoopMenu:_hows(version)
   return out
 end
 
-function CoopMenu:_startRows(add)
-  local st = self:_start()
-  add({ id = "how", label = L("HOW YOU START"), value = howLabel(st.how) })
+-- `st`: whose start (player 2's on its own screen, #64); the player's own
+-- by default
+function CoopMenu:_startRows(add, st, howText)
+  st = st or self:_start()
+  add({ id = "how", label = howText or L("HOW YOU START"), value = howLabel(st.how) })
   if st.how == "pallet" then
     add({ id = "starter", label = L("STARTER"), value = starterLabel(st.starter) })
   elseif st.how == "save" then
@@ -404,14 +415,14 @@ function CoopMenu:_startRows(add)
 end
 
 -- a press on one of the rows above; true when it took it
-function CoopMenu:_startPress(id, version)
-  local st = self:_start()
+function CoopMenu:_startPress(id, version, st)
+  st = st or self:_start()
   if id == "how" then
     local hows = self:_hows(version)
     local at = 1
     for i, h in ipairs(hows) do if h == st.how then at = i end end
     st.how = hows[at % #hows + 1]
-    if st.how == "save" and not st.save then return self:_bring(version) or true end
+    if st.how == "save" and not st.save then return self:_bring(version, st) or true end
     return true
   elseif id == "starter" then
     local at = 1
@@ -419,23 +430,26 @@ function CoopMenu:_startPress(id, version)
     st.starter = Start.STARTERS[at % #Start.STARTERS + 1]
     return true
   elseif id == "save" then
-    self:_bring(version)
+    self:_bring(version, st)
     return true
   end
   return false
 end
 
--- the save pick: the solo saves of `version`, those past Oak's lab
-function CoopMenu:_bring(version)
+-- the save pick: the solo saves of `version`, those past Oak's lab; `st`
+-- is whose start takes it
+function CoopMenu:_bring(version, st)
   self.bringList = self.env.soloSaves and self.env.soloSaves(version) or {}
   self.bringBack = { screen = self.screen, cursor = self.cursor }
+  self.bringFor = st or self:_start()
   self:go("bring")
   settle(self)
 end
 
--- the start the player chose, for the game (nil: the opening)
-function CoopMenu:startChoice()
-  local st = self.start
+-- the start the player chose (`st`: player 2's, #64), for the game (nil:
+-- the opening)
+function CoopMenu:startChoice(st)
+  st = st or self.start
   if not st or st.how == "opening" then return nil end
   if st.how == "pallet" then return { how = "pallet", starter = st.starter } end
   if st.how == "save" and st.save then return { how = "save", slot = st.save.id } end
@@ -491,16 +505,41 @@ function CoopMenu:_entryDone(text)
   elseif p == "joinname" then
     self.joinName = text
   elseif p == "name2" then
-    -- player 2 names themself, then the two enter or join (#22, #11)
+    -- player 2 names themself (#22, #11), then chooses how they start when
+    -- the campaign does not know them yet (#64), then the two enter or join
     self.settings.name2 = text
     self.settings:save()
     self.split = true
-    if self.screen == "hosting" then return self:_enter() end
-    local you = self.session and self.session.lobby and self.session.lobby.you
-    if self.session then
-      self.session:join((you and you.player) and you.name or self.joinName, self:_startHow(you))
+    self.start2 = nil
+    if not self:_seat2Known() then
+      self.start2 = { how = "opening", starter = "BULBASAUR", from = self.screen }
+      self:go("start2")
+      for i, r in ipairs(self:items()) do if r.id == "go2" then self.cursor = i end end
+      return nil
     end
+    return self:_go2()
   end
+end
+
+-- the campaign knows this device's player 2 (#64): they open their world,
+-- so there is no start to choose
+function CoopMenu:_seat2Known()
+  local s = self.session
+  if not (s and self.env.seat2Known) then return false end
+  if s.kind == "host" then
+    return self.env.seat2Known("loopback", self.campaign and self.campaign.id) == true
+  end
+  return self.env.seat2Known(s.address, s.lobby and s.lobby.campaign) == true
+end
+
+-- the two enter (hosting) or join (#11)
+function CoopMenu:_go2()
+  if self.screen == "hosting" then return self:_enter() end
+  local you = self.session and self.session.lobby and self.session.lobby.you
+  if self.session then
+    self.session:join((you and you.player) and you.name or self.joinName, self:_startHow(you))
+  end
+  return nil
 end
 
 -- ENTER WITH 2 PLAYERS and JOIN WITH 2 PLAYERS: player 2 names themself
@@ -574,7 +613,9 @@ function CoopMenu:_enter()
   end
   self.entered = true
   return { kind = "coop_enter", version = s.cartridge.game, campaign = campaign,
-           split = self.split or nil, start = self:startChoice() }
+           split = self.split or nil, start = self:startChoice(),
+           -- how player 2 starts (#64)
+           start2 = self.split and self.start2 and self:startChoice(self.start2) or nil }
 end
 
 -- two players on this device can start: a device claimed for each (#11)
@@ -749,10 +790,25 @@ function CoopMenu:press(action)
       end
       return self:_dial(row.host.address, fit)
     end
+  elseif s == "start2" then
+    local st = self.start2
+    local version = self.session and self.session.cartridge and self.session.cartridge.game
+      or self.version
+    if id == "back" then
+      self.split, self.start2 = nil, nil
+      self:go(st and st.from or "hosting")
+      self.cursor = #self:items()
+      return nil
+    end
+    if self:_startPress(id, version, st) then return nil end
+    if id == "go2" then
+      self:go(st.from)
+      return self:_go2()
+    end
   elseif s == "bring" then
     local back = self.bringBack or { screen = "new", cursor = 1 }
-    if id == "slot" then self:_start().save = row.save end
-    local st = self:_start()
+    local st = self.bringFor or self:_start()
+    if id == "slot" then st.save = row.save end
     if not st.save then st.how = "opening" end
     self:go(back.screen, back.cursor)
     settle(self)
