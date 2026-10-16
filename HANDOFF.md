@@ -44,8 +44,10 @@ None.
 - #68 merged; G37 accepted as built.
 - German "SO BEGINNT SPIELER 2", "So beginnt Spieler 2" and the subtitle:
   kept, for the owner's later review of `german-wording.md`.
-- Cleanup: `g11/` scratch and the old local branches deleted; luacheck
-  installed locally. This worktree stays (the owner did not pick its
+- Cleanup: `g11/` scratch and the old local branches deleted. luacheck:
+  the owner wants it locally, but it needs sudo (`sudo pacman -S
+  luacheck`, Arch's `extra` repo; no luarocks on the machine), so the
+  owner installs it. This worktree stays (the owner did not pick its
   removal); it is on the merged `coop/group12-followups`.
 - What Group 12 did not run live: real pads, two real windows, Yellow,
   and player 2 playing the opening through.
@@ -244,8 +246,9 @@ Forfeit EXP became #67 (Group 12).
 
 - After each `main` sync: `gh workflow list -R Clodmony/gen1recomp-coop --all`
   and disable upstream's workflows.
-- Local tools: luacheck is installed (2026-10-16), so `tools/verify.sh`
-  runs the lint gate too; JDK 17 is installed.
+- Local tools: luacheck is not installed yet; the owner runs `sudo pacman
+  -S luacheck` (then `tools/verify.sh` runs the lint gate too). CI gates
+  it on every pull request. JDK 17 is installed.
 
 ## Cleanup
 
