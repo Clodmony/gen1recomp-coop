@@ -56,6 +56,12 @@ on.
 - Save editor: EDIT on a solo save row; campaign worlds not editable.
 - Skin studio and touch-controls editor: deferred to #7.
 - Carts: left out for now; revisit after the playthrough.
+- At the handoff: merge #69 locally as Claude once coop-ci passes on it
+  (the next session does it, then removes this worktree); the editor's
+  one early close is filed as #70 (Group 10), to be looked at again in a
+  live run with a real mouse; BEARBEITEN and the refusal line are kept
+  for the owner's later review in `german-wording.md`; the merged local
+  branch `coop/group12-followups` is deleted.
 
 ## Group 12's answers (owner, 2026-10-16: every recommendation taken)
 
@@ -132,7 +138,10 @@ Forfeit EXP became #67 (Group 12).
 
 ## Next candidates
 
-- **#7 mobile** (Group 10's last issue): an Android build of the fork's
+- **First: merge #69** once coop-ci is green on it (owner-approved).
+- **#70** (Group 10): the editor's one early close; a live run with a
+  real mouse and keyboard.
+- **#7 mobile** (Group 10): an Android build of the fork's
   launcher (check which upstream mobile build scripts work without the
   proprietary launcher), touch on the launcher, and the skin studio and
   touch-controls editor entries #27 left to it (`main.lua`'s
@@ -265,9 +274,8 @@ Forfeit EXP became #67 (Group 12).
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
 - The Superset worktree `veiled-degree-…` is on
-  `coop/group10-launcher-entries` (PR #69). The local branch
-  `coop/group12-followups` (merged, deleted on GitHub) is still there;
-  delete it with the worktree.
+  `coop/group10-launcher-entries` (PR #69); remove it once #69 is
+  merged. `coop/group12-followups` is deleted.
 - The old local branches (`coop/group8-opening`, `coop/group7a-party-pc`,
   `veiled-degree-51672277`) are deleted. No background processes.
 - Scratch: `g11/`, `g12/` and `g10/` (#27's import, probes, PR body)
