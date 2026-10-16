@@ -6,7 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (#58 and #61 merged; Group 12 next).
+Last updated 2026-10-16 (Group 12 done: draft PR #68 waits for the owner).
 
 ## Testing rule (owner, 2026-10-16)
 
@@ -28,16 +28,39 @@ on.
   locally as Claude. CI passed every check on #61 (its first luacheck run
   found one W113 from #9, fixed). `tools/verify.sh` on `gen1recomp-coop`
   at 9741ed7d: ALL PASSED (37/37 tiers).
-- Protocol 17; campaign file version 4. Decisions G1 to G35 all accepted
-  (G28 to G35 on 2026-10-16).
+- On `gen1recomp-coop`: protocol 17, campaign file version 4. Decisions
+  G1 to G35 accepted. PR #68 brings protocol 18, campaign file version 5,
+  G36 (owner's decision) and G37 (proposed).
 - Milestones: Groups 8 and 11 closed. **Group 12: Group 11 follow-ups**
-  holds #62, #63, #64, #67 (next, the owner's pick). Group 2 has #12 and
-  #15 (owner-side checks); Group 10 holds #7 (mobile) and #27 (launcher
-  entries). Group 9 has no issues.
+  (#62, #63, #64, #67) is done in PR #68; close the milestone once it is
+  merged. Group 2 has #12 and #15 (owner-side checks); Group 10 holds #7
+  (mobile) and #27 (launcher entries). Group 9 has no issues.
 
 ## Open pull requests
 
-None.
+- **#68 (draft), Group 12: Group 11 follow-ups**, branch
+  `coop/group12-followups` into `gen1recomp-coop`. Closes #62, #63, #64
+  and #67. It waits for the owner's merge (locally as Claude); check
+  coop-ci's luacheck job on it first, since luacheck did not run locally.
+  - #67: a friend battle's forfeiting side gets no EXP; its team is still
+    healed (G36).
+  - #62, #63: one trade core (`src/coop/campaign/Trade.lua`; `CableTrade`
+    is gone). A committed trade is owed per player in the campaign
+    (`p.trades`) and sent in the new `trades` message (protocol 18,
+    campaign file 5). A window applies it at a rest point, also after a
+    drop or a crash; the `coopTrade` mark covers a window that restarted
+    on the host's copy (G37, proposed).
+  - #64: HOW PLAYER 2 STARTS in the launcher after PLAYER 2 NAME, skipped
+    for a player 2 the host already knows. Plus a launcher fix found live:
+    an ENTER pressed before the host's own world arrived is kept, not
+    lost.
+  - `tools/verify.sh` at f7162757: ALL PASSED, 37/37 tiers (local
+    luacheck skipped). Every scenario passed live with the cartridge and
+    the 3D mod. Not run: real pads, two real windows, Yellow, and player 2
+    playing the opening through.
+  - New German strings for the owner's later review: "SO BEGINNT
+    SPIELER 2", "So beginnt Spieler 2" and the subtitle, in
+    `german-wording.md`.
 
 ## Group 11's detail choices (owner, 2026-10-16: every recommendation taken)
 
@@ -101,9 +124,10 @@ Forfeit EXP became #67 (Group 12).
 
 ## Next candidates
 
-- **Group 12** (#62, #63, #64, #67), the owner's pick (2026-10-16).
-- Group 10 (#7 mobile, #27 launcher entries) needs owner decisions per
-  feature; Group 2's #12 and #15 are owner-side checks.
+- First merge #68 (owner), then remove this worktree and branch.
+- **Group 10** (#7 mobile, #27 launcher entries): it needs the owner's
+  decisions per feature; ask them first, with the issues' options.
+- Group 2's #12 and #15 are owner-side checks.
 
 ## Live-run recipe
 
@@ -197,6 +221,18 @@ Forfeit EXP became #67 (Group 12).
   every itest1 scenario; their worktree paths point at the removed
   `wt/itest1`, so edit `WT` in `run.sh` to the new worktree). `tpl/`
   holds extracted cartridge data: never commit it.
+- **Trades and other owed things (Group 12).**
+  - An owed trade lands only at a rest point: the driver must stand still
+    on the map (no text box, no menu) for it to apply.
+  - After a rejoin, the owed trade's "Trade completed!" can be on screen
+    before the driver's first on-map check. Wait for the map, and watch
+    the text from the moment of REJOIN.
+  - After "The link was broken." a Cable Club guest is back at the Cable
+    Club's menu, not on the map.
+  - Set the voxel level after CONTINUE, not at the title.
+  - Group 12's drivers were deleted with its scratch when PR #68 opened.
+    Rebuild from `g11/itest1` and `docs/coop/friends.md` § the trade core
+    if needed.
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -209,15 +245,18 @@ Forfeit EXP became #67 (Group 12).
 
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
-- The Superset worktree `veiled-degree-…` still holds the merged
-  `coop/group8-opening` (local branch only; deleted on GitHub): remove
-  the workspace, then delete the branch.
-- Every other Group 8/11 branch and worktree is removed, locally and on
-  GitHub. No background processes.
+- The Superset worktree `veiled-degree-…` is on `coop/group12-followups`
+  (pushed, PR #68). Remove it once #68 is merged, then delete the branch
+  locally and on GitHub.
+- Leftover local branches in the shared clone, all merged and deleted on
+  GitHub: `coop/group8-opening`, `coop/group7a-party-pc` and
+  `veiled-degree-51672277`. Delete them with the owner's approval.
+- No background processes.
 - `~/dev-scratch/gen1recomp-coop/g11/` keeps Group 11's live drivers and
   the save templates `tpl/a`, `tpl/b` (extracted cartridge data, local
-  only) for Group 12's live runs; delete `g11/` when Group 12 is done.
-  `mod-dl/dsv` is the owner's copy of the 3D mod (never committed).
+  only); delete it once #68 is merged unless the owner keeps it.
+  Group 12's scratch (`g12/`) is deleted. `mod-dl/dsv` is the owner's copy
+  of the 3D mod (never committed).
 
 ## Still open
 
