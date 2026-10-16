@@ -468,6 +468,28 @@ do
     "the campaign has a card: HOST, RENAME, DELETE, and Red's switch of both versions (#9)")
   local d = fits(m, "campaign cards")
   eq(#d.cards[1].players, 2, "with its players")
+  -- a campaign's name has its 16 characters, not a player name's 10 (the
+  -- integrated build's live run: Enter did nothing on an 11-character name)
+  choose(m, "rename")
+  for _ = 1, 30 do m:erase() end
+  m:text("KANTO WITH BLUE")
+  m:press("start")
+  eq(m.screen, "host", "a 15-character campaign name finishes the entry")
+  eq(Campaigns.get(campaignId).title, "KANTO WITH BLUE", "and renames the campaign")
+  choose(m, "new")
+  choose(m, "title")
+  for _ = 1, 30 do m:erase() end
+  m:text("SIXTEEN CHARS OK")
+  m:press("start")
+  eq(m.screen, "new", "NEW CAMPAIGN takes a 16-character name")
+  eq(m.form.title, "SIXTEEN CHARS OK", "as the campaign's name")
+  choose(m, "you")
+  for _ = 1, 30 do m:erase() end
+  m:text("TOOLONG")
+  m:press("start")
+  eq(m.form.you, "TOOLONG", "a trainer name of 7")
+  m:press("b")
+  eq(m.screen, "host", "B leaves NEW CAMPAIGN")
   choose(m, "rename")
   for _ = 1, 30 do m:erase() end
   m:text("JOHTO")

@@ -603,7 +603,11 @@ function CoopMenu:press(action)
       local text = e.keypad.text:gsub("^%s+", ""):gsub("%s+$", "")
       -- an empty rival's name leaves him to Oak's speech (#22)
       if text == "" and e.purpose ~= "rival" then return nil end
-      if text ~= "" and e.keypad.kind == "name" and not Protocol.name(text) then return nil end
+      -- a campaign's name has its own length (TITLE_MAX), not a player's
+      local title = e.purpose == "title" or e.purpose == "rename"
+      if text ~= "" and e.keypad.kind == "name" and not title and not Protocol.name(text) then
+        return nil
+      end
       local command = self:_entryDone(text)
       if e.purpose == "name2" then return command end
     elseif result == "cancel" then
