@@ -78,7 +78,7 @@ function Client.new(conn, opts)
     name = opts.name or "PLAYER",
     game = opts.game, sha1 = opts.sha1 or "",
     build = opts.build or "dev",
-    device = opts.device or "0", seat = opts.seat or 1,
+    device = opts.device or "0", seat = opts.seat or 1, window = opts.window,
     known = opts.known or {}, via = opts.via,
     status = "idle", reason = nil,
     seq = 0, player = nil, campaign = nil,
@@ -120,6 +120,7 @@ end
 function Client:join()
   local hello = self:_identity("hello")
   hello.device, hello.seat, hello.via = self.device, self.seat, self.via
+  hello.window = self.window
   hello.logs = { share = self:sharesLog() }
   self.status = "joining"
   self.conn:send(hello)

@@ -116,6 +116,26 @@ frame(2, {})
 eq(dials, before, "a window that kept running while unfocused keeps its link")
 eq(guest.status, "joined", "and stays joined")
 
+-- the guest's link timed out on the guest's side only (found live: the
+-- host's window stopped running for 45 s, every guest's link timed out,
+-- and the host, running again, still held their old links): the window's
+-- hello on its new link is the same player, not a new one
+do
+  local players = #hostSession.host.players
+  local oldHostLink = hostSession.host:player(player).link
+  -- the guest's end closes; the host does not hear of it
+  oldHostLink.conn.other, guest.client.conn.other = nil, nil
+  guest.client.conn:close()
+  frame(2, {})
+  eq(guest.status, "reconnecting", "the guest reconnects")
+  frame(60 * (Session.REDIAL + 1), {})
+  eq(guest.status, "joined", "and is back in")
+  eq(guest.client.player, player, "as the same player, though the host still held the old link")
+  eq(#hostSession.host.players, players, "no second player for the same window")
+  check(oldHostLink.conn.closed, "the old link is closed")
+  check(hostSession.host:player(player).connected, "the player is connected on the new link")
+end
+
 -- a host gone for good: two minutes, then the end over the world, then the launcher
 local hostWas = hostSession.hub.dial
 hostSession.hub.dial = function()

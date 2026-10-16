@@ -594,6 +594,7 @@ function Host:_hello(link, msg)
   if self:_misfit(link, "hello", msg.game, msg.sha1) then
     return self:_turnAway(link, "content_mismatch")
   end
+  self:_takeBack(msg)
   local p = self:resolve(msg.known, msg.name)
   if not p then
     if #self.players >= self.maxPlayers then
@@ -611,7 +612,7 @@ function Host:_hello(link, msg)
   p.game = msg.game
   p.device, p.seat, p.via = msg.device, msg.seat, msg.via
   link.player = p
-  link.device = msg.device
+  link.device, link.window = msg.device, msg.window
   link.shareLogs = msg.logs ~= nil and msg.logs.share == true
   self.dirty = true
   self:_send(link, {
@@ -628,6 +629,23 @@ function Host:_hello(link, msg)
   self:_sendWorld(link, p)
   self:_sendLogBacklog(link)
   HostBattles.back(self, p)
+end
+
+-- A window that redials while this host still holds its old link (its
+-- link timed out on the window's side only, as when the host's own window
+-- stopped running): the old link is its own, gone stale, and lets go, so
+-- the hello takes the player back rather than making a second one.  A
+-- second window of the same device is another window id: someone new (A1.9).
+function Host:_takeBack(msg)
+  local id = type(msg.known) == "table" and msg.known[self.campaign.id] or nil
+  local p = id and self.byId[id]
+  local old = p and p.connected and p.link
+  if not (old and msg.window and old.window == msg.window and p.device == msg.device
+          and p.seat == msg.seat) then
+    return
+  end
+  self:_disconnect(old, "replaced")
+  old.conn:close()
 end
 
 -- per-player sequence numbers (design A1.5): strictly increasing; a number

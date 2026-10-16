@@ -61,7 +61,7 @@ checks what the host sends.
 | Client to host | Fields |
 |---|---|
 | `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
-| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log) |
+| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log), `window` (the game window's own id, the same on each link it redials; optional, so a host of protocol 16 without it ignores it) |
 | `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped), `travel` (`walk`, `run`, `bike`, `surf`) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
@@ -119,8 +119,13 @@ Rules (design A1):
 - **Identity.** The hello carries the seat's `{ campaign = player }` map
   for this host. A remembered player who is not connected gets their player
   back. If that player is connected already (a second window), the device
-  joins as someone new. A device that lost its id is recognised by the same
-  name. Split-screen has two seats, so a device remembers two players per
+  joins as someone new. A hello from the same window (its `window`, device
+  and seat) as the connected player's link is that window redialling while
+  the host still holds its old link, which timed out on the window's side
+  only (found in the integrated live run: a host whose window stopped
+  running for 45 s made every guest a second player); the old link lets
+  go and the player comes back. A device that lost its id is recognised
+  by the same name. Split-screen has two seats, so a device remembers two players per
   campaign.
 - **Worlds** (#13). A `world` is kept only when it parses with the game's
   own save parser and has a save's shape (a team of at most six, twelve

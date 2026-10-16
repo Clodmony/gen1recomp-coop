@@ -53,6 +53,7 @@
 -- "ended"; src/coop/game/Presence.lua).
 
 local Transport = require("src.coop.session.Transport")
+local Random = require("src.coop.session.Random")
 local Protocol = require("src.coop.session.Protocol")
 local Host = require("src.coop.session.Host")
 local Client = require("src.coop.session.Client")
@@ -105,6 +106,8 @@ local function newSession(kind, opts)
     cartridge = opts.cartridge, clock = opts.clock or defaultClock,
     frames = 0, names = {}, maps = {}, last = nil,
     status = "idle", reason = nil, seat = opts.seat or 1,
+    -- this window's id on every link it dials (a redial is the same window)
+    windowId = Random.hex(16),
   }, Session)
   s.identity = opts.identity or Identity.load(Identity.saveFolderStore())
   if opts.log ~= false then
@@ -122,6 +125,7 @@ function Session:_client(conn, hostKey, via)
   self.client = Client.new(conn, {
     name = self.name, game = self.cartridge.game, sha1 = self.cartridge.sha1,
     device = identity.device, seat = self.seat, known = identity:known(hostKey, self.seat), via = via,
+    window = self.windowId,
     clock = self.opts.clock,
     -- the host's own player: its lines are already in the host's log; one
     -- link per device carries the log, the first seat's (#11)
