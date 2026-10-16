@@ -3,7 +3,8 @@
 -- cartridge's own continue screen shows), the active one and a campaign's
 -- marked; PLAY (the slot becomes the active one and the game boots to
 -- continue), NEW SAVE, DELETE after a question, IMPORT .SAV (a file in the
--- cartridge's format, typed, pasted or dropped) and EXPORT per slot.  The
+-- cartridge's format, typed, pasted or dropped), EXPORT and EDIT (upstream's
+-- GPL save editor, tools/save-editor, #27) per slot.  The
 -- slots are upstream's (GPL SaveData), the codec upstream's SaveFileIO and
 -- SaveConvert, so a .sav from a cartridge or an emulator comes and goes
 -- the way it does in the game's own importer.
@@ -11,7 +12,7 @@
 -- Screens: "list", "delete" (the question), "import" (a path to type or
 -- a file to drop), "confirm" (an oversized .sav).
 -- Actions as Menu's; a press may return { kind = "boot", version, newGame =
--- false } or { kind = "saves_exit" }.
+-- false }, { kind = "edit_save", version, slot } or { kind = "saves_exit" }.
 --
 -- env:
 --   version          the game
@@ -20,6 +21,7 @@
 --   exportSlot(version, slotId) -> ok, pathOrErr, note (default: Saves.exportSlot)
 --   campaignOf(slotId) -> a campaign's title when the slot is its, or nil
 --   canType          the import screen takes a typed path (default true)
+--   canEdit          the launcher can open the save editor (default true)
 
 local Text = require("src.coop.launcher.Text")
 local L = Text.get
@@ -55,6 +57,7 @@ function Saves.new(env)
     exportSlot = env.exportSlot or Saves.exportSlot,
     campaignOf = env.campaignOf or function() return nil end,
     canType = env.canType ~= false,
+    canEdit = env.canEdit ~= false,
   }, Saves)
   return self
 end
@@ -84,6 +87,11 @@ function Saves:items()
     for _, slot in ipairs(self:details().slots) do
       -- a campaign's slot is entered from its campaign, not here
       if not slot.campaign then add({ id = "play", slot = slot.id, label = L("PLAY →") }) end
+      -- a campaign's world is the host's to change, not this device's editor's
+      if self.canEdit then
+        add({ id = "edit", slot = slot.id, label = L("EDIT"),
+              enabled = slot.exists and not slot.campaign })
+      end
       -- a campaign's world (its 40-row bag) never goes to a cartridge save (#16, A6.8)
       add({ id = "export", slot = slot.id, label = L("EXPORT"),
             enabled = slot.exists and not slot.campaign })
@@ -177,6 +185,8 @@ function Saves:press(action)
   if s == "list" then
     if id == "play" then
       return boot(self, row.slot)
+    elseif id == "edit" then
+      return { kind = "edit_save", version = self.version, slot = row.slot }
     elseif id == "new" then
       local okC, slotId = pcall(self.saves.createSlot, self.version)
       if not okC or not slotId then

@@ -66,6 +66,7 @@ function Launcher.new(onBoot, opts)
   require("src.coop.split.Split").stop()
   local self = setmetatable({
     onBoot = onBoot, bootOnImport = opts.bootOnImport == true,
+    onEditSave = opts.onEditSave,
     readyCache = {}, saveCache = {}, clock = 0, axis = {},
     ui = { scroll = 0 }, device = mobile() and "touch" or "keys",
   }, Launcher)
@@ -288,6 +289,7 @@ function Launcher:_savesEnv(version)
   return {
     version = version,
     canType = not mobile(),
+    canEdit = self.onEditSave ~= nil,
     campaignOf = function(slotId)
       for id, entry in pairs(settings.slots or {}) do
         if entry.version == version and (entry.slot == slotId or entry.slot2 == slotId) then
@@ -407,11 +409,27 @@ function Launcher:_run(command)
                                                 start = command.start2 }) -- #64
     end
     self:_boot(command.version)
+  elseif command.kind == "edit_save" then
+    -- the save editor (#27): main.lua's openEditor parks this launcher while
+    -- it runs and hands it back on Close (savesChanged); a refusal is left
+    -- in saveNotice, upstream's field for it
+    self.saveNotice = nil
+    self.onEditSave(command.version, command.slot)
+    local refused = self.saveNotice and self.saveNotice[command.version]
+    self.saveNotice = nil
+    if refused then
+      self.menu:notify(L("Could not open the save editor: %s", tostring(refused.text)))
+    end
   elseif command.kind == "copy" then
     if love.system.setClipboardText then love.system.setClipboardText(command.text) end
   elseif command.kind == "open_logs" then
     self:_openLogs()
   end
+end
+
+-- main.lua's closeEditor: the editor may have changed what CONTINUE shows
+function Launcher:savesChanged()
+  self.saveCache = {}
 end
 
 -- ------------------------------------------------------------ mods (#30)

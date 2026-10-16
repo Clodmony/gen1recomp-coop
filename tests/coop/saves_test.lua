@@ -120,8 +120,9 @@ do
   eq(d.slots[2].active, true, "slot 2 is")
   eq(d.slots[2].campaign, "SUNDAY RUN", "and belongs to a campaign")
   eq(d.slots[1].campaign, nil, "slot 1 is a solo save")
-  eq(ids(s), "play:" .. a .. ",export:" .. a .. ",delete:" .. a .. ",export:" .. b .. ",delete:" .. b .. ",new,import",
-    "PLAY, EXPORT and DELETE per solo slot; a campaign's slot plays from its campaign")
+  eq(ids(s), "play:" .. a .. ",edit:" .. a .. ",export:" .. a .. ",delete:" .. a
+    .. ",edit:" .. b .. ",export:" .. b .. ",delete:" .. b .. ",new,import",
+    "PLAY, EDIT, EXPORT and DELETE per solo slot; a campaign's slot plays from its campaign")
   -- a campaign's world (a 40-row bag) never goes to a cartridge save (#16, A6.8)
   for _, r in ipairs(s:items()) do
     if r.id == "export" then
@@ -236,6 +237,33 @@ do
   eq(d.slots[3].name .. "/" .. d.slots[3].badges, "BRIO/3", "as the same trainer with the same badges")
   local save = SaveSerializer.decode(files["saves/red/" .. SaveData.activeSlot("red") .. ".lua"])
   eq(save and save.money, 12345, "and the same money")
+end
+
+-- 4b. EDIT (#27): the save editor on a solo slot that holds a save; a
+-- campaign's world and an empty slot are not edited ----------------------------
+do
+  fresh()
+  local a = SaveData.createSlot("red")
+  SaveData.writeSlot("red", a, luaSave("ASH", {}, 60))
+  local b = SaveData.createSlot("red")
+  SaveData.writeSlot("red", b, luaSave("MISTY", {}, 60))
+  local empty = SaveData.createSlot("red")
+  campaigns = { [b] = "SUNDAY RUN" }
+  local s = newSaves()
+  for _, r in ipairs(s:items()) do
+    if r.id == "edit" then
+      eq(r.enabled, r.slot == a, "EDIT is offered for the solo slot with a save only: " .. r.slot)
+    end
+  end
+  local cmd = pick(s, "edit", a)
+  eq(cmd and cmd.kind .. "/" .. cmd.version .. "/" .. tostring(cmd.slot), "edit_save/red/" .. a,
+    "EDIT asks the launcher to open the editor on that slot")
+  eq(pick(s, "edit", b), nil, "EDIT on a campaign's slot does nothing")
+  eq(pick(s, "edit", empty), nil, "nor on an empty slot")
+  -- a launcher with no editor (none given) offers no EDIT row
+  local bare = Saves.new({ version = "red", canEdit = false })
+  check(not ids(bare):find("edit", 1, true), "no EDIT without an editor")
+  campaigns = {}
 end
 
 -- 5. in the menu: from the solo sheet, back with B ---------------------------

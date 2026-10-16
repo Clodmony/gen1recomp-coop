@@ -185,6 +185,8 @@ The credit line of upstream's licence is not translated.
 | Each slot is one adventure. The game continues the active one. | Jeder Platz ist ein Abenteuer. Das Spiel setzt den aktiven fort. | |
 | PLAY → | SPIELEN → | |
 | EXPORT | EXPORTIEREN | |
+| EDIT | ÄNDERN | |
+| Could not open the save editor: %s | Der Spielstand-Editor ließ sich nicht öffnen: %s | |
 | IMPORT | IMPORTIEREN | |
 | + NEW SAVE | + NEUER SPIELSTAND | |
 | IMPORT .SAV | .SAV IMPORTIEREN | |

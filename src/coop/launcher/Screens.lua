@@ -617,8 +617,8 @@ local function savesList(p, saves, c)
   end
   for _, slot in ipairs(d.slots) do
     local idx = byslot[slot.id] or {}
-    local bws = { fitWidth(L("PLAY →")), fitWidth(L("EXPORT")), fitWidth(L("DELETE")) }
-    local bw = (idx.play and bws[1] + 6 or 0) + bws[2] + bws[3] + 6
+    local bws = { fitWidth(L("PLAY →")), fitWidth(L("EXPORT")), fitWidth(L("DELETE")), fitWidth(L("EDIT")) }
+    local bw = (idx.play and bws[1] + 6 or 0) + (idx.edit and bws[4] + 6 or 0) + bws[2] + bws[3] + 6
     local inline = c.w - bw - 20 >= 180
     local ch = inline and 3 * LINE + 14 or 3 * LINE + 44
     p:rect(c.x, y, c.w, ch, slot.active and "lcd" or "paper")
@@ -638,6 +638,10 @@ local function savesList(p, saves, c)
     if idx.play then
       rowButton(p, bx, by, bws[1], 22, idx.play, rows[idx.play], { style = "primary" })
       bx = bx + bws[1] + 6
+    end
+    if idx.edit then
+      rowButton(p, bx, by, bws[4], 22, idx.edit, rows[idx.edit])
+      bx = bx + bws[4] + 6
     end
     rowButton(p, bx, by, bws[2], 22, idx.export, rows[idx.export])
     bx = bx + bws[2] + 6

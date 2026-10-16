@@ -580,6 +580,7 @@ local function makeLauncher(launcherOpts)
   end, {
     initialTab = launcherOpts and launcherOpts.initialTab or nil,
     notice = launcherOpts and launcherOpts.notice or nil,
+    onEditSave = openEditor,  -- co-op (#27): EDIT on a SAVES row
   })
 end
 
