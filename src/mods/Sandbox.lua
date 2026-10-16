@@ -16,6 +16,8 @@
 
 local Runtime = require("src.mods.Runtime")
 local SafePath = require("src.mods.SafePath")
+-- co-op (#30): what a mod sees of the fork's build (src/coop/mods/Gate.lua)
+local CoopGate = require("src.coop.mods.Gate")
 
 local Sandbox = {}
 
@@ -133,6 +135,9 @@ local function loveFacade(compat, permissions)
         error(("love.%s is not available to mods%s"):format(key,
           type(hint) == "string" and (", use " .. hint) or ""), 2)
       end
+      -- co-op (#30): the window's size is the game's view (a split-screen
+      -- half), so a mod's scene fits it (src/coop/mods/Gate.lua)
+      if key == "graphics" then return CoopGate.graphics(_G.love.graphics) end
       return _G.love[key]
     end,
     -- a callback chain lands on the real table (compat.assign decides which
@@ -243,6 +248,9 @@ local function sandboxedRequire(modId, permissionSet, compat)
     local substitute = compat and compat.module(name)
     if substitute ~= nil then return substitute end
     local denial = Sandbox.moduleDenial(name, permissionSet)
+      -- co-op (#30): upstream's launcher stays out of the fork's process,
+      -- a mod's require included (LICENSE.MD term 2)
+      or CoopGate.denial(name)
     if denial then error(("[%s] %s"):format(modId or "mod", denial), 2) end
     local previous = Runtime.modRequire
     Runtime.modRequire = modId or true

@@ -6705,6 +6705,9 @@ function OverworldState:drawWorld()
         if self.fishing then
           at(fxRodFn, self.player.px + 8, self.player.py + 16)
         end
+        -- co-op (#30): the partner arrows and "!" bubbles, under the
+        -- pipeline's camera (src/coop/game/Presence.lua)
+        require("src.coop.game.Presence").drawFx(Game, self, at, project, scale)
       end)
     end
     override = Pipelines.drawWorld(pipelineId, ctx)
