@@ -813,6 +813,7 @@ characters, a menu row fewer.
 | for %s? | gegen %s? | |
 | VS %s | GEGEN %s | |
 | TRADING | TAUSCHT | |
+| Waiting for %s... | Warte auf %s... | |
 | Invitation sent. | Anfrage gesendet. | |
 | %s wants / to battle! | %s / möchte kämpfen! | |
 | %s wants / to trade! | %s / möchte tauschen! | |

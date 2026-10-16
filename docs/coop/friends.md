@@ -72,7 +72,8 @@ laid over a world or holdings), `Client.lua`, `Protocol.lua`,
   gets no rows. The host refuses an invitation to a partner who is away
   (`partner_away`), busy (`partner_busy`), or when either player is
   already in an invitation (`invite_pending`); the sender's notice says
-  "BLUE is away." or "BLUE is busy.".
+  "BLUE is away." or "BLUE is busy.". A player whose own invitation still
+  waits sends no second one: the notice says "Waiting for BLUE...".
 - **The question** ("RED / wants to battle!", "RED / wants to trade!", then
   the cartridge's YES / NO) shows only at a rest point (the shared world's,
   [world.md](world.md)) with the overworld on top: no menu, text box,
