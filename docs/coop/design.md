@@ -948,7 +948,10 @@ REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle; the
 opening's parts since #22; the BATTLE and TRADE rows, VS <foe> and
 TRADING since #23 ([friends.md](friends.md)); partners in a Cable Club
 room are not drawn since #60 ([cable.md](cable.md)). The last save is in
-since #13.
+since #13. With a world-pipeline mod (the Dramatic Shape Voxel Mod) the
+arrows and the "!" are drawn under its 3D camera and partners keep their
+colour; in a session SELECT stays the CO-OP menu's when such a mod takes
+SELECT on the map (#30, [mods.md](mods.md), G34).
 
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
@@ -1119,6 +1122,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A14 Presence, finding the partner, CO-OP menu, run button | #15 ([presence.md](presence.md)); the battle, opening, friend battle and campaign file parts #34 |
 | A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
 | Local split-screen (the sibling's open #53) | #11 |
+| Mods: the Dramatic Shape Voxel Mod in co-op and split-screen, the launcher's MODS page | #30 ([mods.md](mods.md)) |
 
 ## 6. Decisions
 
@@ -1550,3 +1554,25 @@ sibling's D-numbers.
   process), so a Red and a Blue player never share a device. Yellow stays
   with Yellow (G4); the answer is in A13. Protocol 12. Details:
   [versions.md](versions.md).
+- **G34. Engine-patching mods run on the fork's boot path; the player
+  installs them, the fork never ships them** (#30, 2026-10-16, proposed).
+  The owner's co-op playthrough needs the Dramatic Shape Voxel Mod, whose
+  licence forbids redistribution, so the fork carries no copy of it (its
+  tests use a stand-in mod with the same manifest fields) and offers a
+  way to install it: the launcher's SETTINGS > MODS lists the installed
+  mods per game, turns each ON or OFF with the flag the game's loader
+  reads, installs a mod's .zip or folder into the save folder's `mods/`
+  and takes a mod's optional file, on the GPL mod modules (never
+  upstream's `LauncherMods`). The fork adapts its own code to such a mod,
+  not the mod: a mod's require of an upstream launcher module fails
+  (LICENSE.MD term 2; the voxel mod falls back on its own); a mod's
+  `love.graphics` reports its game's view as the window, so a split-screen
+  half gets a half-sized 3D scene; with a world pipeline the partner
+  arrows and "!" bubbles are drawn in its field-effect pass under its
+  camera, and a partner's sprite reaches it in their colour. One rule of
+  A14 meets the mod head on: the voxel mod steps its camera with SELECT on
+  the map; in a co-op session SELECT stays the CO-OP menu's (A14 row 9),
+  solo play keeps the mod's SELECT, and the camera stays on the "3" key and
+  the mod's OPTIONS row. A mod's options are each player's own and graphics
+  only, nothing is synced (`affects_link: false`), and a session does not
+  compare mods. Details: [mods.md](mods.md).
