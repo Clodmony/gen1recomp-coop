@@ -151,6 +151,17 @@ So drawing the world twice costs about what two half-size scenes cost:
 under 10 ms a frame here, within a 60 Hz frame with room to spare. Before
 the view-sized fix each half rendered a whole window's scene (10.6 ms).
 
+Again on the merged Group 11 build (#61, with #22, #57, #59, #55, #23,
+#60, #9 and #66 in it), the mod installed by hand in each save folder: a
+host who started in Pallet Town through the fork's launcher and a guest
+joining with START IN PALLET both drew the voxel world and each other,
+SELECT opened the CO-OP menu, hiding the guest's window for 4 s kept the
+link, and START > SAVE saved; the host announced the guest as "MISTY
+joined the session." (not in the opening, #66). A wild co-op battle
+joined from the CO-OP menu, a walk-in to a partner's battle and a friend
+battle ran in 3D-BTL with no `battle_desync`; split-screen with both
+halves in 3D took 8.8 ms a frame.
+
 Not run: Windows, macOS and Android, a real window and real pads, two
 machines, the VR companion mod, the STADIUM models (no Stadium ROM here),
 the mod's optional file through IMPORT FILE (the test covers it with the
