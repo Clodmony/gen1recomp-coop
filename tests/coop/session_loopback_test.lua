@@ -157,6 +157,29 @@ eq(twin.status, "joined", "a second window joins")
 check(twin.player ~= greenId, "a second window of a connected player is someone new")
 eq(#host.players, 3, "three players now")
 
+-- a second window of the same device and seat, while the first is still
+-- there: the host makes sure of the first link (HOLD seconds), then the
+-- second window is someone new (A1.9).  A host of its own.
+do
+  local saved = clock
+  local h = newHost()
+  local hb = h:serve(Transport.loopback())
+  local first = seat(hb, "GREEN", { seat = 2 })
+  first:join()
+  pump(h, { first })
+  local id = first.player
+  local same = seat(hb, "GREEN", { seat = 2, known = { [CAMPAIGN] = id } })
+  same:join()
+  pump(h, { first, same })
+  eq(same.status, "joining", "its hello waits while the first window's link is made sure of")
+  clock = clock + Host.HOLD + 0.1
+  pump(h, { first, same })
+  eq(same.status, "joined", "then it joins")
+  check(same.player ~= id, "as someone new: the first window is still there")
+  eq(first.status, "joined", "and the first window keeps its player")
+  clock = saved
+end
+
 -- probe: the lobby view, nobody created ------------------------------------
 local prober = seat(hub, "GREEN", { known = { [CAMPAIGN] = greenId } })
 twin:leave()

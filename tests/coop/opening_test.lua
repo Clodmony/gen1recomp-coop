@@ -221,6 +221,47 @@ do
   check(not view(x).opening, "the window says again it is past the opening")
 end
 
+-- a returning player's game opens on the title first (found live): the
+-- title's empty save is no world in the opening, and CONTINUE then loads
+-- the world, here one saved in Oak's lab after the opening
+do
+  local host, hub = startHost()
+  local first = Client.new(hub:dial(), { name = "RED", game = "red", sha1 = SHA, build = "test",
+                                         device = "d1", clock = now })
+  first:join()
+  local before = { c = first, w = Window.new(first), save = F.save("RED", { map = "OAKS_LAB" }),
+                   map = "OAKS_LAB", sent = {} }
+  pump(host, { before }, 12)
+  -- as a campaign file holds it after a SAVE
+  host.state:player(first.player).world = F.save("RED", { map = "OAKS_LAB" })
+  -- RED quits and starts the game again: a new window, on the title
+  first.conn:close()
+  local c = Client.new(hub:dial(), { name = "RED", game = "red", sha1 = SHA, build = "test",
+                                     device = "d1", clock = now, known = first.known })
+  c:join()
+  local x = { c = c, w = Window.new(c), save = F.save("RED", { party = {}, flags = {} }),
+              map = nil, busy = "no_overworld", sent = {} }
+  local said = {}
+  local send = c.send
+  c.send = function(self, msg)
+    if msg.type == "opening" then said[#said + 1] = tostring(msg.done) end
+    return send(self, msg)
+  end
+  local marked = false
+  local function watch(frames)
+    for _ = 1, frames do
+      pump(host, { x }, 1)
+      if view(x).opening or x.w:inOpening() then marked = true end
+    end
+  end
+  watch(20) -- the title, before CONTINUE
+  x.save, x.map, x.busy = F.save("RED", { map = "OAKS_LAB" }), "OAKS_LAB", nil
+  watch(20)
+  eq(x.w.opening, false, "CONTINUE's world with a starter is past the opening")
+  check(not marked, "the title's empty save never put the player in the opening")
+  eq(table.concat(said, ","), "true", "the window told the host once: past the opening")
+end
+
 -- the rival's name (A4.5) --------------------------------------------------------
 do
   local host, hub = startHost()

@@ -410,7 +410,12 @@ end
 -- true while the window plays the opening.
 function Window:_opening(f)
   if self.naming and self.client:sendOpening(false, self.naming) then self.naming = nil end
-  if self.opening == nil then self.opening = not hasStarter(f.save) end
+  if self.opening == nil then
+    -- the first look waits for a world on screen: the title's (and Oak's
+    -- speech's) save is not yet the one CONTINUE or NEW GAME plays
+    if f.map == nil then return true end
+    self.opening = not hasStarter(f.save)
+  end
   -- each link tells the host once: a host that lost this player's world
   -- marks them in the opening when they come back
   -- (with the starter, when this window finished the opening: a done lost

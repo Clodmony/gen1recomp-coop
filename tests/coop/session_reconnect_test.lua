@@ -116,6 +116,62 @@ frame(2, {})
 eq(dials, before, "a window that kept running while unfocused keeps its link")
 eq(guest.status, "joined", "and stays joined")
 
+-- the guest's link timed out on the guest's side only (found live: the
+-- host's window stopped running for 45 s, every guest's link timed out,
+-- and the host, running again, still held their old links): the window's
+-- hello on its new link is the same player, not a new one
+do
+  local players = #hostSession.host.players
+  local oldHostLink = hostSession.host:player(player).link
+  -- the guest's end closes; the host does not hear of it
+  oldHostLink.conn.other, guest.client.conn.other = nil, nil
+  guest.client.conn:close()
+  frame(2, {})
+  eq(guest.status, "reconnecting", "the guest reconnects")
+  frame(60 * (Session.REDIAL + 1), {})
+  eq(guest.status, "joined", "and is back in")
+  eq(guest.client.player, player, "as the same player, though the host still held the old link")
+  eq(#hostSession.host.players, players, "no second player for the same window")
+  check(oldHostLink.conn.closed, "the old link is closed")
+  check(hostSession.host:player(player).connected, "the player is connected on the new link")
+end
+
+-- the guest's game crashed and is started again at once (found live: the
+-- host had not noticed the dead link yet, so the new window's hello made
+-- a second player): the host makes sure of the old link first, and the
+-- player comes back
+do
+  local players = #hostSession.host.players
+  local oldHostLink = hostSession.host:player(player).link
+  oldHostLink.conn.other, guest.client.conn.other = nil, nil -- the process is gone
+  local again = Session.startDial({
+    address = "loop", name = "BLUE", cartridge = { game = "red", sha1 = SHA },
+    log = false, identity = guest.identity, clock = function() return t end,
+    dial = function() lastConn = hostSession.hub:dial() return lastConn end,
+  })
+  Session.current = nil
+  check(again.windowId ~= guest.windowId, "the new game is another window")
+  for _ = 1, 6 do
+    t = t + 1 / 60
+    hostSession:update(1 / 60, nil)
+    again:update(1 / 60, nil)
+  end
+  eq(again.status, "probed", "the restarted game's REJOIN probes the host")
+  local you = again.lobby and again.lobby.you
+  eq(you and you.player, player, "the probe names the player, so REJOIN joins at once")
+  again:join()
+  for _ = 1, 60 * 3 do
+    t = t + 1 / 60
+    hostSession:update(1 / 60, nil)
+    again:update(1 / 60, {})
+  end
+  eq(again.status, "joined", "the restarted game is in")
+  eq(again.client.player, player, "as the same player")
+  eq(#hostSession.host.players, players, "no second player")
+  check(oldHostLink.conn.closed, "the dead link was let go")
+  guest = again
+end
+
 -- a host gone for good: two minutes, then the end over the world, then the launcher
 local hostWas = hostSession.hub.dial
 hostSession.hub.dial = function()

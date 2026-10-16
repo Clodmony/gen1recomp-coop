@@ -61,8 +61,8 @@ checks what the host sends.
 
 | Client to host | Fields |
 |---|---|
-| `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
-| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log), `start` (optional: how a new player starts, `opening`, `pallet` or `save`, #66) |
+| `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`, and optional `device`, `seat`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
+| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log), `start` (optional: how a new player starts, `opening`, `pallet` or `save`, #66), `window` (optional: the game window's own id, the same on each link it redials) |
 | `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped), `travel` (`walk`, `run`, `bike`, `surf`) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
@@ -120,8 +120,21 @@ Rules (design A1):
 - **Identity.** The hello carries the seat's `{ campaign = player }` map
   for this host. A remembered player who is not connected gets their player
   back. If that player is connected already (a second window), the device
-  joins as someone new. A device that lost its id is recognised by the same
-  name. Split-screen has two seats, so a device remembers two players per
+  joins as someone new. A hello from the same window (its `window`, device
+  and seat) as the connected player's link is that window redialling while
+  the host still holds its old link, which timed out on the window's side
+  only (found in the integrated live run: a host whose window stopped
+  running for 45 s made every guest a second player); the old link lets
+  go and the player comes back. A hello from another window of the same
+  device and seat (a game started again after a crash, before the host saw
+  the old link die; found in the same run) waits up to 5 s
+  (`Host.HOLD`) while the host makes sure of the old link (ENet times it
+  out within about two seconds unless it answers; ENet's own timeouts come
+  back after 6 s): one that closes was the crashed game's, and the player
+  comes back; one still there is a second window, someone new. A probe
+  from that seat (with its `device` and `seat`) already names the player,
+  so REJOIN joins at once. A device that lost its id is recognised by the
+  same name. Split-screen has two seats, so a device remembers two players per
   campaign.
 - **Worlds** (#13). A `world` is kept only when it parses with the game's
   own save parser and has a save's shape (a team of at most six, twelve
@@ -315,6 +328,22 @@ The run found three faults, now fixed and tested:
 Two machines on a LAN, the beacon across machines, Windows, macOS and mobile
 have not been run. The launcher's co-op screens were run the same way
 (#12); [launcher.md](launcher.md) says what was run.
+
+**Focus, visibility and stalls** (integrated Group 11 build, 2026-10-16;
+Linux desktop, LÖVE 11.5, US Red, offscreen, two processes over ENet, each
+entering through the fork's launcher with BRING A SAVE): the host's and
+the guest's windows lost focus (`love.focus(false)`) or were hidden
+(`love.visible(false)`) for 3 to 30 s while their frames ran, in the
+launcher's hosting and connection screens and in the game (the opening,
+a frozen rival scene, a joined League battle, the Hall of Fame's
+continue): every link was kept. Windows whose process stopped running
+(no frames, no network) for 10, 45 and 60 s: a guest that stalled closed
+its link on resuming and came back as the same player; guests whose host
+stalled timed out and redialled, and came back as the same players once
+the host ran again (a second player per guest before the `window` fix
+above). A guest killed and started again at once came back through
+REJOIN as the same player, over loopback. A real minimized window,
+Wayland and other systems have not been run.
 
 ## Tests
 

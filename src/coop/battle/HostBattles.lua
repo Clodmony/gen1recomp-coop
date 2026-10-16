@@ -86,6 +86,16 @@ local function participant(b, pid)
   return nil
 end
 
+-- whether any participant is present (design A11.1)
+local function anyPresent(b)
+  for _, e in ipairs(b.players) do
+    if e.present then return true end
+  end
+  return false
+end
+
+local finish -- below: a battle's end
+
 -- the battle a player is in or queued for, or nil (design A8.1)
 function HostBattles.of(host, pid)
   for id, b in pairs(host.battles) do
@@ -171,6 +181,13 @@ function HostBattles.open(host, p, msg)
     return nil, "beaten"
   end
   local running = enc and HostBattles.running(host, enc)
+  if running and not anyPresent(running) then
+    -- nobody is in it to fight on (their links went, perhaps before it
+    -- asked anything, so no join could go in): it ends as fled now, as
+    -- A11.7 would after ABANDON, and this player meets the encounter afresh
+    finish(host, running, "run", nil, "abandoned")
+    running = nil
+  end
   if running then
     host:_log("encounter_walk_in", { encounter = enc, battle = running.id }, p)
     return HostBattles.join(host, p, { battle = running.id, team = msg.team, otId = msg.otId,
@@ -315,7 +332,7 @@ function HostBattles.suggest(host, p, msg)
   return b
 end
 
-local function finish(host, b, result, by, why)
+function finish(host, b, result, by, why)
   b.ended = result
   host.dirty = true
   host:_log("battle_end", { battle = b.id, result = result, rev = #b.inputs, why = why }, by)
@@ -429,8 +446,7 @@ end
 function HostBattles.tick(host, now)
   for _, b in pairs(host.battles) do
     if not b.ended then
-      local present = false
-      for _, e in ipairs(b.players) do present = present or e.present end
+      local present = anyPresent(b)
       if present then
         b.emptyAt = nil
       else

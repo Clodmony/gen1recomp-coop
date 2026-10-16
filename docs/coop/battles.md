@@ -418,7 +418,13 @@ nobody is left.
   owner's. The owner decides again the moment they are back.
 - **Nobody left** (A11.7). A battle nobody is present in waits two minutes
   (a redial's budget), then ends as fled; at shutdown every battle still
-  running ends as fled, and its players hear it before `ended`.
+  running ends as fled, and its players hear it before `ended`. A unique
+  encounter's battle nobody is present in ends as fled at once when
+  another player meets that encounter, who then fights it afresh: a
+  walk-in could not go in (no one is there to bring the battle to a
+  question), so the player waited the two minutes on a silent screen
+  (found in the integrated live run: the rival scene's driver quit during
+  the battle's intro).
 - **The end while away** (A11.8). A join still queued is released; a player
   whose link was down when their battle ended hears the end once back: the
   window builds the battle from the record, plays it out of sight and ends
@@ -575,6 +581,19 @@ Route 22's second fight with the cartridge (the ROM-free test starts each
 from its map script), a loss in a scene, a partner joining from the
 CO-OP menu instead of the box, a driver whose link comes back mid-scene,
 split-screen, and real pads.
+
+Integrated Group 11 build (2026-10-16, same setup, both players entering
+through the fork's launcher with BRING A SAVE and the RIVAL save, walking
+and pressing A; no teleports, no given Pokémon): ASH walked left onto
+x 29 and drove `route22_1`; MISTY, standing at (33,5), was frozen under
+the box, lost focus for 5 s and was hidden for 5 s while frozen (link
+and box kept), ASH's window was hidden for 5 s mid-scene, A joined
+ASH's battle, it was won, MISTY was released with the rival's flag, and
+walking past x 29 started nothing. With MISTY driving, her process quit
+during the battle's intro: ASH's box went, and ASH meeting the rival
+waited two silent minutes for the abandon (A11.7) until the fix under
+*Leaving, coming back, taking over*; since, ASH's own fight opens at once
+and was won. No `battle_desync`.
 The team's League run and the Hall of Fame's continue (#55, same setup:
 each player given three level 100 MEWTWO by the drivers, which also put
 them in the rooms, answered the move questions and pressed A through the
@@ -606,6 +625,21 @@ soft reset or START > QUIT in a co-op window, a dropped link during the
 continue, a disconnected player inside, split-screen, and Blue or Yellow
 (ROM-free tests cover the reset, the dropped link and the disconnected
 player).
+
+Integrated Group 11 build (2026-10-16, same setup, both bringing the
+LEAGUE save through the launcher, walking every room and fighting with
+their own teams): ASH beat LORELEI and BRUNO alone while MISTY's window
+lost focus; MISTY walked through both rooms (LORELEI's line, no battle);
+MISTY walked in to ASH's AGATHA fight (one battle, her copy; her window
+lost focus 5 s in it) and they won; ASH beat LANCE and the Champion, lost
+focus during the Hall of Fame, and continued at Pallet Town; MISTY walked
+through LANCE's room, met the Champion as already beaten, got her own
+Hall of Fame and the continue. With both back in Pallet Town, ASH went
+back to the plateau (put there as a fly would), the lobby cleared the
+run, and LORELEI fought again. MISTY's START > QUIT > YES continued the
+co-op world (hidden 5 s meanwhile) with her team. No `battle_desync`.
+Still not run: a real whiteout, a dropped link during the continue,
+split-screen, Blue and Yellow.
 
 ## Tests
 

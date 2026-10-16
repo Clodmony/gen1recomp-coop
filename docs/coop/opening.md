@@ -32,7 +32,10 @@ opening when they join, so the others are told "<NAME> joined the session in
 the opening." (unless the hello says they start in Pallet Town or bring a
 save, `start`, #66); the window's first look then confirms or clears it, and it
 says so again on every new link (a done lost to a dropped link is sent
-again, with its starter).
+again, with its starter). The first look waits for a world on screen: the
+title's save (before CONTINUE or NEW GAME) is not the player's, and taking
+it for one put a returning player in the opening until they next stood
+outside Oak's lab (found in the integrated live run).
 
 **A private story** (A4.4). While a window plays the opening it sends no
 patch, takes nothing of the campaign's story, lands no gifts and sends no
@@ -246,6 +249,24 @@ refused world or start in the host's log):
 Not run for #57: Blue, the German games, Yellow's refusal on a cartridge
 (the launcher's tests only), a dropped link during a start (the loopback
 test only), real pads and windows.
+
+**Integrated Group 11 build** (2026-10-16; Linux desktop, LÖVE 11.5, US
+Red, offscreen, ENet, every process entering through the fork's launcher
+and walking the opening: the house, Oak's stop, the lab, the rival's
+battle, the door): ASH hosted NEW CAMPAIGN with RIVAL NAME empty and THE
+OPENING; MISTY joined mid-opening with NEW NAME and THE OPENING. Both were
+private (not drawn, IN THE OPENING in each CO-OP box, SAVE refused), both
+windows lost focus and were hidden for 5 s each, both took SQUIRTLE from
+their own labs, saw each other in Pallet Town and saved. MISTY quit and
+REJOINed (past the opening, her team); ASH quit and hosted again from
+CAMPAIGNS > HOST, MISTY REJOINed, both went on. The run found the first
+look on the title (fixed above). #57 in the same build: ASH with START IN
+PALLET (CHARMANDER), MISTY with BRING A SAVE (the TRADE save, trainer id,
+team and money kept; her solo save file unchanged; the campaign's story
+stayed the Pallet start's, so her world lost the brought save's own
+story entries such as EVENT_GOT_POKEDEX), GREEN with THE OPENING
+(BULBASAUR; the rival still counters CHARMANDER); the campaign file after
+the three SAVEs held the three worlds and the ten story entries.
 
 Not run: real pads and windows, a drop during the opening, split-screen
 (player 2's name is checked in the launcher's tests), the host's RIVAL
