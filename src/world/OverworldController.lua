@@ -1915,6 +1915,10 @@ function OverworldState:handleInput()
   end
 end
 
+-- co-op (#30): the engine's own handleInput, before any mod wraps it; a
+-- co-op session's SELECT comes here (src/coop/game/CoopMenu.lua claimSelect)
+OverworldState.coopBaseHandleInput = OverworldState.handleInput
+
 -- JoypadOverworld both make -- home/overworld.asm:382
 -- slopeMaps list -> { n = #list, ids = { [mapId] = true } }: update() asks
 -- every frame, so the list is indexed once instead of scanned per call.
@@ -2660,6 +2664,13 @@ end
 function OverworldState:interact()
   local p = self.player
   local fx, fy = p:facingCell()
+
+  -- co-op (#23): A on a partner opens BATTLE / TRADE / CANCEL
+  -- (src/coop/game/Friends.lua); a solo game returns at once
+  if require("src.coop.game.Friends").talk(Game, self, fx, fy) then
+    interacted(self, fx, fy, "partner")
+    return
+  end
 
   local npc = self:npcAtCell(fx, fy)
   if not npc and self.map:isCounterCell(fx, fy) then
@@ -4120,10 +4131,13 @@ function OverworldState:cableClubReceptionist(onDone)
           t._CableClubNPCPleaseComeAgainText or romText(Game.data, "_CableClubNPCPleaseComeAgainText", "Please come\nagain!"), onDone))
         return
       end
-      Game:writeSave()
+      Game:writeSave("link") -- co-op (#60): the save kind of a link room (#13)
       require("src.core.Sound").play(Game.data, "Save")
       local ok, LinkState = pcall(require, "src.link.LinkState")
-      if ok and LinkState then
+      -- co-op (#60): in a co-op world the session is the cable and the
+      -- cartridge's link menu opens instead (src/coop/game/CableClub.lua)
+      local coop = require("src.coop.game.CableClub").open(Game)
+      if not coop and ok and LinkState then
         Game.stack:push(LinkState.new(Game))
       end
       if onDone then onDone() end
@@ -4781,17 +4795,24 @@ local function sameEncounter(enc) return enc end
 -- table without calling next to force) and then encounter.species (which
 -- transforms a non-nil roll before repel filtering).  With no wrapper on
 -- either name this is the bare Encounter.roll, same RNG draws and all.
+-- co-op (#9): with "wild Pokémon from both versions" on, the other
+-- version's Pokémon of the same slot may stand in (src/coop/game/WildMix.lua)
+local function coopWild(enc, mapId, terrain)
+  if not enc then return enc end
+  return require("src.coop.game.WildMix").encounter(enc, mapId, terrain)
+end
+
 function OverworldState:rollEncounter(encDef, terrain)
   if not (Runtime.wantsHook("encounter.roll")
           or Runtime.wantsHook("encounter.species")) then
-    return Encounter.roll(encDef)
+    return coopWild(Encounter.roll(encDef), self.map.id, terrain) -- co-op (#9)
   end
   local ctx = { mapId = self.map.id, terrain = terrain, rng = love.math.random }
   local enc = Runtime.call("encounter.roll", rollVanilla, encDef, ctx)
   if enc then
     enc = Runtime.call("encounter.species", sameEncounter, enc, ctx)
   end
-  return enc
+  return coopWild(enc, self.map.id, terrain) -- co-op (#9)
 end
 
 function OverworldState.rollsIndoorEncounters(def, indoor)
@@ -6688,6 +6709,9 @@ function OverworldState:drawWorld()
         if self.fishing then
           at(fxRodFn, self.player.px + 8, self.player.py + 16)
         end
+        -- co-op (#30): the partner arrows and "!" bubbles, under the
+        -- pipeline's camera (src/coop/game/Presence.lua)
+        require("src.coop.game.Presence").drawFx(Game, self, at, project, scale)
       end)
     end
     override = Pipelines.drawWorld(pipelineId, ctx)

@@ -23,11 +23,15 @@
 --   env.addresses()        -> { { ip, kind } }, this device's addresses
 --   env.splitReady()       -> true when CONTROLS has a device for each of
 --                          two players (split-screen, #11)
+--   env.soloSaves(version) -> this device's single-player saves of that game,
+--                          { id, name, badges, time, bringable } (#57)
 --
 -- Actions: "up", "down", "left", "right", "a", "b", "start".  A press or
 -- update() may return a command for the launcher:
---   { kind = "coop_enter", version = v, campaign = { id, title }, split = true? }
---   (split: a second player on this device joins once the game runs, #11)
+--   { kind = "coop_enter", version = v, campaign = { id, title }, split = true?,
+--     start = { how = "pallet", starter } or { how = "save", slot }? }
+--   (split: a second player on this device joins once the game runs, #11;
+--   start: how a new player starts, #57)
 --   { kind = "copy", text = "…" }
 --   { kind = "coop_exit", notice = text? }   back to PLAY
 
@@ -35,6 +39,8 @@ local Addresses = require("src.coop.session.Addresses")
 local Games = require("src.coop.launcher.Games")
 local Keypad = require("src.coop.launcher.Keypad")
 local Protocol = require("src.coop.session.Protocol")
+local Versions = require("src.coop.session.Versions")
+local Start = require("src.coop.campaign.Start")
 local L = require("src.coop.launcher.Text").get
 
 local CoopMenu = {}
@@ -52,6 +58,14 @@ local function languageName(version)
 end
 CoopMenu.languageName = languageName
 
+-- the games a campaign of `game` plays with, as the launcher names them
+-- (#9): "RED or BLUE", "YELLOW"
+function CoopMenu.togetherText(game)
+  local games = Versions.together(game)
+  if #games == 2 then return L("%s or %s", label(games[1]), label(games[2])) end
+  return label(game)
+end
+
 -- the sentence for a refusal (design A2.5: a mismatch is named exactly)
 function CoopMenu.reasonText(reason, lobby, version)
   if reason == "content_mismatch" and lobby then
@@ -59,8 +73,14 @@ function CoopMenu.reasonText(reason, lobby, version)
       return L("The host plays %s in %s, this game is %s in %s. Both need the same language.",
         label(lobby.game), languageName(lobby.game), label(version), languageName(version))
     end
+    -- Red with Blue (#9): a pair plays together from verified dumps only
+    if Versions.pair(lobby.game) == version then
+      return L("%s and %s play together only from verified dumps. One of the two ROMs is another dump.",
+        label(lobby.game), label(version))
+    end
     if lobby.game ~= version then
-      return L("The host plays %s. This game is %s.", label(lobby.game), label(version))
+      return L("The host plays %s. This game is %s. %s plays with %s only.", label(lobby.game),
+        label(version), label(lobby.game), CoopMenu.togetherText(lobby.game))
     end
     return L("The host's %s ROM is another dump than this one.", label(version))
   elseif reason == "protocol_mismatch" then
@@ -135,9 +155,15 @@ function CoopMenu:items()
   if s == "host" or s == "campaigns" then
     -- each card: HOST (its cartridge imported here), RENAME, DELETE
     for _, c in ipairs(self.campaigns or {}) do
-      add({ id = "campaign", campaign = c, label = L("HOST"), enabled = self.env.ready(c.game) })
+      add({ id = "campaign", campaign = c, label = L("HOST"),
+            enabled = self:_hostCartridge(c) ~= nil })
       add({ id = "rename", campaign = c, label = L("RENAME") })
       add({ id = "delete", campaign = c, label = L("DELETE") })
+      -- wild Pokémon from both versions, changeable later (#9, design A13.3)
+      if Versions.pair(c.game) then
+        add({ id = "mix", campaign = c, label = c.mix and L("BOTH VERSIONS: ON")
+              or L("BOTH VERSIONS: OFF") })
+      end
     end
     if self.deleted then add({ id = "restore", label = L("RESTORE BACKUP") }) end
     add({ id = "new", label = L("NEW CAMPAIGN"), enabled = self.env.ready(self.version) })
@@ -152,6 +178,13 @@ function CoopMenu:items()
     add({ id = "you", label = L("TRAINER NAME"), value = self.form.you })
     -- the rival's name, or asked in Oak's speech (#22, design A2.3, A4.5)
     add({ id = "rival", label = L("RIVAL NAME"), value = self.form.rival or L("ASK IN THE GAME") })
+    -- wild Pokémon from both versions (#9, design A13.3): off by default,
+    -- for a game with a pair
+    if Versions.pair(self.version) then
+      add({ id = "mix", label = L("WILD POKéMON"),
+            value = self.form.mix and L("BOTH VERSIONS") or L("THIS VERSION ONLY") })
+    end
+    self:_startRows(add) -- how the host's player starts (#57)
     add({ id = "go", label = L("CREATE AND HOST") })
   elseif s == "hosting" then
     for _, a in ipairs(self:_hostAddresses()) do
@@ -170,6 +203,11 @@ function CoopMenu:items()
     for _, a in ipairs(self.settings.recent) do
       add({ id = "recent", address = a, label = a })
     end
+  elseif s == "bring" then
+    -- the device's solo saves of this game (#57, design A4.1)
+    for _, sv in ipairs(self.bringList or {}) do
+      add({ id = "slot", save = sv, label = sv.name or sv.id, enabled = sv.bringable })
+    end
   elseif s == "connecting" then
     local session = self.session
     local st = session and session.status
@@ -179,7 +217,10 @@ function CoopMenu:items()
     elseif st == "probed" then
       local you = session.lobby and session.lobby.you
       add({ id = "cancel", label = L("CANCEL") })
-      if not (you and you.player) then add({ id = "name", label = L("NEW NAME") }) end
+      if not (you and you.player) then
+        add({ id = "name", label = L("NEW NAME") })
+        self:_startRows(add) -- how a new player starts (#57)
+      end
       if self:_splitReady() then add({ id = "join2", label = L("JOIN WITH 2 PLAYERS") }) end
       add({ id = "join", label = L("JOIN AS %s", (you and you.name) or self.joinName) })
     elseif st == "unreachable" then
@@ -196,14 +237,39 @@ function CoopMenu:items()
   return rows
 end
 
--- after a refusal for the cartridge: another imported one that fits
+-- after a refusal for the cartridge: another imported one that fits (the
+-- host's game, or the other of its pair, #9)
 function CoopMenu:_otherCartridge()
   local session = self.session
   if not session or session.status ~= "refused" or session.reason ~= "content_mismatch" then
     return nil
   end
-  local game = session.lobby and session.lobby.game
-  if game and game ~= session.cartridge.game and self.env.ready(game) then return game end
+  local lobby = session.lobby
+  if not (lobby and lobby.game) then return nil end
+  for _, game in ipairs(Versions.together(lobby.game)) do
+    if game ~= session.cartridge.game and self.env.ready(game) and CoopMenu.fits(lobby, game) then
+      return game
+    end
+  end
+  return nil
+end
+
+-- a host's lobby lets in this device's `game` (#9): its own game, or the
+-- other of its pair when the host's dump is a verified one (this device's
+-- import verified its own)
+function CoopMenu.fits(lobby, game)
+  if not lobby or not game then return false end
+  if game == lobby.game then return true end
+  return Versions.pair(lobby.game) == game and Versions.clean(lobby.game, lobby.sha1)
+end
+
+-- the cartridge this device hosts campaign `c` with: its game, or the
+-- other of its pair (a Blue cartridge hosts a Red campaign, A13.2); nil
+-- when neither is imported here
+function CoopMenu:_hostCartridge(c)
+  for _, game in ipairs(Versions.together(c.game)) do
+    if self.env.ready(game) then return game end
+  end
   return nil
 end
 
@@ -232,11 +298,13 @@ function CoopMenu.oneEach(hosts)
 end
 
 -- the cartridge of this device that fits a host's lobby: the picked one, or
--- another imported game (Red with Blue is #9)
+-- another imported game: the host's, or the other of its pair (#9)
 function CoopMenu:_fitFor(lobby)
   if not lobby or lobby.protocol ~= Protocol.VERSION then return nil end
-  if lobby.game == self.version then return self.version end
-  if self.env.ready(lobby.game) then return lobby.game end
+  if CoopMenu.fits(lobby, self.version) then return self.version end
+  for _, game in ipairs(Versions.together(lobby.game)) do
+    if self.env.ready(game) and CoopMenu.fits(lobby, game) then return game end
+  end
   return nil
 end
 
@@ -285,13 +353,104 @@ local function settle(self)
 end
 CoopMenu.settle = settle
 
+-- ------------------------------------------------------------ how they start (#57)
+
+-- How a new player starts (design A2.3, A2.5, A4.1, G28): THE OPENING (the
+-- default), START IN PALLET with a starter (Red and Blue), BRING A SAVE
+-- from this device's solo saves.  Offered on NEW CAMPAIGN for the host's
+-- player and on the connection check for a player the host does not know;
+-- a returning player starts from the campaign's world (A4.3).
+
+local function howLabel(how)
+  if how == "pallet" then return L("START IN PALLET") end
+  if how == "save" then return L("BRING A SAVE") end
+  return L("THE OPENING")
+end
+
+local function starterLabel(starter)
+  if starter == "BULBASAUR" then return L("BULBASAUR") end
+  if starter == "CHARMANDER" then return L("CHARMANDER") end
+  return L("SQUIRTLE")
+end
+
+function CoopMenu:_start()
+  if not self.start then self.start = { how = "opening", starter = "BULBASAUR" } end
+  return self.start
+end
+
+-- how a new player starts, said on hello (#66): nil for a player the host
+-- knows (they open the campaign's world)
+function CoopMenu:_startHow(you)
+  if you and you.player then return nil end
+  return self.start and self.start.how or nil
+end
+
+-- the ways this game offers, in the order HOW YOU START steps through them
+function CoopMenu:_hows(version)
+  local out = { "opening" }
+  if Start.offersPallet(version) then out[#out + 1] = "pallet" end
+  if self.env.soloSaves then out[#out + 1] = "save" end
+  return out
+end
+
+function CoopMenu:_startRows(add)
+  local st = self:_start()
+  add({ id = "how", label = L("HOW YOU START"), value = howLabel(st.how) })
+  if st.how == "pallet" then
+    add({ id = "starter", label = L("STARTER"), value = starterLabel(st.starter) })
+  elseif st.how == "save" then
+    add({ id = "save", label = L("SAVE"), value = st.save and st.save.name or L("PICK A SAVE") })
+  end
+end
+
+-- a press on one of the rows above; true when it took it
+function CoopMenu:_startPress(id, version)
+  local st = self:_start()
+  if id == "how" then
+    local hows = self:_hows(version)
+    local at = 1
+    for i, h in ipairs(hows) do if h == st.how then at = i end end
+    st.how = hows[at % #hows + 1]
+    if st.how == "save" and not st.save then return self:_bring(version) or true end
+    return true
+  elseif id == "starter" then
+    local at = 1
+    for i, sp in ipairs(Start.STARTERS) do if sp == st.starter then at = i end end
+    st.starter = Start.STARTERS[at % #Start.STARTERS + 1]
+    return true
+  elseif id == "save" then
+    self:_bring(version)
+    return true
+  end
+  return false
+end
+
+-- the save pick: the solo saves of `version`, those past Oak's lab
+function CoopMenu:_bring(version)
+  self.bringList = self.env.soloSaves and self.env.soloSaves(version) or {}
+  self.bringBack = { screen = self.screen, cursor = self.cursor }
+  self:go("bring")
+  settle(self)
+end
+
+-- the start the player chose, for the game (nil: the opening)
+function CoopMenu:startChoice()
+  local st = self.start
+  if not st or st.how == "opening" then return nil end
+  if st.how == "pallet" then return { how = "pallet", starter = st.starter } end
+  if st.how == "save" and st.save then return { how = "save", slot = st.save.id } end
+  return nil
+end
+
 -- ------------------------------------------------------------ flows
 
 -- the campaign cards: of this cartridge ("host") or all ("campaigns")
 function CoopMenu:_openList(screen, focusId)
   screen = screen or self.root
   if screen ~= "campaigns" then screen = "host" end
-  self.campaigns = self.env.campaigns.list(screen == "host" and self.version or nil)
+  -- HOST lists the campaigns of both games of the pair (#9, design A13.2)
+  self.campaigns = self.env.campaigns.list(screen == "host" and Versions.together(self.version)
+    or nil)
   self:go(screen)
   if focusId then
     for i, r in ipairs(self:items()) do
@@ -338,7 +497,9 @@ function CoopMenu:_entryDone(text)
     self.split = true
     if self.screen == "hosting" then return self:_enter() end
     local you = self.session and self.session.lobby and self.session.lobby.you
-    if self.session then self.session:join((you and you.player) and you.name or self.joinName) end
+    if self.session then
+      self.session:join((you and you.player) and you.name or self.joinName, self:_startHow(you))
+    end
   end
 end
 
@@ -351,7 +512,8 @@ end
 
 function CoopMenu:_startHost(campaign, name)
   local settings = self.settings
-  self.version = campaign.game or self.version
+  -- the campaign's game, or the other of its pair imported here (#9)
+  self.version = self:_hostCartridge(campaign) or campaign.game or self.version
   settings.name = name
   settings.last = { kind = "host", campaign = campaign.id, version = self.version }
   settings:save()
@@ -359,7 +521,8 @@ function CoopMenu:_startHost(campaign, name)
   self.campaign = self.env.campaigns.get(campaign.id) or campaign
   self.addressList = nil
   self.deleted = nil
-  local session, refused = self.env.host(self.campaign, name, self.version)
+  local session, refused = self.env.host(self.campaign, name, self.version,
+                                         self.start and self.start.how or nil) -- #66
   if not session then
     -- the campaign's file cannot be read, or is of a newer build: it is
     -- left as it is and its backup named (#13, design A3.5)
@@ -379,6 +542,7 @@ function CoopMenu:_dial(address, version, auto)
   if address == "" then return end
   self.joinName = self.joinName or self:_playerName()
   self.dialVersion = version
+  self.start = nil -- asked again for this host (#57)
   self.autoJoin = auto
   self.session = self.env.dial(address, version, self.joinName)
   self:go("connecting")
@@ -410,7 +574,7 @@ function CoopMenu:_enter()
   end
   self.entered = true
   return { kind = "coop_enter", version = s.cartridge.game, campaign = campaign,
-           split = self.split or nil }
+           split = self.split or nil, start = self:startChoice() }
 end
 
 -- two players on this device can start: a device claimed for each (#11)
@@ -449,7 +613,11 @@ function CoopMenu:press(action)
       local text = e.keypad.text:gsub("^%s+", ""):gsub("%s+$", "")
       -- an empty rival's name leaves him to Oak's speech (#22)
       if text == "" and e.purpose ~= "rival" then return nil end
-      if text ~= "" and e.keypad.kind == "name" and not Protocol.name(text) then return nil end
+      -- a campaign's name has its own length (TITLE_MAX), not a player's
+      local title = e.purpose == "title" or e.purpose == "rename"
+      if text ~= "" and e.keypad.kind == "name" and not title and not Protocol.name(text) then
+        return nil
+      end
       local command = self:_entryDone(text)
       if e.purpose == "name2" then return command end
     elseif result == "cancel" then
@@ -472,7 +640,11 @@ function CoopMenu:press(action)
     if id == "back" then return exit() end
     if id == "new" then
       self.form = { title = L("%s CO-OP", label(self.version)), you = self:_playerName() }
-      return self:go("new", 4)
+      self.start = nil
+      self:go("new")
+      -- CREATE AND HOST is preselected
+      for i, r in ipairs(self:items()) do if r.id == "go" then self.cursor = i end end
+      return nil
     end
     if id == "restore" then
       local restored = self.env.campaigns.restore(self.deleted.id)
@@ -483,12 +655,23 @@ function CoopMenu:press(action)
       return nil
     end
     self.campaign = row.campaign
-    if id == "campaign" then return self:_startHost(row.campaign, self:_playerName()) end
+    if id == "campaign" then
+      self.start = nil -- a campaign's own player starts from its world (#57)
+      return self:_startHost(row.campaign, self:_playerName())
+    end
     if id == "rename" then
       return self:_entry("rename", L("CAMPAIGN NAME"), "name", row.campaign.title,
         CoopMenu.TITLE_MAX)
     end
     if id == "delete" then return self:go("delete", 1) end
+    if id == "mix" then
+      self.env.campaigns.setMix(row.campaign.id, not row.campaign.mix)
+      self:_openList(s, row.campaign.id)
+      for i, r in ipairs(self:items()) do
+        if r.id == "mix" and r.campaign.id == row.campaign.id then self.cursor = i end
+      end
+      return nil
+    end
   elseif s == "new" then
     if id == "back" then return self:_openList(self.root) end
     if id == "title" then
@@ -500,9 +683,14 @@ function CoopMenu:press(action)
     if id == "rival" then
       return self:_entry("rival", L("RIVAL NAME"), "name", self.form.rival or "", CoopMenu.NAME_MAX)
     end
+    if id == "mix" then -- #9
+      self.form.mix = not self.form.mix
+      return nil
+    end
+    if self:_startPress(id, self.version) then return nil end
     if id == "go" then
       local c = self.env.campaigns.create({ title = self.form.title, game = self.version,
-                                            rival = self.form.rival })
+                                            rival = self.form.rival, mix = self.form.mix })
       return self:_startHost(c, self.form.you)
     end
   elseif s == "delete" then
@@ -561,6 +749,14 @@ function CoopMenu:press(action)
       end
       return self:_dial(row.host.address, fit)
     end
+  elseif s == "bring" then
+    local back = self.bringBack or { screen = "new", cursor = 1 }
+    if id == "slot" then self:_start().save = row.save end
+    local st = self:_start()
+    if not st.save then st.how = "opening" end
+    self:go(back.screen, back.cursor)
+    settle(self)
+    return nil
   elseif s == "connecting" then
     local st = self.session and self.session.status
     if id == "retry" then
@@ -570,9 +766,11 @@ function CoopMenu:press(action)
     elseif id == "join" then
       self.split = nil
       local you = self.session.lobby and self.session.lobby.you
-      self.session:join((you and you.player) and you.name or self.joinName)
+      self.session:join((you and you.player) and you.name or self.joinName, self:_startHow(you))
     elseif id == "name" then
       return self:_entry("joinname", L("TRAINER NAME"), "name", self.joinName, CoopMenu.NAME_MAX)
+    elseif self:_startPress(id, self.session.cartridge.game) then
+      return nil
     elseif id == "switch" then
       local address = self.session.address
       self:_cancelSession()
@@ -648,7 +846,7 @@ end
 --   host/campaigns: { cards = self.campaigns, deleted = { id, title }? }
 --   delete:     { campaign }
 --   hosting:    { campaign, players = { { name, game, host } }, max,
---                 warning?, game }
+--                 warning?, game, mix = { waiting = game? }? (#9) }
 --   join:       { nearby = { { title, game, players, fit, needs } },
 --                 searching, nearbyOff }
 --   connecting: { address, title?, steps = { found, protocol, fits }
@@ -672,6 +870,10 @@ function CoopMenu:details()
     d.campaign = self.campaign
     d.game = session and session.cartridge.game or self.version
     d.max = session and session.host and session.host.maxPlayers or 8
+    -- wild Pokémon from both versions (#9): on, and the version it waits for
+    if session and session.host and session.host.mix then
+      d.mix = { waiting = session.host:wildWaiting() }
+    end
     if session and session.listenError then
       d.warning = L("The network port is busy: only this device can join.")
     elseif #self:_hostAddresses() == 0 then

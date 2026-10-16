@@ -143,7 +143,35 @@ function Conn:update()
     if self.other and self.other.closed then self.closed = true end
     return
   end
+  if self.suspectedAt then self:_trustAgain() end
   if self.client then self:_serviceClient() end
+end
+
+-- The host doubts this link is still there (a hello from the same seat of
+-- the same device came on another link): a dead one closes soon.  ENet
+-- times the peer out within a second or so unless it answers; a loopback
+-- link whose other end is gone closes now.
+function Conn:suspect()
+  if self.closed then return end
+  if self.kind == "loopback" then
+    if not self.other then self:close() end
+    return
+  end
+  if self.peer then
+    pcall(self.peer.timeout, self.peer, 4, 300, 1200)
+    pcall(self.peer.ping, self.peer)
+    self.suspectedAt = now()
+  end
+end
+
+-- a link still there SUSPECT_FOR seconds after it was doubted gets ENet's
+-- own timeouts back (zeros are ENet's defaults)
+Transport.SUSPECT_FOR = 6
+function Conn:_trustAgain()
+  if self.suspectedAt and now() - self.suspectedAt > Transport.SUSPECT_FOR then
+    self.suspectedAt = nil
+    if self.peer then pcall(self.peer.timeout, self.peer, 0, 0, 0) end
+  end
 end
 
 function Conn:close()

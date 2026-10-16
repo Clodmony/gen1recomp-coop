@@ -40,6 +40,14 @@ Read before working:
   upstream files.
 - [docs/coop/battles.md](docs/coop/battles.md): co-op battles (lockstep
   copies in every window, the host's record, joining, the rules).
+- [docs/coop/friends.md](docs/coop/friends.md): invitations, friend
+  battles and direct trades between partners.
+- [docs/coop/cable.md](docs/coop/cable.md): the Cable Club over the
+  session (trades by pairing, the Colosseum, the continue position).
+- [docs/coop/mods.md](docs/coop/mods.md): mods in the fork's build (the
+  3D Dramatic Shape Voxel Mod, #30), the launcher's MODS page.
+- [docs/coop/versions.md](docs/coop/versions.md): Red and Blue in one
+  campaign, wild Pokémon from both versions, why Yellow stays apart.
 - [docs/coop/split.md](docs/coop/split.md): split-screen, two players on one
   device (two worlds in one process, the views, input routing, seat 2).
 
@@ -113,6 +121,15 @@ Read before working:
   at an issue boundary, open the pull request for the finished issues, and
   leave the rest of the group for the next session. An issue found on the
   way goes into the milestone where it fits.
+- **The session tests everything itself** (owner, 2026-10-16): every
+  scenario of a feature runs live with the cartridge in scripted
+  multi-process runs, on the **integrated** branch (not only each
+  feature's branch), including desktop situations such as two windows and
+  focus or visibility changes, and bugs are fixed before the owner hears
+  of the work. Never hand the owner a playtest to find bugs; the owner
+  plays through with a friend once most of the work is done. The 3D
+  Dramatic Shape Voxel Mod (#30) is a hard requirement for that
+  playthrough.
 - **GitHub issues are the task list.** New work, bugs found on the way and
   follow-ups become issues; there is no task file in the repository.
 - **The handoff lives in the repository.** `HANDOFF.md` is rewritten at the end

@@ -13,7 +13,7 @@ M.FILES = {
   "src/coop/launcher/Screens.lua", "src/coop/launcher/Launcher.lua",
   "src/coop/launcher/RomImport.lua", "src/coop/session/Addresses.lua",
   "src/coop/launcher/Controls.lua", "src/coop/launcher/GameOptions.lua",
-  "src/coop/launcher/Saves.lua",
+  "src/coop/launcher/Saves.lua", "src/coop/launcher/Mods.lua",
 }
 
 -- strings handed to Text.get from a table rather than a literal call

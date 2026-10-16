@@ -5,8 +5,9 @@ What a co-op session shows in the game (#15, area A14 in
 partner out of sight, their icons on the TOWN MAP, the CO-OP menu, notices,
 and hold B to run. It lives in `src/coop/game/` and reads the running
 session ([session.md](session.md)); a solo game shows none of it. The parts
-that need battles, the opening (done with #22) or friend battles are #34; the last save in
-the CO-OP box came with the campaign files (#13).
+that need battles, the opening (done with #22) or friend battles are #34
+(friend battles and trades done with #23, [friends.md](friends.md)); the
+last save in the CO-OP box came with the campaign files (#13).
 
 ## Files
 
@@ -26,6 +27,8 @@ Upstream files have one marked hook each (`co-op (#15)`):
 
 - `src/core/Game.lua` (`Game:step`) calls `Presence.step`.
 - `src/world/OverworldController.lua`:
+  - `OverworldState:interact`: A on a partner opens BATTLE / TRADE /
+    CANCEL (#23, [friends.md](friends.md));
   - `OverworldState:draw` draws the arrows in the world pass;
   - `drawUI` draws the notices;
   - `handleInput` opens the CO-OP menu on SELECT, and keeps a SELECT
@@ -38,6 +41,14 @@ Upstream files have one marked hook each (`co-op (#15)`):
   that palette in every COLORS mode, and replays it over the palette zones
   as OG RED's sprites are.
 
+With a world-pipeline mod (#30, [mods.md](mods.md)) four more marked hooks
+(`co-op (#30)`): the overworld's `ctx.drawFx` calls `Presence.drawFx`,
+which draws the arrows and the "!" under the pipeline's camera (the world
+pass skips them then); `SpriteRenderer:resolveImage` wears a player's
+colour; `OverworldState.coopBaseHandleInput` keeps the engine's own
+`handleInput`, and `Game:load` calls `CoopMenu.claimSelect` once the mods
+are in, so SELECT in a session reaches the CO-OP menu past a mod's wrap.
+
 ## Rules and what was done
 
 | A14 rule | Here |
@@ -45,11 +56,11 @@ Upstream files have one marked hook each (`co-op (#15)`):
 | 1. Partners on the map are solid | A partner on this player's map blocks the cell they stand on and, mid-step, the cell they leave. The player's own steps and NPC wandering stop there (`Collision.canMove`). Scripted moves pass through, since they skip collision. A partner's own Pikachu is not drawn. Yellow was not run. |
 | 2. Partners on connected maps | A partner on a map the overworld draws as a neighbour (the routes and towns its connections reach) is drawn there, eased, never solid. Out of sight, the arrow takes over. |
 | 3. Colours, "!" | Each player wears the colour of their place in the session: red, blue, green, purple, orange, teal, pink, brown, then again (G11). It is an OBJ palette of white, skin, the colour and a dark outline. This player wears theirs too. A partner in a battle their own world opened stands where it started under the cartridge's "!" bubble (#34). |
-| 4. Who is not drawn | A partner who left, or who has not reported a position yet, and a partner who joined a battle elsewhere (#34; they show again once it ends). A partner in the opening is not drawn and gets no arrow or TOWN MAP mark, and a player in the opening sees nobody (#22, [opening.md](opening.md)). The Cable Club rooms wait for #23. |
+| 4. Who is not drawn | A partner who left, or who has not reported a position yet, and a partner who joined a battle elsewhere (#34; they show again once it ends). A partner in the opening is not drawn and gets no arrow or TOWN MAP mark, and a player in the opening sees nobody (#22, [opening.md](opening.md)). A partner in a Cable Club room is not drawn (#60, [cable.md](cable.md)): their window shows the link screens, and the trade screen names them. |
 | 5. Easing | A step is eased over 16 frames walking or surfing, 8 running or riding. A jump of more than two cells (a warp, a fly) lands at once. A step through a connection keeps easing across the seam. A partner reports the cell their step heads for, so the others ease it while they walk it. |
 | 6. Arrow | See *The arrow*. |
 | 7. TOWN MAP | The TOWN MAP item, the CO-OP menu's TOWN MAP row and the fly map show each connected partner's icon in their colour, under the player's own. The Pokédex's area view shows none. |
-| 8. START > CO-OP | A CO-OP row after OPTION, only in a session. Upstream's START menu ends with MODS and QUIT, where the cartridge has EXIT, so CO-OP comes before those. Red, Blue and Yellow share this menu. See *The CO-OP menu*. JOIN <NAME> joins a partner's battle (#18), REJOIN goes back into one this player left (#20), and a partner in a battle shows IN A BATTLE in the box (#34) ([battles.md](battles.md)). A partner in the opening shows IN THE OPENING, and one who joins in it is announced so (#22). BATTLE and TRADE wait for #23; the last save is in the box since #13. |
+| 8. START > CO-OP | A CO-OP row after OPTION, only in a session. Upstream's START menu ends with MODS and QUIT, where the cartridge has EXIT, so CO-OP comes before those. Red, Blue and Yellow share this menu. See *The CO-OP menu*. JOIN <NAME> joins a partner's battle (#18), REJOIN goes back into one this player left (#20), and a partner in a battle shows IN A BATTLE in the box (#34) ([battles.md](battles.md)). A partner in the opening shows IN THE OPENING, and one who joins in it is announced so (#22). BATTLE <NAME> and TRADE <NAME> invite a free partner, and a partner meeting someone shows IN A BATTLE or TRADING (#23, [friends.md](friends.md)); a JOIN or REJOIN row names the foe on its second line, VS <FOE> (#34). The rows show three at a time and scroll. The last save is in the box since #13. |
 | 9. SELECT | SELECT on the map opens the CO-OP menu in a session. The START menu, the bag, a battle and the party are screens of their own, so their own SELECT is untouched. In a co-op battle nothing opens: the battle is the screen on top, and its own SELECT swaps moves as in the cartridge (#34). |
 | 10. Notices | "BLUE joined the session." and "BLUE left the session." Light text on a dark band at the top of the screen. Each stays 180 frames (3 s) and fades over the last 30; at most three show at once. A partner's battle this player is free to join is told: "BLUE is in a battle against wild PIDGEY. START > CO-OP to join." (a trainer: "against BUG CATCHER") (#34). A join that cannot go in says why ("The battle is full."), a battle away from the screen says how it ended, and a dropped link says "Lost the host: reconnecting..." and "Back in the session." (#20). |
 | 11. Hold B to run | In a session, a walking step with B held takes the bike's 8 frames. The bike (the Cycling Road slope too) and surfing keep their own; a solo game walks as the cartridge does; there is no setting. Upstream Gen 1 has no run option: its `movement.speed` hook is where a mod adds one (`tests/mod_qol_hooks_tests.lua`). A mod there still wraps this. |
@@ -98,8 +109,12 @@ Drawn with the cartridge's font, boxes and cursor. The upper box shows:
 - each partner with the TOWN MAP name of where they are, or AWAY for one who
   left.
 
-The rows:
+The rows (three at a time, scrolling; a row's second line can name a
+battle's foe, VS PIDGEY):
 
+- JOIN <NAME> or REJOIN for a partner's battle ([battles.md](battles.md));
+- BATTLE <NAME> and TRADE <NAME> for each free partner (#23,
+  [friends.md](friends.md));
 - TOWN MAP, only for a player without the TOWN MAP item. B goes back to the
   CO-OP menu.
 - LEAVE SESSION, asked YES/NO with NO first. A guest says goodbye; the host

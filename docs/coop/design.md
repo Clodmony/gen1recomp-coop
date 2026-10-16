@@ -127,7 +127,9 @@ Bullets are numbered `A<area>.<n>` so the *Issues* table can assign them.
    recognised by typing the same name (D26, D48, D49). Split-screen needs two
    remembered identities per device (one per local seat). Here (#11) both
    seats remember theirs in one identity, under the host's key and the seat
-   ([split.md](split.md)).
+   ([split.md](split.md)). A redial from the same window, and a game
+   restarted on the same device and seat whose old link is dead, come back
+   as their own player (G35, [session.md](session.md)).
 10. **carry** Windows stay trusted (owner, D72): the host checks only step length (up
     to two cells on the same map, a ledge hop), trusts the warps a window
     reports and the enemies its world prepared; collision is the window's own;
@@ -169,8 +171,8 @@ The screens are in place (#12, [launcher.md](launcher.md)), laid out after
 entry (log sharing, the logs folder) is on the HELP tab. Left for other
 issues: the line saying which games play together and the both-versions
 switch (#9); a card's badges, place and last save (campaign files, #13); the
-rival's name and how a new player starts (#22); the split-screen entry
-(#11); a phone layout run on a phone (#7).
+split-screen entry (#11); a phone layout run on a phone (#7). The rival's
+name (#22) and how a new player starts (#57, G28) are in place.
 
 1. **adapt** Start screen: cartridge tiles (Ready / needs re-import / not imported),
    the pick remembered, a line saying which games play together; HOST and JOIN;
@@ -290,8 +292,11 @@ rival's name and how a new player starts (#22); the split-screen entry
 
 In place (#22, [opening.md](opening.md), G27): the opening on a private
 story, the names, the rival's starter, a new campaign's story, "in the
-opening" and no save in it (A4.4 to A4.9). Split into #57 (owner,
-2026-10-15): the start in Pallet Town and bringing a save (A4.1 to A4.3).
+opening" and no save in it (A4.4 to A4.9). In place (#57,
+[opening.md](opening.md) § Other starts, G28): the start in Pallet Town
+(Red and Blue; not Yellow) and bringing a solo save (A4.1 to A4.3), with
+the canned story a skipper brings to a campaign with none (A4.7), and the
+launcher's choice (A2.3, A2.5).
 
 1. **adapt** Three ways to start: **play Oak's opening** (default); **start in Pallet
    Town** with a chosen starter at level 5 and 3000 money; **bring a trainer**
@@ -671,9 +676,15 @@ cartridge's bag stays, refusing the rest; accepted by the owner,
 ### A10. Unique encounters, trainers, rival scenes and the League
 
 A10.1 to A10.4 and A10.8 are in place (#21, [battles.md](battles.md), G26),
-with these adaptations: an encounter is named by its map object, and the
-League's rooms are never kept done until A10.6. A10.5 to A10.7 are #55
-(owner, 2026-10-15).
+with this adaptation: an encounter is named by its map object. A10.5 is
+in place (#59, split from #55 by the owner on 2026-10-16;
+[battles.md](battles.md), G29), with this adaptation: with no
+map-script bytes (G21) a scene is a script the runner starts on a
+scene's map that fights the rival while his flag is unset, and it ends
+when that script ends. A10.6 and A10.7 are in place (#55,
+[battles.md](battles.md), G30), with these adaptations: the
+run's clear is asked by every lobby entry, and a reset reopens the world
+as the host last had it.
 
 1. **carry** A unique encounter (or any carrying victory flags) has at most one active
    instance; beating it marks it done for everybody; losing or fleeing releases
@@ -788,6 +799,19 @@ accepted both as built (2026-10-15).
 
 ### A12. Friend battles and trades
 
+In place for rules 1 to 6 (#23, [friends.md](friends.md), decision G31,
+proposed): invitations, a friend battle on upstream's lockstep link
+battle, a direct trade with the host's swap once; the Cable Club and the
+Colosseum (7 to 9) are #60.
+
+In place for the Cable Club (#60, [cable.md](cable.md), G32): its trades,
+the continue position and the Colosseum (A12.7 to A12.9), with these
+adaptations: the room is chosen at the receptionist's link menu and a
+cable joins only players of the same room (no "first other free
+player"); the 30 s and 60 s waits run from the first offer and from both
+offers; a world in a Cable Club room opens before the nurse of the
+center its town leads into, where upstream puts its added rooms' saves.
+
 1. **carry** Talking to the partner opens BATTLE / TRADE / CANCEL; the CO-OP menu also
    lists BATTLE and TRADE with each free partner's name (D100).
 2. **carry** An invitation needs the recipient's YES, shown only at a rest point, back
@@ -838,6 +862,13 @@ accepted both as built (2026-10-15).
 
 ### A13. Red + Blue mixing (and where Yellow fits)
 
+In place (#9, [versions.md](versions.md), G33): Red and Blue (and Rot and
+Blau) in one campaign, the refusals named, a Blue cartridge hosting a Red
+campaign, and "wild Pokémon from both versions" (A13.1 to A13.4). A save
+brought from the partner's game comes with bringing a save (#57). Yellow
+stays with Yellow (G4); the answer on mixing it is at the end of this
+section.
+
 1. **adapt** Red and Blue play one campaign (owner, D101): the host also lets in the
    other game of the same pair when both are verified dumps; another revision,
    a hack, Yellow or another language is refused ("Red or Blue of the same
@@ -860,21 +891,69 @@ accepted both as built (2026-10-15).
    player's own version. Rejected: lookup by species and level (two slots can
    share both).
 4. **carry** No cartridge data is shipped or cached: each window of a paired game
-   sends its own wild slots after every welcome (about 10 KB, session only),
+   sends its own wild slots after every welcome (about 10 KB in the source,
+   about 20 KB of JSON here; session only),
    the host passes the other version's to the other game's players; until a
    device of each version has been in, the Hosting screen says which version it
    waits for and every world keeps its own; the roll is drawn only while a
    window holds the other tables, so a campaign without the switch keeps the
-   cartridge's encounter stream (D104).
+   cartridge's encounter stream (D104). Here the extra number is drawn only
+   where the slot offers the other version's exclusive (G33).
+
+**Yellow with Red or Blue (#9, G4).** Compared by the fork's own extraction
+of the US dumps and the engine's Yellow branches (`GameVersion.isYellow()`),
+Yellow is not a third cartridge of the same game:
+
+- **Species.** 38 species differ in their data: learnsets (225 entries),
+  level-1 moves, TM and HM sets, two catch rates, front sprite sizes. Moves,
+  items and the type chart are the same. A co-op battle is one record every
+  window plays with its own cartridge's data (G24), so a Red and a Yellow
+  window would part at the first level-up move, evolution move or catch:
+  a desync on every battle that reaches one.
+- **Wild Pokémon and fishing.** Every wild table differs (59 maps), and so do
+  the Super Rod's.
+- **Trainers.** Twenty trainer classes have other teams: the rival's three
+  (EEVEE, its evolution chosen by his first battles, `Commands.rival_battle`
+  and `save.rivalStarter`), the gym leaders, Giovanni and the Rockets, with
+  Jessie and James as `OPP_ROCKET` with their own picture; eight maps have
+  other trainer headers.
+- **The story.** Pallet's opening (Oak catches PIKACHU, the rival takes
+  EEVEE), the gift starters (BULBASAUR in Cerulean, CHARMANDER on Route 24,
+  SQUIRTLE in Vermilion), Jessie and James' scenes: map objects differ on 42
+  maps and 516 texts differ. The campaign's story is a set of the
+  cartridge's flags and toggles (G21); the same flag stands for another
+  scene in the other cartridge, or for none.
+- **The Pikachu.** The follower, its mood and happiness on every step
+  (`PikachuFollower.onStep`), its scenes (Bill's house), its send-out
+  without a ball and its refusal of the THUNDERSTONE are Yellow's alone;
+  the surfing PIKACHU, the cries, the GBC colours and Yellow's intro,
+  title, Pokédex, box and option screens are too.
+- **Trades.** Yellow's in-game trades differ (27 entries).
+
+Proposal: keep mixing Yellow with Red or Blue unsupported, as now. A Yellow
+host lets in Yellow only and a Red or Blue host refuses Yellow, naming it
+("YELLOW plays with YELLOW only."). Yellow with Yellow plays co-op with every
+rule here. Mixing would need, before any story rule: battles between a
+Yellow and a Red or Blue window refused (or run on one cartridge's species
+data, which the no-shipping rule forbids), and a translation of the story
+between the two cartridges' flags, map by map. Only then would the owner's
+analogies (2026-10-13) apply: each player their own Pikachu follower, one
+gift starter each, Jessie and James under the rival-scene lock (D84), and
+the first player to finish the opening setting the rival's EEVEE line (D50).
 
 ### A14. Presence, finding the partner, the CO-OP menu and the run button
 
 In place (#15, [presence.md](presence.md)), with what a session without
 battles supports; the battle parts since #34 ([battles.md](battles.md)):
 the "!" where a battle started, a joiner from elsewhere not drawn, JOIN and
-REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle. Left: who
-is not drawn in the opening or the Cable Club, the BATTLE and TRADE rows
-and "in the opening" (#22, #23); the last save is in since #13.
+REJOIN, IN A BATTLE, the battle notice, SELECT in a co-op battle; the
+opening's parts since #22; the BATTLE and TRADE rows, VS <foe> and
+TRADING since #23 ([friends.md](friends.md)); partners in a Cable Club
+room are not drawn since #60 ([cable.md](cable.md)). The last save is in
+since #13. With a world-pipeline mod (the Dramatic Shape Voxel Mod) the
+arrows and the "!" are drawn under its 3D camera and partners keep their
+colour; in a session SELECT stays the CO-OP menu's when such a mod takes
+SELECT on the map (#30, [mods.md](mods.md), G34).
 
 1. **adapt** Partners on the same map are drawn as solid actors: the player's own
    steps and NPC wandering stop at them; scripted and forced movement passes
@@ -1038,13 +1117,14 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A7 Pokémon, party, PC, Pokédex and captures | #17 |
 | A8 Co-op battles: rules | #18 ([battles.md](battles.md)) |
 | A9 Co-op battles: presentation and menus | #19 |
-| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes, the League run and the Hall of Fame #55 |
+| A10 Unique encounters, trainers, rival scenes, the League | #21 ([battles.md](battles.md)); rival scenes #59 ([battles.md](battles.md)); the League run and the Hall of Fame #55 ([battles.md](battles.md)) |
 | A11 Leaving, reconnecting, taking over, shutting down | #20 |
-| A12 Friend battles and trades | #23 |
-| A13 Red + Blue mixing, Yellow | #9 |
+| A12 Friend battles and trades | #23; the Cable Club #60 ([cable.md](cable.md)) |
+| A13 Red + Blue mixing, Yellow | #9 ([versions.md](versions.md)) |
 | A14 Presence, finding the partner, CO-OP menu, run button | #15 ([presence.md](presence.md)); the battle, opening, friend battle and campaign file parts #34 |
 | A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
 | Local split-screen (the sibling's open #53) | #11 |
+| Mods: the Dramatic Shape Voxel Mod in co-op and split-screen, the launcher's MODS page | #30 ([mods.md](mods.md)) |
 
 ## 6. Decisions
 
@@ -1319,3 +1399,198 @@ sibling's D-numbers.
   the starter he counters (the first finisher's); Red and Blue's later
   rival battles pick his team from it. Protocol 10, campaign file 4.
   Details: [opening.md](opening.md).
+- **G28. A new player's start is written by the launcher and kept by the
+  host** (#57, 2026-10-16, accepted by the owner the same day). A4.1 to A4.3 leave open where a
+  skipper's world is made and how it reaches the campaign. Here the
+  launcher asks HOW YOU START (THE OPENING, START IN PALLET with a
+  STARTER, BRING A SAVE with a pick of the device's solo saves past Oak's
+  lab) on NEW CAMPAIGN and, for a player the host does not know, on the
+  connection check. On entering, and only when the host has no world for
+  the player (`world` `fresh`; a returning player gets the campaign's,
+  A4.3), it writes the start world into the campaign's slot with a
+  `coopStart` mark: for Pallet, a new game's skeleton with the starter at
+  level 5 (species, level, experience, DVs, its two first moves), 3000
+  money, the starter's flags and Pokédex, standing at Pallet Town's
+  blackout cell, and the story #22's played run seeded (Oak's walk flags,
+  the rival fought, Oak in the lab, the player's and the rival's
+  counter-pick balls gone as `oaks_lab.lua`'s ball rows hide them,
+  Pallet's Oak hidden); for a brought save, the save as it stands. The
+  game opens it with CONTINUE, so the game's own load checks it
+  (migrations, `SaveData.validate`, which also derives the starter's
+  stats and PP, the trainer stamped on every Pokémon). At its first rest
+  point the window sends it whole (`start`, protocol 13) and waits; the
+  host refuses it as `returning` when it has the player's world, else
+  keeps it (its trainer id with it, A4.2), seeds a campaign with no story
+  from its entries (A4.3, A4.7) with the late joiner's list for its key
+  items (A6.5), sets the rival's starter from it if unset (A4.6), clears
+  "in the opening", sends the story and answers `started`; the window then
+  opens as a late window, so a skipper into a campaign with a story takes
+  the campaign's over its own. The host decides the seed, so two skippers
+  never mix two stories. Yellow offers no START IN PALLET: its opening
+  (Oak catches PIKACHU, who follows; one ball; the rival's EEVEE, whose
+  later form #9 decides) is not captured and no Yellow run checked it, so
+  a Yellow player plays the opening or brings a save. A second seat on a
+  split-screen device plays the opening. Details: [opening.md](opening.md).
+- **G29. A rival scene is the script that fights him** (#59, 2026-10-16,
+  accepted by the owner the same day). A10.5 starts a scene when the window's map-script byte
+  enters the scene's states. The engine keeps no such bytes (G21): each
+  scene is a hand-ported script (the map's ambush on its cells, or the
+  rival's talk script). So a scene is a script the script runner starts on
+  one of the scene maps whose rows fight the rival with that scene's class
+  (`rival_battle`), while the scene's `EVENT_BEAT_..._RIVAL` flag is unset;
+  it ends when that script ends (`src/coop/game/Scenes.lua`, one marked
+  hook in `ScriptRunner:run`, no edit to the map scripts). The window
+  claims the map (`scene`) on the frame after the script starts, and lets
+  go at its first rest point after it, after the scene's patch, or at once
+  on leaving the map; the host also lets go when the driver's move names
+  another map, or the driver drops or leaves. A refused claim plays on and
+  its battle joins the driver's, the rival being his map object (G26). A
+  partner on the map waits from its next rest point under a box that
+  counts as resting; A in it joins the driver's battle; it goes on a rest
+  frame after the claim, so the result has landed. The list is Red and
+  Blue's (Route 22 twice, Cerulean, S.S. Anne 2F, Pokémon Tower 2F, Silph
+  Co. 7F); the Champion's room is not on it, and Yellow re-lists with #9.
+  Costs: the claims live in host memory; a partner anywhere on a scene's
+  map waits, however far from the rival. Protocol 11. Details:
+  [battles.md](battles.md).
+- **G30. The League run lives on the host; a reset reopens the co-op world**
+  (#55, 2026-10-16, accepted by the owner the same day). A10.6: a League fight won is a unique
+  encounter kept done (G26) until the run's clear, so a window walking
+  into one, the Champion included, counts it as won at once; the members'
+  beaten flags and beaten trainers are story entries, and the started bit
+  and the Champion room's run flag (`EVENT_STARTED_ELITE_4`,
+  `EVENT_BEAT_CHAMPION_RIVAL_THIS_RUN`) join the walk-ins and Lance's lock
+  as each player's, so every window that reaches the Champion's room meets
+  him. The engine erases a run in the Indigo Plateau lobby only (its Hall
+  of Fame keeps the flags until the next lobby visit), so the clear is
+  asked by every lobby entry in a co-op world and by each induction
+  (`league`). The lobby then resets only the player's part; the host
+  erases the campaign's part, the League's encounters and their victory
+  commits once no connected player is in the League (its five rooms and
+  the Hall of Fame) and no League fight runs, and, after the Champion fell,
+  every connected player is inducted. A10.7: the engine's Hall of Fame
+  ends in Game:returnToTitle's path (the boot movie, the title), which
+  every other reset takes too; in a co-op window both freeze the world and
+  send `restart` (after the Hall of Fame with the world just saved, as one
+  that asks for no save, and the induction). The host answers in the
+  link's order with the player's world, the story laid over it, and the
+  game reopens it with its own CONTINUE. A world left in the Hall of Fame
+  goes to the engine's post-game home (`SaveData.applyPostGameHome`:
+  Pallet Town, healed), where the cartridge's fly warp also lands. A player
+  without a world (in the opening) starts the opening again. Costs: a
+  reset loses what the window had not sent yet (the host's world is its
+  last holdings, sent at rest points, and its last SAVE), a gift landed in
+  that time included; the hold lives in host memory, and a disconnected
+  player inside holds nothing. Protocol 16.
+  Details: [battles.md](battles.md).
+- **G31. Friend battles are upstream's link battle; the host trades once**
+  (#23, 2026-10-16, accepted by the owner the same day). A12.3 left the engine to the issue: the
+  co-op battle record (G24) or upstream's lockstep link battle. A friend
+  battle is upstream's link battle (`src/link/LinkBattle.lua`): each
+  window runs the whole battle from its own side (its own team as allies,
+  its own moves, switches and replacements), the host deals the seed and
+  passes the two windows' messages on over the co-op session, numbered,
+  kept and sent again from the first after a drop. G24's record has every
+  player on one side against an enemy's AI; a second human side, a
+  mirrored view and a RUN per side would have meant a second battle kind
+  inside it, where the link battle has them already, with the
+  cartridge's battle screen and the real teams untouched. On top of it:
+  RUN forfeits, no money, a released battle is a draw after the two
+  minutes of A12.4, the team is healed after, and each Pokémon gets the
+  full trainer EXP and stat EXP of every foe it stood against (both out
+  with HP left at once), paid over the map after the battle with the
+  engine's levels, moves to learn and evolutions. A direct trade is shown
+  by upstream's link trade screen (its drawing; the LAN screens and the
+  launcher's ONLINE screens are not used), with the host in the middle:
+  both offers and both TRADEs go to the host, which commits the swap once
+  (`trade:<pair>`) on both worlds it keeps and lays it over every world or
+  holdings a window sends until that window shows it; each window swaps
+  its own team (whole rows: uids and original trainers kept), saves,
+  plays the movie and the trade evolution. One trade per pairing. Costs:
+  the link battle forces 1X game speed while it runs, as upstream's
+  does; a released battle pays EXP for what was fought; the battle's
+  learning and evolution come after it, not during it. Protocol 15.
+  Details: [friends.md](friends.md).
+- **G32. The Cable Club's rooms are its link screens; the session is the
+  cable** (#60, 2026-10-16, accepted by the owner the same day). Upstream's Gen 1 Cable Club has no
+  rooms to walk into: the receptionist saves and opens a LAN link menu
+  that pairs two games over a cable of its own, then runs the cartridge's
+  trade screen or link battle. In a co-op world she opens the cartridge's
+  own link menu instead (TRADE CENTER, COLOSSEUM, CANCEL), the room chosen
+  goes to the host, and upstream's same screens run over the session
+  (`LinkState.newFromSession`), each link message passed to the mate by
+  the host. So "in a room" is being at that menu's choice, and A12.7's
+  partners adapt: an offer either side made, then the room's players in id
+  order two by two, kept while both stay; a third player waits without a
+  cable; rooms never mix, so "the first other free player" has no
+  counterpart. A trade is the host's: it holds each yes until both said
+  it, swaps the two rows once in the stored worlds (uids kept, commit
+  `cable:<pair>:<n>`) and saves, and only then hands each window the
+  other's yes with the uid it receives; the window plays the movie and
+  any trade evolution on its own copy, and its own save follows. A round
+  with no second offer within 30 s of the first, or no answer within 60 s
+  of both, goes back to the lists. The Colosseum is upstream's link
+  battle from the lead's seed, nothing of it kept. The rooms' maps are
+  never entered, so A12.8 only meets a cartridge's save made in one: it
+  opens before the nurse of the center its last outdoor map leads into,
+  as upstream relocates the saves of its added rooms. Protocol 14.
+  Details: [cable.md](cable.md).
+- **G33. Red and Blue are one game in two cartridges; the switch of both
+  versions is the campaign card's** (#9, 2026-10-16, accepted by the owner the same day). A host lets
+  in its own game and dump, and the other game of its pair (Red with Blue,
+  Rot with Blau) when both are verified dumps (`GameVersion.acceptsSha1`);
+  everything else is refused `content_mismatch`, the host's log saying
+  `language`, `dump` or `game`, and the launcher naming it from the lobby.
+  The fork's extraction shows the two share species, moves, items,
+  trainers and texts, so a co-op battle's record plays the same in both
+  windows. Choose your campaign lists both games' campaigns, and a Blue
+  cartridge hosts a Red campaign whose file stays in Red's folder (A13.2).
+  "Wild Pokémon from both versions" (A13.3, A13.4) differs from the source
+  in three details: the switch lives on the hosting device's campaign card
+  (`mix`, NEW CAMPAIGN's row and the card's), not in the campaign file, so
+  it is changed between hostings and needs no file version; the window
+  draws the extra number only where the slot offers an exclusive, so a
+  slot without one keeps the cartridge's stream even with the tables held;
+  the tables are about 20 KB of JSON. A split-screen device plays one
+  cartridge for both seats (the version and the cartridge cache are one per
+  process), so a Red and a Blue player never share a device. Yellow stays
+  with Yellow (G4); the answer is in A13. Protocol 12. Details:
+  [versions.md](versions.md).
+- **G34. Engine-patching mods run on the fork's boot path; the player
+  installs them, the fork never ships them** (#30, 2026-10-16, accepted by the owner the same day).
+  The owner's co-op playthrough needs the Dramatic Shape Voxel Mod, whose
+  licence forbids redistribution, so the fork carries no copy of it (its
+  tests use a stand-in mod with the same manifest fields) and offers a
+  way to install it: the launcher's SETTINGS > MODS lists the installed
+  mods per game, turns each ON or OFF with the flag the game's loader
+  reads, installs a mod's .zip or folder into the save folder's `mods/`
+  and takes a mod's optional file, on the GPL mod modules (never
+  upstream's `LauncherMods`). The fork adapts its own code to such a mod,
+  not the mod: a mod's require of an upstream launcher module fails
+  (LICENSE.MD term 2; the voxel mod falls back on its own); a mod's
+  `love.graphics` reports its game's view as the window, so a split-screen
+  half gets a half-sized 3D scene; with a world pipeline the partner
+  arrows and "!" bubbles are drawn in its field-effect pass under its
+  camera, and a partner's sprite reaches it in their colour. One rule of
+  A14 meets the mod head on: the voxel mod steps its camera with SELECT on
+  the map; in a co-op session SELECT stays the CO-OP menu's (A14 row 9),
+  solo play keeps the mod's SELECT, and the camera stays on the "3" key and
+  the mod's OPTIONS row. A mod's options are each player's own and graphics
+  only, nothing is synced (`affects_link: false`), and a session does not
+  compare mods. Details: [mods.md](mods.md).
+- **G35. A window that comes back is its own player; a unique encounter
+  nobody is in is fought afresh** (Group 11 live test, 2026-10-16,
+  accepted by the owner the same day). Two refinements the integrated live run needed. A1.9: a
+  device whose remembered player is still connected joins as someone new,
+  but a host window frozen for 45 s made every guest's redial a second
+  player, and a guest that crashed and restarted before the host noticed
+  got a duplicate on REJOIN. Now the hello carries a per-window id, and a
+  redial from the same window takes its player back; a hello or probe from
+  the same device and seat makes the host check the old link for up to
+  5 s (`Host.HOLD`): if it dies the new window is that player, if it stays
+  alive the new window joins as someone new, as A1.9 says. A11.7: a unique
+  encounter's battle that nobody is present in ends as fled at once when
+  another player meets that encounter, who fights it afresh, instead of
+  waiting two minutes on a silent screen. Details:
+  [session.md](session.md) *Identity*, [battles.md](battles.md)
+  *Nobody left*.

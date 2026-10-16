@@ -68,6 +68,16 @@
 --     seeding a campaign with no story yet, A4.7), tells the host the
 --     starter it chose, sends its world, and takes the campaign's rival
 --     name from then on.
+--   * A start (#57, design A4.1 to A4.3, G28): a world the launcher
+--     started (in Pallet Town, or brought from a solo save) carries
+--     `coopStart`.  At its first rest point the window takes the mark off
+--     and sends the world whole (`start`); it waits, sending and taking
+--     nothing, until the host keeps it, then opens as a late window (the
+--     campaign's story over its entries: its own when it seeded the
+--     campaign).  A start sent again on a new link that the host refuses
+--     as `returning` went through on the old one.  Any other refusal
+--     leaves the window closed: it sends nothing, so the host's world for
+--     this player stays as it was (A4.3).
 
 local SaveSerializer = require("src.core.SaveSerializer")
 local Ownership = require("src.coop.campaign.Ownership")
@@ -104,6 +114,11 @@ function Window.new(client)
     naming = nil,    -- a rival's name given in Oak's speech, not sent yet
     told = nil,      -- the client the opening's state last went to
     finished = nil,  -- this window finished the opening
+    starting = nil,  -- #57: how this world started ("pallet", "save") until the host kept it
+    startTo = nil,   -- the client the start last went to, and its seq
+    startSeq = nil,
+    resent = nil,    -- the start went out again on a new link
+    refused = nil,   -- why the host refused the start: the window stays closed
   }, Window)
 end
 
@@ -330,7 +345,12 @@ end
 
 function Window:update(f)
   if not self:_ready() or type(f.save) ~= "table" then return end
+  if self.refused then return end
   self:_confirm()
+  if self:_start(f) then
+    self.rest = f.busy and 0 or self.rest + 1
+    return
+  end
   if self:_opening(f) then
     self.rest = f.busy and 0 or self.rest + 1
     return
@@ -390,7 +410,12 @@ end
 -- true while the window plays the opening.
 function Window:_opening(f)
   if self.naming and self.client:sendOpening(false, self.naming) then self.naming = nil end
-  if self.opening == nil then self.opening = not hasStarter(f.save) end
+  if self.opening == nil then
+    -- the first look waits for a world on screen: the title's (and Oak's
+    -- speech's) save is not yet the one CONTINUE or NEW GAME plays
+    if f.map == nil then return true end
+    self.opening = not hasStarter(f.save)
+  end
   -- each link tells the host once: a host that lost this player's world
   -- marks them in the opening when they come back
   -- (with the starter, when this window finished the opening: a done lost
@@ -413,6 +438,63 @@ function Window:_opening(f)
   self.held, self.heldBoxes = "", ""
   self:_holdings(f.save, true)
   return false
+end
+
+-- the host's answer to this window's start: "ok", a refusal, or nil
+function Window:_startAnswer()
+  local c = self.client
+  if not self.startSeq or self.startTo ~= c then return nil end
+  if c.started == self.startSeq then return "ok" end
+  for _, r in ipairs(c.rejections) do
+    if r.seq == self.startSeq then
+      -- the host had the world from the start sent on the old link
+      if r.reason == "returning" and self.resent then return "ok" end
+      return r.reason
+    end
+  end
+  return nil
+end
+
+-- One frame of a start (#57): its first rest point sends the world the
+-- launcher started, whole; the window waits for the host's answer.
+-- Returns true while it waits.
+function Window:_start(f)
+  local save = f.save
+  if not self.starting then
+    if self.sent or type(save.coopStart) ~= "string" then return false end
+    self.starting = save.coopStart
+    save.coopStart = nil
+  end
+  local answer = self:_startAnswer()
+  if answer == "ok" then
+    self.starting = nil
+    -- a world with a starter plays no opening; the host knows
+    self.opening, self.told = false, self.client
+    return false
+  elseif answer then
+    self.starting, self.refused = nil, answer
+    return true
+  end
+  if f.busy or self.rest + 1 < Window.REST_FRAMES then return true end
+  local c = self.client
+  if self.startTo ~= c then
+    local seq = c:sendStart(self.starting, World.encode(save))
+    if seq then
+      if self.startTo then self.resent = true end
+      self.startTo, self.startSeq = c, seq
+    end
+  end
+  return true
+end
+
+-- The game reopened its world from the host (#55, design A10.7: the Hall
+-- of Fame's continue, a reset): the window opens again as a late one at
+-- its next rest point, and the holdings it opened are the host's.
+function Window:reopen()
+  self.rest, self.sent, self.seen, self.unconfirmed = 0, nil, {}, {}
+  self.owed, self.bag, self.money = nil, nil, nil
+  self.held, self.heldBoxes = nil, nil
+  self.opening = nil
 end
 
 -- true while the player plays the opening (#22)

@@ -27,8 +27,9 @@ Separate ids keep caches, saves, mod settings and sessions apart:
 - The fork's launcher lists ROT, BLAU and GELB under the US games and
   imports any of the three dumps ([launcher.md](launcher.md)).
 - A co-op host refuses a cartridge of another language before anything else,
-  with `content_mismatch` ([session.md](session.md)). German Red with German
-  Blue is #9's question, inside one language.
+  with `content_mismatch` ([session.md](session.md)). Rot and Blau play one
+  campaign as Red and Blue do (#9, [versions.md](versions.md)); Gelb plays
+  with Gelb.
 - A mod loads only in the games it lists. The German ids are not in
   upstream's `GameVersion.ORDER`, so a mod for `gen1` (or with no `games`
   key) means the US games: their mods carry English words.

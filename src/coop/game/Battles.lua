@@ -367,6 +367,17 @@ function Battles.step(game)
   end
 end
 
+-- The game reopened its world (#55, design A10.7): this window's copies
+-- went with the old one.  Finished battles are dropped; a running one this
+-- player is in is built again from its record, as after a drop (#20).
+function Battles.reopen(client)
+  Battles.away, Battles.live, Battles.walking = {}, {}, {}
+  Battles.held, Battles.joining, Battles.stray = nil, nil, nil
+  for id, rec in pairs(client and client.battles or {}) do
+    if rec.ended then client:dropBattle(id) else rec.bound = nil end
+  end
+end
+
 -- a record this window has no copy of: this player is in it (not just a
 -- queued join, not one they opened that is still being bound), and it has
 -- inputs to play
@@ -432,7 +443,10 @@ end
 function Battles.rejoinRows(game, items)
   for _, b in pairs(Battles.away) do
     if not b.coop.done then
-      items[#items + 1] = { label = Strings("REJOIN"), onSelect = function()
+      local foe = b.kind == "trainer" and b.trainer and b.trainer.name
+        or b.enemy and b.enemy.name or "?"
+      -- (the second line, #34: against whom)
+      items[#items + 1] = { label = Strings("REJOIN"), detail = Strings("VS %s", foe), onSelect = function()
         Battles.rejoin(game, b)
       end }
     end
@@ -550,7 +564,9 @@ function Battles.joinRows(game, items)
   if next(Battles.away) then return Battles.rejoinRows(game, items) end
   if require("src.coop.game.Opening").active() then return end -- (#22)
   for _, o in ipairs(Battles.offers()) do
-    items[#items + 1] = { label = Strings("JOIN %s", o.name), onSelect = function()
+    items[#items + 1] = { label = Strings("JOIN %s", o.name),
+                          detail = Strings("VS %s", o.summary.foe or "?"), -- #34: against whom
+                          onSelect = function()
       Battles.join(game, o.summary, o.name)
     end }
   end

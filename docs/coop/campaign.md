@@ -188,7 +188,10 @@ Entering a campaign from the launcher writes the player's world from the
 host into that slot before the game boots. A player the campaign has no
 world for keeps what the slot holds: a new game, or the device's progress
 from before campaign files. That progress reaches the host with the first
-save.
+save. Such a player who chose START IN PALLET or BRING A SAVE (#57) gets
+that start world in the slot instead; its window sends it to the host
+whole (`start`), and the host keeps it unless it has the player's world
+already ([opening.md](opening.md) § Other starts).
 
 Split-screen (#11) needs one such slot per seat. `CoopSettings.slots` is
 keyed by campaign today.

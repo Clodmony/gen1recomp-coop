@@ -25,7 +25,8 @@ language, under every page and every message.
 - **PLAY**: the hero ("One story. Two journeys."), the cartridges RED, BLUE,
   YELLOW, ROT, BLAU and GELB (Rote, Blaue and Gelbe Edition,
   [german.md](german.md)), each
-  READY or IMPORT ROM; what fits today (the same cartridge on both sides);
+  READY or IMPORT ROM; which games play together ("RED plays with RED or
+  BLUE", "YELLOW plays with YELLOW", #9: [versions.md](versions.md));
   PLAY SOLO; HOST A CAMPAIGN, JOIN A FRIEND, and COUCH CO-OP marked PLANNED
   and not offered until #4 and #11 work; IMPORT ROM for a cartridge with no
   ROM; LAST SESSION with HOST AGAIN or REJOIN.
@@ -88,6 +89,16 @@ language, under every page and every message.
   launcher and the game always show the same value and the game applies
   them at boot as it applies its own (decision G18 in
   [design.md](design.md)). A phone or console has no WINDOW row.
+- **MODS** (#30, from SETTINGS, for the cartridge picked on PLAY): the
+  mods on this device as cards (name, version, description, PATCHES ENGINE
+  CODE, CHANGES LINK PLAY, an optional file IMPORTED or NOT IMPORTED); a
+  press turns one ON or OFF for that game (the per-game flag in
+  `options.lua` the game's mod loader reads at boot); + INSTALL MOD takes a
+  mod's .zip, dropped or its path typed or pasted, or its folder dropped,
+  and copies it into the save folder's `mods/<id>/` (a mod already there
+  is replaced); IMPORT FILE takes a mod's optional file, checked by size
+  and MD5 against its manifest. A .zip dropped on the MODS page is a mod;
+  anywhere else it is a ROM, as before. See [mods.md](mods.md).
 - **HELP**: how partners connect, SHARE LOGS (on by default; session logs go
   to the session's players and hold trainer names and addresses) and OPEN LOGS
   FOLDER on desktop, and the credits: the credit line, the fork, the AI
@@ -132,21 +143,31 @@ HOST A CAMPAIGN, JOIN A FRIEND, LAST SESSION and the CAMPAIGNS tab open the
 co-op screens of the picked cartridge (#12, design A2). A session started
 there keeps running while the launcher shows it and on into the game.
 
-- **Choose your campaign** (HOST A CAMPAIGN) and **Your campaigns** (the
+- **Choose your campaign** (HOST A CAMPAIGN: the campaigns of this
+  cartridge and of its pair, #9) and **Your campaigns** (the
   CAMPAIGNS tab, every cartridge): one card per campaign, latest hosted first,
   with its cartridge, players and when it was hosted last, and HOST, RENAME and
-  DELETE. HOST is offered when the card's cartridge is imported here. DELETE
+  DELETE; a Red or Blue card also has BOTH VERSIONS: ON or OFF, "wild
+  Pokémon from both versions" for the next hosting (#9). HOST is offered
+  when the card's cartridge, or the other of its pair, is imported here; a
+  Blue cartridge hosts a Red campaign, whose file stays Red's. DELETE
   asks again and keeps the last state as `coop/campaigns/<id>.json.bak` in the
   save folder; RESTORE BACKUP brings the card back. NEW CAMPAIGN asks for the
   campaign's name, the trainer's (16 and 7 characters) and the rival's
   (RIVAL NAME: empty, ASK IN THE GAME, leaves him to Oak's speech; #22,
-  [opening.md](opening.md)) and hosts it.
+  [opening.md](opening.md)), for Red and Blue WILD POKéMON (THIS VERSION
+  ONLY or BOTH VERSIONS, #9), how the host's player starts (HOW YOU
+  START: THE OPENING, START IN PALLET with a STARTER, or BRING A SAVE, which
+  lists this device's solo saves past Oak's lab; Red and Blue only for
+  Pallet; #57, [opening.md](opening.md) § Other starts) and hosts it.
 - **Hosting**: the players in (this device's player marked, a partner on
   another cartridge named with it) out of the host's player limit, the
   addresses partners join at (up to two, a VPN address first, then the home
   network, each labelled, the one a partner used last marked LAST USED; COPY
   copies one), a warning when the port is busy or no network was found (then
-  only this device can join), STOP HOSTING and ENTER THE WORLD (at any time;
+  only this device can join), with BOTH VERSIONS on "Wild Pokémon from
+  both versions: on." or the version it waits for (#9), STOP HOSTING and
+  ENTER THE WORLD (at any time;
   partners can join later). With a device claimed on CONTROLS for each of
   two players, ENTER WITH 2 PLAYERS (and JOIN WITH 2 PLAYERS on the
   connection check) asks PLAYER 2 NAME and enters in split-screen
@@ -155,7 +176,8 @@ there keeps running while the launcher shows it and on into the game.
   session."
 - **Join a friend**: the hosts heard on the LAN beacon (one card per
   campaign, with its cartridge, language and players, and whether this
-  device's cartridge fits, which other imported one joins, or which one it
+  device's cartridge fits (its own game or the other of the pair, #9), which
+  other imported one joins, or which ones it
   needs), BY ADDRESS (a host name or address with an optional `:port`), the
   recent addresses. A nearby host on another cartridge this device has
   imported is joined with that cartridge.
@@ -165,9 +187,12 @@ there keeps running while the launcher shows it and on into the game.
   after the minute "could not reach" and a checklist for the kind of address
   (a VPN address: the VPN on both devices; a home address: the same network
   and the firewall; a public address: port forwarding). A device the host
-  knows sees one JOIN AS <name>; a new player can type a NEW NAME first. A
-  refusal is named exactly ("The host plays RED. This game is BLUE.", another
-  language, another dump, another protocol, a full or closing session), with
+  knows sees one JOIN AS <name>; a new player can type a NEW NAME first and
+  chooses HOW YOU START as on NEW CAMPAIGN (#57). A
+  refusal is named exactly ("The host plays YELLOW. This game is RED. YELLOW
+  plays with YELLOW only.", another language, another dump, Red and Blue
+  from a dump that is not a verified one, another protocol, a full or
+  closing session), with
   USE <GAME> when another imported cartridge fits. Once joined, the game
   starts.
 - **Text entry**: a grid in the style of the cartridge's naming screen, so a
@@ -188,7 +213,9 @@ own, created and named after the campaign the first time (decision G10 in
 active one. Since #13 the player's progress lives in the host's campaign
 file ([campaign.md](campaign.md)). Entering writes the player's world from it
 into the slot, so the title screen offers CONTINUE with it. A player the
-campaign has no world for keeps the slot as it is: NEW GAME the first time.
+campaign has no world for keeps the slot as it is: NEW GAME the first time;
+one who chose START IN PALLET or BRING A SAVE gets that world in the slot,
+and CONTINUE opens it (#57).
 A split-screen second player plays in a second slot of the campaign
 (`slot2`, "<campaign> P2").
 The launcher puts the solo slot back when it opens again (a fresh empty slot
@@ -217,6 +244,11 @@ says so and names its backup instead of hosting it.
   PLAY, NEW SAVE, DELETE and its question, IMPORT .SAV (typed, pasted or
   dropped, the oversized question) and EXPORT of any slot (made active for
   upstream's export, the active slot put back).
+- `Mods.lua` (#30): the MODS page's model: the installed mods, ON/OFF,
+  the install and the optional file screens. The mods themselves are
+  `src/coop/mods/Installed.lua`, on the GPL mod modules (`Manifest`,
+  `SaveData`'s mod flags, `RequiredImports`); `Launcher.lua` mounts a
+  .zip or a dropped folder and copies it through it.
 - `GameOptions.lua` (#5): the game's options on SETTINGS: each row's key
   in `options.lua`, its value's label and how it steps, read and written
   through `SaveData`.
@@ -242,7 +274,9 @@ each boot path above. `LauncherWindow.lua` (the launcher's window size and
 fullscreen memory) is not on the licence's list and stays.
 
 Upstream features that only its launcher reaches are not offered yet: mod
-management and mod updates before a shortcut boot (`main.lua` asks for none),
+updates, profiles and indexes (the MODS page turns mods on and off and
+installs them, #30) and mod updates before a shortcut boot (`main.lua` asks
+for none),
 the save editor, the skin studio, the touch-controls editor, the Box, carts and
 the other games. Mobile is #7; the game's CONTROLS and OPTIONS menus stay
 in the game and agree with the launcher's pages (#4, #5), and the save
@@ -289,6 +323,13 @@ restart path); no upstream launcher module was loaded. The co-op screens
 (#12) were run in two game processes on one machine (host, nearby join, enter
 the world, the host closing the session, LAST SESSION on both sides). Two
 machines on a LAN, pads, touch, Windows, macOS and phones have not been run.
+
+The MODS page (#30) was run the same way on Linux desktop (LÖVE 11.5,
+offscreen) by a frame driver from a restart into the launcher: SETTINGS >
+MODS listed the bundled example mods, + INSTALL MOD with a typed path to a
+.zip of the Dramatic Shape Voxel Mod (the mod in one repository folder)
+installed it, OFF and ON wrote its flag, and CONTINUE booted Red with the
+mod loaded; the page was looked at locally ([mods.md](mods.md)).
 
 The redesign (#38, #41) was run on Linux desktop (LÖVE 11.5, the offscreen
 video driver) by a frame driver that opened every page and saved each frame:
@@ -375,3 +416,13 @@ the partner dialled, each campaign's save slot and the solo slot afterwards,
 the keypad and address kinds, and that every co-op page fits a 480 x 400
 launcher with the credit line. The ENet suite (`love tests/coop/enet`) has the
 late host over real sockets.
+`versions_launcher_test.lua` (#9) covers which games play together on PLAY,
+the refusals of Yellow and of an unverified pair, the cartridge that fits a
+nearby host, the switch of both versions on NEW CAMPAIGN and on the card,
+the Hosting line, and a Blue cartridge hosting a Red campaign
+([versions.md](versions.md)).
+`launcher_mods_test.lua` (#30) drives SETTINGS > MODS on an in-memory save
+folder with a stand-in mod: the cards, ON/OFF as the game's mod loader
+reads it, installing from a repository folder and from the top of a .zip
+(a copy replaced, `.git` left behind, a missing manifest and a bad id
+refused) and a mod's optional file checked by MD5 ([mods.md](mods.md)).

@@ -6,8 +6,8 @@
 -- joins it, so there is one instance; a win or a catch makes it done for
 -- the campaign, kept in the campaign file, and a window walking into a
 -- done one hears `beaten` (it counts as won); a loss, a flight, an
--- abandoned battle or a shutdown release it; the League's rooms are never
--- kept done; a walk-in into a full battle
+-- abandoned battle or a shutdown release it; the League's rooms are kept
+-- done while the team's run lasts (#55); a walk-in into a full battle
 -- or while in another one is refused; a malformed encounter is dropped;
 -- the Hall of Fame's Cerulean Cave guard stays the campaign's.
 --   luajit tests/coop/encounters_test.lua
@@ -181,6 +181,36 @@ HostBattles.endAll(host)
 pump()
 eq(host.state.encounters[MEWTWO], nil, "a shutdown releases it too")
 
+-- a battle nobody is present in, walked into: the walker fights it afresh
+-- (found live: the rival's opener quit during the battle's intro, before
+-- any question, and a partner meeting the rival waited two silent minutes
+-- for the abandon, A11.7)
+do
+  local RIVAL = "trainer:ROUTE_22_obj_1"
+  local R = { kind = "trainer", enemy = { mon("PIDGEY") }, map = "ROUTE_22", foe = "GARY",
+              trainer = { class = "OPP_RIVAL1", index = 5 }, encounter = RIVAL }
+  clear()
+  green:battleOpen(R, team("g", 1), 2, false)
+  pump()
+  local gid = opened(green)
+  for _, p in ipairs(host.battles[gid].players) do p.present = false end -- GREEN's link dropped
+  blue.rejections = {}
+  blue:battleOpen(R, team("b", 1), 3, false)
+  pump()
+  eq(lastRejection(blue), nil, "BLUE's meeting with him is not refused")
+  eq(host.joins[blue.player], nil, "BLUE does not queue for a battle nobody is in")
+  local bid = opened(blue)
+  check(bid ~= nil and bid ~= gid, "BLUE's own fight against him opens at once")
+  local why
+  for _, l in ipairs(logLines) do
+    if l.kind == "battle_end" and l.data.battle == gid then why = l.data.result .. "/" .. tostring(l.data.why) end
+  end
+  eq(why, "run/abandoned", "the battle nobody was in ends as fled (A11.7)")
+  eq(battleCount(), 1, "still one instance of the encounter")
+  HostBattles.endAll(host)
+  pump()
+end
+
 -- a walk-in into a full battle is refused (A8.5) ------------------------------
 clear()
 local GIO = "trainer:VIRIDIAN_GYM_obj_1"
@@ -201,7 +231,8 @@ eq(battleCount(), 1, "and does not open a second instance")
 red:battleAt(id, 2, nil, nil, nil, "run")
 pump()
 
--- the League fights everyone again on every run: never kept done --------------
+-- the League's rooms are one run for the team (#55, A10.6): kept done until
+-- the run's clear (tests/coop/league_test.lua)
 clear()
 local LORELEI = "trainer:LORELEIS_ROOM_obj_1"
 local L = { kind = "trainer", enemy = { mon("DEWGONG") }, map = "LORELEIS_ROOM", foe = "LORELEI",
@@ -212,13 +243,12 @@ id = opened(green)
 check(id ~= nil, "LORELEI is one fight while it runs")
 green:battleAt(id, 1, nil, nil, nil, "win")
 pump()
-eq(host.state.encounters[LORELEI], nil, "won, but not kept done: the next run fights her again")
+eq(host.state.encounters[LORELEI] and host.state.encounters[LORELEI].state, "done",
+   "won, she is done while the team's run lasts")
 clear()
 blue:battleOpen(L, team("b", 1), 3, false)
 pump()
-check(opened(blue) ~= nil, "BLUE fights her")
-blue:battleAt(opened(blue), 1, nil, nil, nil, "run")
-pump()
+eq(lastRejection(blue), "beaten", "a partner arriving later counts her as won")
 
 -- the protocol --------------------------------------------------------------------
 do

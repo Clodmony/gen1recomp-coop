@@ -278,6 +278,7 @@ do
     if it.label == "JOIN BLUE" then row = i end
   end
   check(row ~= nil, "the CO-OP menu offers JOIN BLUE (A8.3)")
+  eq(row and menu.items[row].detail, "VS FIXMON B", "its second line says against whom (#34, A14.8)")
   stack:pop()
   local offers = Battles.offers()
   Battles.join(Game, offers[1].summary, offers[1].name)

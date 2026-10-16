@@ -19,6 +19,7 @@ local CoopSettings = require("src.coop.launcher.CoopSettings")
 local Controls = require("src.coop.launcher.Controls")
 local GameOptions = require("src.coop.launcher.GameOptions")
 local Saves = require("src.coop.launcher.Saves")
+local Mods = require("src.coop.launcher.Mods")
 local Seats = require("src.coop.game.Seats")
 local Screens = require("src.coop.launcher.Screens")
 local Text = require("src.coop.launcher.Text")
@@ -27,6 +28,13 @@ local Ui = require("src.coop.launcher.Ui")
 local Session = require("src.coop.session.Session")
 local L = Text.get
 
+
+-- a typed or pasted path without its quotes, spaces and file:// prefix
+local function cleanPath(path)
+  path = tostring(path or ""):gsub("^%s+", ""):gsub("%s+$", "")
+  path = path:gsub('^"(.*)"$', "%1"):gsub("^'(.*)'$", "%1"):gsub("^file://", "")
+  return path
+end
 local Launcher = {}
 Launcher.__index = Launcher
 
@@ -97,6 +105,8 @@ function Launcher.new(onBoot, opts)
     -- the game's options on SETTINGS (#5), in options.lua where the game reads them
     gameOptions = GameOptions.new({ fixedDisplay = require("src.core.VideoMode").fixedDisplay() }),
     saves = function(v) return Saves.new(self:_savesEnv(v)) end,
+    -- the MODS page (#30), on the GPL mod modules (src/coop/mods/Installed.lua)
+    mods = function(v) return Mods.new({ version = v, canType = not mobile() }) end,
   })
   self:_coopReturn()
   if opts.notice then self.menu:notify(opts.notice) end
@@ -137,17 +147,63 @@ end
 -- The player's world from the campaign into the campaign's slot (#13).  A
 -- player the campaign has no world for keeps what the slot holds: a new
 -- game, or this device's progress from before campaign files, which goes to
--- the host with the first save.
-function Launcher:_coopWorld(SaveData, version, slot)
+-- the host with the first save.  Such a player who chose how they start
+-- (#57, `start`) gets that world instead: in Pallet Town, or a solo save
+-- brought along; a returning player always gets the campaign's (A4.3).
+function Launcher:_coopWorld(SaveData, version, slot, start)
   local s = Session.current
   if not (s and slot and s.takeWorld) then return end
   local save = s:takeWorld()
+  if save == nil and start then
+    local why
+    save, why = self:_startWorld(SaveData, version, start, s)
+    if not save then
+      self.menu:notify(L("Your start could not be made: %s", tostring(why)))
+      return
+    end
+  end
   if save == false then
     self.menu:notify(L("Your world from the campaign could not be read."))
   elseif save then
     local ok, err = SaveData.writeSlot(version, slot, save)
     if not ok then self.menu:notify(L("Your world could not be written: %s", tostring(err))) end
   end
+end
+
+-- the world a new player starts with (#57): in Pallet Town with their
+-- starter, or a solo save of this device; nil and why
+function Launcher:_startWorld(SaveData, version, start, s)
+  local Start = require("src.coop.campaign.Start")
+  if start.how == "pallet" then
+    local state = s.client and s.client.state
+    local name = tostring(s.name or ""):upper():sub(1, 7)
+    return Start.pallet({ version = version, starter = start.starter, name = name,
+                          rival = state and state.rival or nil })
+  end
+  local text = SaveData.readSlotSource(version, start.slot)
+  local ok, save = pcall(SaveData.decode, text or "")
+  if not ok or type(save) ~= "table" then return nil, "the save does not read" end
+  return Start.brought(save)
+end
+
+-- This device's single-player saves of `version` for BRING A SAVE (#57):
+-- every slot that holds a save and is no campaign's, as the SAVES page
+-- lists them, and whether it is past Oak's lab
+function Launcher:_soloSaves(version)
+  local SaveData = require("src.core.SaveData")
+  local Start = require("src.coop.campaign.Start")
+  local details = Saves.new(self:_savesEnv(version)):details()
+  local out = {}
+  for _, slot in ipairs(details.slots) do
+    if slot.exists and not slot.campaign then
+      local text = SaveData.readSlotSource(version, slot.id)
+      local ok, save = pcall(SaveData.decode, text or "")
+      out[#out + 1] = { id = slot.id, name = slot.name or slot.label or slot.id,
+                        badges = slot.badges, dex = slot.dex, time = slot.time,
+                        bringable = ok and Start.bringable(save) or false }
+    end
+  end
+  return out
 end
 
 -- what the co-op screens reach: this device's settings and campaigns, the
@@ -163,6 +219,7 @@ function Launcher:_coopEnv(version)
     campaigns = Campaigns,
     addresses = function() return require("src.coop.session.Addresses").mine() end,
     splitReady = function() return Seats.complete(2) end,
+    soloSaves = function(v) return launcher:_soloSaves(v) end,
     nearby = function()
       if not launcher.nearby and not launcher.nearbyError then
         local listener, why = require("src.coop.session.Beacon").listener()
@@ -174,9 +231,10 @@ function Launcher:_coopEnv(version)
       if launcher.nearby then launcher.nearby:close() end
       launcher.nearby, launcher.nearbyError = nil, nil
     end,
-    host = function(campaign, name, v)
+    host = function(campaign, name, v, start)
       return Session.startHost({
         campaign = campaign, cartridge = Session.cartridge(v), name = name,
+        start = start, -- how the host's own player starts (#66)
         shareLogs = settings.shareLogs,
         onRoster = function(roster) Campaigns.record(campaign.id, roster) end,
       })
@@ -306,6 +364,27 @@ function Launcher:_run(command)
       if self.menu.saves then self.menu.saves:importData(data, path:match("[^/\\]+$") or path) end
       self.saveCache = {}
     end
+  elseif command.kind == "install_mod" then
+    -- a typed .zip path on the MODS page (#30)
+    local path = cleanPath(command.path)
+    local file = require("src.core.SaveData").openNative(path, "rb")
+    if not file then
+      self.menu:notify(L("Could not open %s", path))
+    else
+      local data = file:read("*a")
+      file:close()
+      self:_installModZip(data, path:match("[^/\\]+$") or path)
+    end
+  elseif command.kind == "mod_import" then
+    local path = cleanPath(command.path)
+    local file = require("src.core.SaveData").openNative(path, "rb")
+    if not file then
+      self.menu:notify(L("Could not open %s", path))
+    else
+      local data = file:read("*a")
+      file:close()
+      self:_importModFile(data, path:match("[^/\\]+$") or path)
+    end
   elseif command.kind == "boot" then
     if command.newGame then
       -- a new game gets its own slot; the old save stays on disk
@@ -321,7 +400,7 @@ function Launcher:_run(command)
     local SaveData = require("src.core.SaveData")
     local slot = self:_coopSettings():enterSlot(SaveData, command.version, command.campaign.id,
       command.campaign.title)
-    self:_coopWorld(SaveData, command.version, slot)
+    self:_coopWorld(SaveData, command.version, slot, command.start)
     if self.nearby then self.nearby:close() end
     self.nearby = nil
     -- two players on this device (#11): the second joins once the game runs
@@ -336,6 +415,60 @@ function Launcher:_run(command)
   end
 end
 
+-- ------------------------------------------------------------ mods (#30)
+
+local INSTALL_MOUNT = "coop_mod_install"
+local INSTALL_ARCHIVE = "coop_mod_install.zip"
+
+-- install the mod in a mounted tree, then unmount it
+function Launcher:_installMounted(source, name)
+  local Installed = require("src.coop.mods.Installed")
+  local manifest, err = Installed.install(Installed.mountedTree(INSTALL_MOUNT))
+  pcall(love.filesystem.unmount, source)
+  local mods = self.menu.mods
+  local text = manifest and L("Installed %s %s. It runs when the game starts.",
+      manifest.name or manifest.id, manifest.version or "")
+    or L("Could not install %s: %s", name, tostring(err))
+  if mods then mods:done(manifest ~= nil, text) else self.menu:notify(text) end
+end
+
+-- a mod's .zip (dropped, or a typed path): mounted from memory, copied
+-- into the save folder's mods/
+function Launcher:_installModZip(data, name)
+  local ok, fileData = pcall(love.filesystem.newFileData, data, INSTALL_ARCHIVE)
+  local okM, mounted = false, false
+  if ok and fileData then
+    okM, mounted = pcall(love.filesystem.mount, fileData, INSTALL_ARCHIVE, INSTALL_MOUNT)
+  end
+  if not (okM and mounted and love.filesystem.getInfo(INSTALL_MOUNT)) then
+    pcall(love.filesystem.unmount, INSTALL_ARCHIVE)
+    return self.menu:notify(L("Could not install %s: %s", name or "?", L("it is not a .zip this build opens")))
+  end
+  self:_installMounted(INSTALL_ARCHIVE, name)
+end
+
+-- a mod's folder, dropped on the window
+function Launcher:directorydropped(path)
+  if self.menu.screen ~= "mods" or not self.menu.mods then
+    return self.menu:notify(L("To install a mod, open SETTINGS > MODS and drop it there."))
+  end
+  local ok = pcall(love.filesystem.mount, path, INSTALL_MOUNT)
+  if not (ok and love.filesystem.getInfo(INSTALL_MOUNT)) then
+    return self.menu:notify(L("Could not open %s", tostring(path)))
+  end
+  self:_installMounted(path, tostring(path):match("[^/\\]+$") or path)
+end
+
+-- the file a mod asks for (its optional import), checked and stored
+function Launcher:_importModFile(data, name)
+  local mods = self.menu.mods
+  local m, imp = mods and mods:pendingImport()
+  if not m then return end
+  local ok, err = require("src.coop.mods.Installed").importOptional(m.id, imp.id, data)
+  mods:done(ok == true, ok and L("Imported %s for %s.", imp.name, m.name)
+    or L("Could not import %s: %s", name or imp.name, tostring(err)))
+end
+
 function Launcher:_boot(version)
   if Launcher.current == self then Launcher.current = nil end
   self.booted = version
@@ -346,6 +479,13 @@ end
 
 function Launcher:importData(data, name)
   if self.job then return end
+  -- on the MODS page (#30) a dropped file is a mod's .zip, or the file the
+  -- mod asks for on its import screen
+  local mods = self.menu.screen == "mods" and self.menu.mods
+  if mods then
+    if mods.screen == "import" then return self:_importModFile(data, name) end
+    return self:_installModZip(data, name)
+  end
   -- a cartridge save goes to the SAVES page of the picked game (#6)
   if Saves.looksLikeSav(data, name) and self.menu.savesOf then
     local menu = self.menu

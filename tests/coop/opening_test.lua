@@ -170,6 +170,32 @@ do
   eq(host.state.chose, "SQUIRTLE", "the second finisher does not change the rival's starter")
 end
 
+-- a new player who starts in Pallet or brings a save is not "in the opening"
+-- when they join (found in the integrated build's live run: the join notice
+-- said "joined the session in the opening") ----------------------------------
+do
+  local host, hub = startHost()
+  local c = Client.new(hub:dial(), { name = "MISTY", game = "red", sha1 = SHA, build = "test",
+                                     device = "d7", clock = now, start = "pallet" })
+  c:join()
+  local watcher = Client.new(hub:dial(), { name = "BROCK", game = "red", sha1 = SHA,
+                                           build = "test", device = "d8", clock = now })
+  watcher:join()
+  for _ = 1, 6 do
+    clock = clock + 1 / 60
+    c:update(); watcher:update(); host:update(); c:update(); watcher:update()
+  end
+  eq(c.status, "joined", "MISTY joined")
+  check(not (watcher:playerView(c.player) or {}).opening,
+        "a player who chose START IN PALLET is not announced in the opening")
+  check((c:playerView(watcher.player) or {}).opening,
+        "one who chose nothing (the opening) still is")
+  local bad = Protocol.sanitize({ type = "hello", protocol = Protocol.VERSION, build = "t",
+                                  name = "X", game = "red", sha1 = SHA, device = "d9", seat = 1,
+                                  start = "nowhere" }, "host")
+  eq(bad, nil, "an unknown start is dropped whole")
+end
+
 -- a returning player is never in the opening ------------------------------------
 do
   local host, hub = startHost()
@@ -193,6 +219,47 @@ do
   pump(host, { x }, 8)
   eq(c2.status, "joined", "back in")
   check(not view(x).opening, "the window says again it is past the opening")
+end
+
+-- a returning player's game opens on the title first (found live): the
+-- title's empty save is no world in the opening, and CONTINUE then loads
+-- the world, here one saved in Oak's lab after the opening
+do
+  local host, hub = startHost()
+  local first = Client.new(hub:dial(), { name = "RED", game = "red", sha1 = SHA, build = "test",
+                                         device = "d1", clock = now })
+  first:join()
+  local before = { c = first, w = Window.new(first), save = F.save("RED", { map = "OAKS_LAB" }),
+                   map = "OAKS_LAB", sent = {} }
+  pump(host, { before }, 12)
+  -- as a campaign file holds it after a SAVE
+  host.state:player(first.player).world = F.save("RED", { map = "OAKS_LAB" })
+  -- RED quits and starts the game again: a new window, on the title
+  first.conn:close()
+  local c = Client.new(hub:dial(), { name = "RED", game = "red", sha1 = SHA, build = "test",
+                                     device = "d1", clock = now, known = first.known })
+  c:join()
+  local x = { c = c, w = Window.new(c), save = F.save("RED", { party = {}, flags = {} }),
+              map = nil, busy = "no_overworld", sent = {} }
+  local said = {}
+  local send = c.send
+  c.send = function(self, msg)
+    if msg.type == "opening" then said[#said + 1] = tostring(msg.done) end
+    return send(self, msg)
+  end
+  local marked = false
+  local function watch(frames)
+    for _ = 1, frames do
+      pump(host, { x }, 1)
+      if view(x).opening or x.w:inOpening() then marked = true end
+    end
+  end
+  watch(20) -- the title, before CONTINUE
+  x.save, x.map, x.busy = F.save("RED", { map = "OAKS_LAB" }), "OAKS_LAB", nil
+  watch(20)
+  eq(x.w.opening, false, "CONTINUE's world with a starter is past the opening")
+  check(not marked, "the title's empty save never put the player in the opening")
+  eq(table.concat(said, ","), "true", "the window told the host once: past the opening")
 end
 
 -- the rival's name (A4.5) --------------------------------------------------------

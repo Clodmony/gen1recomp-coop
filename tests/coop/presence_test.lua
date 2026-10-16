@@ -314,11 +314,13 @@ stack:update(1 / 60)
 Input:sourceRelease("select", "test")
 Input:step()
 check(stack:top().coopMenu, "SELECT on the map opens the CO-OP menu")
-eq(labels(stack:top()), "TOWN MAP,LEAVE SESSION,CANCEL", "its rows without a TOWN MAP")
+eq(labels(stack:top()), "BATTLE BLUE,TRADE BLUE,TOWN MAP,LEAVE SESSION,CANCEL",
+   "its rows without a TOWN MAP (BATTLE and TRADE for the free partner, #23)")
 stack:pop()
 Game.save.inventory = Game.save.inventory or {}
 Game.save.inventory.TOWN_MAP = 1
-eq(labels(CoopMenu.new(Game)), "LEAVE SESSION,CANCEL", "with the item, no TOWN MAP row")
+eq(labels(CoopMenu.new(Game)), "BATTLE BLUE,TRADE BLUE,LEAVE SESSION,CANCEL",
+   "with the item, no TOWN MAP row")
 Game.save.inventory.TOWN_MAP = nil
 local lines = CoopMenu.lines(Game, s, "10.0.0.5")
 eq(lines[1], "FIX CO-OP", "the box names the campaign")

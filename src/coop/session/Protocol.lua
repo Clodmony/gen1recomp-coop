@@ -29,8 +29,26 @@ local Protocol = {}
 -- opening is, and in `state`; a walk-in joins the running one.  10: the
 -- opening (#22): a window's `opening` (in it or done, the rival's name,
 -- the starter chosen), and who is in it, the rival's name and the
--- starter he counters in `state`.
-Protocol.VERSION = 10
+-- starter he counters in `state`.  11: rival scenes (#59): a window's
+-- `scene` claim or release, and the claimed maps in `state`.  12: Red
+-- and Blue (#9): a window's own wild slots (`wild`) to the host, the
+-- other version's (`wild`) to the window.  13: how a new player starts
+-- (#57): a window's `start` (a world started in Pallet Town or brought
+-- from a solo save) and the host's `started`, and the `returning` refusal.
+-- 14: the Cable Club (#60): a window's `cable` (enter a room, leave it)
+-- and `cable_link` (a link-cable message for its mate), the host's `cable`
+-- (the room, the mate, the round) and `cable_link`, and who is in a Cable
+-- Club room in `state`.
+-- 15: friend battles and trades (#23): `invite`, `invite_answer`,
+-- `pair_msg`, `pair_end`, `trade_team`, `trade_pick` and `trade_confirm`
+-- to the host, `invite`, `pair` and `pair_msg` to the client, and who
+-- meets whom (`meeting`) in `state`.
+-- 16: the team's League run and the Hall of Fame's continue (#55): a
+-- window's `league` (the lobby, an induction) and `restart`, and the
+-- host's `world` naming the restart it answers.
+-- 17: how a new player starts on `hello` (`start`), so one who starts in
+-- Pallet Town or brings a save is not announced in the opening.
+Protocol.VERSION = 17
 
 -- one message, encoded, may be this long: a full PC is about a quarter of a
 -- megabyte (design A1.4)
@@ -66,6 +84,15 @@ Protocol.REASONS = {
   no_pokemon = true, run_initiator = true,
   -- leaving and taking over (#20)
   opener_stays = true, not_away = true,
+  -- rival scenes (#59): another player drives that map's scene
+  scene_taken = true,
+  -- how a new player starts (#57): the campaign has this player's world
+  returning = true,
+  -- the Cable Club (#60)
+  no_cable = true,
+  -- friend battles and trades (#23)
+  partner_busy = true, partner_away = true, no_partner = true, invite_pending = true,
+  no_invite = true, no_pair = true, bad_team = true, bad_pick = true,
 }
 
 -- a player's world travels as the game's save text (World.lua checks it):
@@ -317,6 +344,8 @@ local publicPlayer = record({
   map = Protocol.mapId, x = cell, y = cell, facing = enum(FACINGS),
   travel = enum(TRAVELS), battle = pattern("^b[0-9a-f]+$", 17),
   opening = bool, -- #22: playing the opening (design A4.8)
+  cable = enum({ trade = true, colosseum = true }), -- #60: in a Cable Club room
+  meeting = enum({ battle = true, trade = true }), -- #23: a friend battle or trade
 })
 
 -- the lobby view of a player (probe answers and the LAN beacon)
@@ -450,14 +479,67 @@ local battleSummary = record({
 -- the starters a rival counters (#22, design A4.6); Yellow's is #9
 Protocol.STARTERS = { BULBASAUR = true, CHARMANDER = true, SQUIRTLE = true }
 
+-- rival scenes (#59, design A10.5): a scene by its key
+-- (src/coop/game/Scenes.lua), and a map's claim as `state` names it
+Protocol.sceneKey = pattern("^[a-z0-9_]+$", 24)
+local sceneClaim = record({ map = Protocol.mapId, key = Protocol.sceneKey, by = Protocol.playerId })
+
+-- Red and Blue (#9, design A13.3, A13.4): a version's wild slots, map by
+-- map, its grass (or cave) and its water table in the cartridge's slot
+-- order; the encounter tables hold ten slots a table and fewer than 256
+-- maps
+Protocol.MAX_WILD_MAPS = 256
+Protocol.MAX_WILD_SLOTS = 10
+local wildSlots = listOf(record({ species = dataId, level = int(1, 100) }),
+                         Protocol.MAX_WILD_SLOTS)
+local wildMaps = mapOf(Protocol.mapId, record({}, { grass = wildSlots, water = wildSlots }),
+                       Protocol.MAX_WILD_MAPS)
+-- the Cable Club (#60, design A12.7 to A12.9) ------------------------------
+
+-- the rooms behind the receptionist; "none" leaves them
+Protocol.CABLE_ROOMS = { trade = true, colosseum = true }
+local cableRoom = enum({ trade = true, colosseum = true, none = true })
+-- the messages of upstream's link cable a Cable Club room carries
+-- (src/link/LinkState.lua, Protocol.TradeSession, LinkBattle): each is
+-- checked by the cable's own sanitizer (src/link/Wire.lua) and keeps only
+-- its fields there
+Protocol.CABLE_LINK_TYPES = {
+  hello = true, records = true, party = true, pick = true, confirm = true,
+  action = true, hash = true, replace = true, bye = true, forfeit = true,
+}
+local function cableLink(v)
+  if type(v) ~= "table" or type(v.type) ~= "string" or not Protocol.CABLE_LINK_TYPES[v.type] then
+    return nil, "not a cable message"
+  end
+  local ok, clean = pcall(require("src.link.Wire").sanitize, v)
+  if not ok or type(clean) ~= "table" then return nil, "bad cable message" end
+  return clean
+end
+Protocol.cableLink = cableLink
+local cableUid = pattern("^[%w_:%-]*$", 40) -- a row's uid, "" for none
+Protocol.MAX_CABLE_PARTY = 6
+-- the team's League run (#55, design A10.6): a window entered the Indigo
+-- Plateau lobby (it asks for the run's clear) or was inducted into the Hall
+-- of Fame; a window's restart (A10.7): after the Hall of Fame, or a reset
+Protocol.LEAGUE_EVENTS = { lobby = true, inducted = true }
+Protocol.RESTART_KINDS = { hall = true, reset = true }
+
 Protocol.TO_HOST = {
   -- asked before hello on the same link: the host answers whatever the
   -- protocol and creates nobody (design A1.8)
-  probe = record(withType("probe", identity), { known = known }),
-  -- logs: whether this link carries the device's shared log lines (#31)
+  -- device, seat: which seat of which device asks (a game started again
+  -- after a crash learns it is still that player)
+  probe = record(withType("probe", identity), { known = known, device = Protocol.deviceId,
+                                                seat = int(1, 2) }),
+  -- logs: whether this link carries the device's shared log lines (#31);
+  -- window: this game window's own id, the same on every link it redials
+  -- (a host that still holds the window's old link knows it for its own)
   hello = record(withType("hello", extend(identity, {
     device = Protocol.deviceId, seat = int(1, 2),
-  })), { known = known, via = text(64), logs = record({ share = bool }) }),
+  })), { known = known, via = text(64), logs = record({ share = bool }),
+         window = Protocol.deviceId,
+         -- how a new player starts (#57, #66): the opening, Pallet, a save
+         start = enum({ opening = true, pallet = true, save = true }) }),
   -- the client's own position; warp is true when its world changed map or
   -- jumped (a warp, a map connection, a fly); travel is how it moves (#15)
   move = record(withType("move", {
@@ -487,6 +569,17 @@ Protocol.TO_HOST = {
   -- the name it gave the rival in Oak's speech
   opening = record(withType("opening", { seq = seq, done = bool }),
                    { rival = name, chose = enum(Protocol.STARTERS) }),
+  -- how a new player starts (#57, design A4.1 to A4.3): the world the
+  -- launcher started, in Pallet Town or brought from a solo save, whole
+  -- (the game's save text, the PC included), at the window's first rest
+  -- point
+  start = record(withType("start", { seq = seq, how = enum({ pallet = true, save = true }),
+                                     save = blob(Protocol.MAX_WORLD) })),
+  -- the team's League run and the Hall of Fame's continue (#55, design
+  -- A10.6, A10.7): this window entered the lobby or was inducted; it
+  -- restarts and waits for its world
+  league = record(withType("league", { seq = seq, event = enum(Protocol.LEAGUE_EVENTS) })),
+  restart = record(withType("restart", { seq = seq, kind = enum(Protocol.RESTART_KINDS) })),
   -- co-op battles (#18, design A8): a battle this window's world opened,
   -- with this player's team (otId: their trainer id; expAll: an EXP.ALL in
   -- their bag)
@@ -517,6 +610,22 @@ Protocol.TO_HOST = {
   -- TAKE OVER for `owner`, who dropped (design A11.6)
   battle_takeover = record(withType("battle_takeover", { seq = seq, battle = Protocol.battleId,
                                                          owner = Protocol.playerId })),
+  -- a rival scene (#59, design A10.5): this window's world started the
+  -- scene `key` on `map` (on true: a claim) or is past it (on false)
+  scene = record(withType("scene", { seq = seq, map = Protocol.mapId, key = Protocol.sceneKey,
+                                     on = bool })),
+
+  -- Red and Blue (#9): this window's own version's wild slots, after each
+  -- welcome (about 10 KB; the host keeps them in memory only)
+  wild = record(withType("wild", { seq = seq, maps = wildMaps })),
+  -- the Cable Club (#60): enter a room behind the receptionist (with: a
+  -- partner this player offered the cable to) or leave it ("none")
+  cable = record(withType("cable", { seq = seq, room = cableRoom }), { with = Protocol.playerId }),
+  -- a link-cable message for this player's mate, in round `round`; uids:
+  -- with a `party`, the uid of each Pokémon in it ("" for none)
+  cable_link = record(withType("cable_link", { seq = seq, round = int(1, Protocol.MAX_SEQ),
+                                               link = cableLink }),
+                      { uids = listOf(cableUid, Protocol.MAX_CABLE_PARTY) }),
 }
 
 -- what a client accepts from the host ------------------------------------
@@ -540,10 +649,18 @@ Protocol.TO_CLIENT = {
   }), { saved_ago = int(-1, Protocol.MAX_SEQ), busy = text(Protocol.MAX_REASON),
          battles = listOf(battleSummary, Protocol.MAX_PLAYERS),
          -- the campaign's rival: his name and the starter he counters (#22)
-         rival = name, chose = enum(Protocol.STARTERS) }),
+         rival = name, chose = enum(Protocol.STARTERS),
+         -- the rival scenes being played, one driver a map (#59)
+         scenes = listOf(sceneClaim, Protocol.MAX_PLAYERS) }),
   -- the player's world from the campaign, once after welcome (#13); none
-  -- for a player who never saved in this campaign
-  world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD) }),
+  -- for a player who never saved in this campaign; again as the answer to
+  -- a window's restart, naming it (#55)
+  world = record(withType("world", { fresh = bool }), { save = blob(Protocol.MAX_WORLD),
+                                                         restart = seq }),
+  -- the host kept the world a window started with (#57): `seq` is its
+  -- `start`, `seeded` when it began the campaign's story; the story came
+  -- first
+  started = record(withType("started", { seq = int(1, Protocol.MAX_SEQ), seeded = bool })),
   -- a save of the campaign (#13, design A3.12): `you` when this player
   -- asked for it; ok false with the reason when it was refused
   saved = record(withType("saved", { ok = bool, by = name, you = bool }),
@@ -592,7 +709,99 @@ Protocol.TO_CLIENT = {
     suggestions = listOf(record({ by = Protocol.playerId, cmd = cmd }), Protocol.MAX_PLAYERS),
     ended = enum(Protocol.RESULTS),
   }),
+  -- Red and Blue (#9): the other version's wild slots, once a link while
+  -- the campaign's "wild Pokémon from both versions" switch is on
+  wild = record(withType("wild", { game = Protocol.gameId, maps = wildMaps })),
+  -- the Cable Club (#60): this player's room ("none": out of it), and once
+  -- a mate is found, who (mate, name) and whether this window leads the
+  -- link (lead: it deals the battle's seed); round: the trade's round,
+  -- moved on when the host turned a stalled one back to the lists
+  cable = record(withType("cable", { room = cableRoom, round = int(0, Protocol.MAX_SEQ) }),
+                 { mate = Protocol.playerId, name = name, lead = bool }),
+  -- the mate's link-cable message, in round `round`; uid: with the
+  -- trade's last confirm, the uid of the Pokémon this player receives
+  cable_link = record(withType("cable_link", { round = int(1, Protocol.MAX_SEQ),
+                                               link = cableLink }),
+                      { uid = cableUid }),
 }
+
+-- friend battles and trades (#23, design A12.1 to A12.6) -------------------
+
+Protocol.INVITE_KINDS = { battle = true, trade = true }
+-- how an invitation ended, as both players hear it (A12.2)
+Protocol.INVITE_ANSWERS = { accepted = true, declined = true, timeout = true, busy = true,
+                            left = true }
+-- how a window's side of a pairing ended
+Protocol.PAIR_RESULTS = { win = true, lose = true, draw = true, forfeit = true, cancel = true,
+                          done = true }
+-- why the host ended a pairing for both (A12.4, A12.6)
+Protocol.PAIR_ENDS = { released = true, left = true, cancel = true }
+Protocol.inviteId = pattern("^i[0-9a-f]+$", 17)
+Protocol.pairId = pattern("^t[0-9a-f]+$", 17)
+-- a team's rows as the game's save text (src/coop/campaign/Trade.lua)
+Protocol.MAX_TEAM_TEXT = 64 * 1024
+-- one message of upstream's link battle, passed on between the two
+-- windows (src/link/LinkBattle.lua; the receiving window's link session
+-- checks it with src/link/Wire.lua): plain data with a type
+local function linkMsg(v)
+  local out, why = plain(v)
+  if out == nil then return nil, why end
+  if type(out) ~= "table" or type(out.type) ~= "string" or #out.type > 40 then
+    return nil, "no type"
+  end
+  return out
+end
+local pairKinds = enum(Protocol.INVITE_KINDS)
+
+-- invite `to` to a friend battle or trade (A12.1, A12.2)
+Protocol.TO_HOST.invite = record(withType("invite", { seq = seq, to = Protocol.playerId,
+                                                      kind = pairKinds }))
+-- the invited player's YES or NO
+Protocol.TO_HOST.invite_answer = record(withType("invite_answer", {
+  seq = seq, invite = Protocol.inviteId, yes = bool,
+}))
+-- the n-th message of this window's link battle in the pairing
+Protocol.TO_HOST.pair_msg = record(withType("pair_msg", {
+  seq = seq, pair = Protocol.pairId, n = int(1, Protocol.MAX_SEQ), msg = linkMsg,
+}))
+-- this window's side of the pairing ended
+Protocol.TO_HOST.pair_end = record(withType("pair_end", {
+  seq = seq, pair = Protocol.pairId, result = enum(Protocol.PAIR_RESULTS),
+}))
+-- a trade: this player's team as the trade screen opened, the slot they
+-- offer, and their TRADE (yes) or CANCEL (no) once both offered (A12.6)
+Protocol.TO_HOST.trade_team = record(withType("trade_team", {
+  seq = seq, pair = Protocol.pairId, team = blob(Protocol.MAX_TEAM_TEXT),
+}))
+Protocol.TO_HOST.trade_pick = record(withType("trade_pick", {
+  seq = seq, pair = Protocol.pairId, slot = int(1, Protocol.MAX_TEAM),
+}))
+Protocol.TO_HOST.trade_confirm = record(withType("trade_confirm", {
+  seq = seq, pair = Protocol.pairId, yes = bool,
+}))
+
+-- an invitation to this player (no answer yet), or how one this player
+-- sent or got ended
+Protocol.TO_CLIENT.invite = record(withType("invite", {
+  id = Protocol.inviteId, from = Protocol.playerId, to = Protocol.playerId, kind = pairKinds,
+}), { answer = enum(Protocol.INVITE_ANSWERS) })
+-- a pairing this player is in, as it stands: the partner, the link
+-- battle's side (role) and seed, the partner away (A12.4), the end; for a
+-- trade both teams, both offers, both answers and whether the host
+-- committed the swap (done)
+Protocol.TO_CLIENT.pair = record(withType("pair", {
+  id = Protocol.pairId, kind = pairKinds, partner = Protocol.playerId,
+  role = enum({ host = true, guest = true }), seed = int(1, 2147483646),
+}), {
+  name = name, away = bool, ended = enum(Protocol.PAIR_ENDS),
+  mine = blob(Protocol.MAX_TEAM_TEXT), theirs = blob(Protocol.MAX_TEAM_TEXT),
+  myPick = int(1, Protocol.MAX_TEAM), theirPick = int(1, Protocol.MAX_TEAM),
+  confirmed = bool, theirConfirmed = bool, done = bool,
+})
+-- the partner's n-th link battle message
+Protocol.TO_CLIENT.pair_msg = record(withType("pair_msg", {
+  pair = Protocol.pairId, n = int(1, Protocol.MAX_SEQ), msg = linkMsg,
+}))
 
 Protocol.LOBBY = record(extend(lobby, { port = int(1, 65535) }))
 

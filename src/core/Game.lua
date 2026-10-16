@@ -62,6 +62,9 @@ function Game:load(opts)
     self.mods:load(Data)
   end
   self.modStatus = self.mods:status()
+  -- co-op (#30): SELECT in a session stays the CO-OP menu's when a mod
+  -- wrapped the overworld's input for it (src/coop/game/CoopMenu.lua)
+  require("src.coop.game.CoopMenu").claimSelect(require("src.world.OverworldController"))
   -- co-op (#25): a German game's engine lines in the cartridge's words, its
   -- type names and its wider boxes, into Data.strings / type_chart /
   -- field.theme where no mod put anything (src/coop/game/German.lua); before
@@ -250,6 +253,9 @@ end
 -- unsaved progress discarded.  TitleState:enter restarts the title
 -- theme; stop() keeps the map song from bleeding over in the meantime.
 function Game:returnToTitle()
+  -- co-op (#55): a reset in a co-op window continues the co-op world
+  -- instead (src/coop/game/Restart.lua, design A10.7)
+  if require("src.coop.game.Restart").take(self, "reset") then return end
   require("src.core.Music").stop()
   while self.stack:top() do self.stack:pop() end
   self.stack:push(self:makeTitleState())
@@ -1564,6 +1570,9 @@ function Game:restoreSave(loaded, recovered, opts)
     for _, mon in ipairs(loaded.party or {}) do Pokemon.heal(mon) end
   end
   require("src.world.gen1.UnionSafety").settle(loaded, self.data)
+  -- co-op (#60): a world continued in a Cable Club room opens at its
+  -- center's counter (src/coop/game/CableClub.lua, design A12.8)
+  require("src.coop.game.CableClub").settle(loaded, self.data)
   local modsDiff = SaveData.modsDiff(loaded, activeMods)
   local report = SaveData.validate(loaded, self.data)
   report.recovered = recovered

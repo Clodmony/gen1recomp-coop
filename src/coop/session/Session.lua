@@ -45,12 +45,15 @@
 -- REDIAL_FOR seconds ("reconnecting"); the world keeps running and sends
 -- nothing until the host has the player back, and the first position after
 -- that counts as a warp.  A game back from a pause longer than RESUME_AFTER
--- seconds closes its link and dials at once.  A session that ends under a
+-- seconds that stopped running meanwhile (an app put away) closes its link
+-- and dials at once; a window that only lost focus kept running and keeps
+-- its link.  A session that ends under a
 -- running game shows why over the world for END_SHOW seconds before the
 -- launcher.  `linkNote` tells the game what to say ("lost", "back",
 -- "ended"; src/coop/game/Presence.lua).
 
 local Transport = require("src.coop.session.Transport")
+local Random = require("src.coop.session.Random")
 local Protocol = require("src.coop.session.Protocol")
 local Host = require("src.coop.session.Host")
 local Client = require("src.coop.session.Client")
@@ -103,6 +106,8 @@ local function newSession(kind, opts)
     cartridge = opts.cartridge, clock = opts.clock or defaultClock,
     frames = 0, names = {}, maps = {}, last = nil,
     status = "idle", reason = nil, seat = opts.seat or 1,
+    -- this window's id on every link it dials (a redial is the same window)
+    windowId = Random.hex(16),
   }, Session)
   s.identity = opts.identity or Identity.load(Identity.saveFolderStore())
   if opts.log ~= false then
@@ -120,6 +125,8 @@ function Session:_client(conn, hostKey, via)
   self.client = Client.new(conn, {
     name = self.name, game = self.cartridge.game, sha1 = self.cartridge.sha1,
     device = identity.device, seat = self.seat, known = identity:known(hostKey, self.seat), via = via,
+    window = self.windowId,
+    start = self.opts.start, -- how a new player starts (#66)
     clock = self.opts.clock,
     -- the host's own player: its lines are already in the host's log; one
     -- link per device carries the log, the first seat's (#11)
@@ -135,17 +142,21 @@ end
 -- The campaign's state from its file, or a new one; nil and
 -- { why, backup } when the file is refused (design A3.5).  `fs` is
 -- CampaignFile's file calls.
+-- A campaign is its game's (the card's `game`): a Blue cartridge hosting a
+-- Red campaign keeps it in Red's folder (#9, design A13.2).
 function Session.openCampaign(fs, campaign, cartridge)
-  local state, info = CampaignFile.read(fs, cartridge.game, campaign.id)
+  local game = campaign.game or cartridge.game
+  local state, info = CampaignFile.read(fs, game, campaign.id)
   if state then return state, info end
   if info.why ~= "missing" then return nil, info end
   -- a new campaign's rival is the one its host named, if any (#22)
-  return Campaign.new({ id = campaign.id, title = campaign.title, game = cartridge.game,
-                        sha1 = cartridge.sha1, created = os.time(),
-                        rival = campaign.rival }), { new = true }
+  return Campaign.new({ id = campaign.id, title = campaign.title, game = game,
+                        sha1 = game == cartridge.game and cartridge.sha1 or "",
+                        created = os.time(), rival = campaign.rival }), { new = true }
 end
 
--- Host a campaign ({ id, title, players }) with this device's cartridge.
+-- Host a campaign ({ id, title, players, game, mix }) with this device's
+-- cartridge (the campaign's game or the other of its pair, #9).
 -- opts: name, port, shareLogs, listen (false: loopback only), beacon
 -- (false: none), onRoster(roster) when the players change, campaignFs
 -- (CampaignFile's file calls; the save folder's by default, false: no
@@ -178,6 +189,8 @@ function Session.startHost(opts)
     players = campaign.players, state = state, store = store,
     cartridge = s.cartridge, hostName = opts.name, port = s.port, log = s.log,
     device = s.identity.device, clock = opts.clock, hex = opts.hex,
+    -- "wild Pokémon from both versions", the campaign card's switch (#9)
+    mix = campaign.mix == true,
   })
   s.hub = s.host:serve(Transport.loopback())
   if opts.listen ~= false then
@@ -249,8 +262,10 @@ end
 
 -- the hello on the probed link; `name` replaces the player's name (a new
 -- player names themself)
-function Session:join(name)
+-- start: how a new player starts ("opening", "pallet", "save"; #66)
+function Session:join(name, start)
   if self.kind ~= "join" or self.status ~= "probed" then return false end
+  if start then self.opts.start = start; self.client.start = start end
   if Protocol.name(name) then
     self.name = name
     self.client.name = name
@@ -314,19 +329,24 @@ end
 -- notes when (design A11.10)
 function Session.pause()
   local s = Session.current
-  if s and not s.pausedAt then s.pausedAt = s.clock() end
+  if s and not s.pausedAt then s.pausedAt, s.pausedFrames = s.clock(), s.frames end
   if s and s.host then return s.host:pause() end
   return false
 end
 
 -- the app is back: a joining game paused longer than RESUME_AFTER seconds
--- closes its link and dials at once, its link likely gone stale (A11.10)
+-- that ran less than a frame a second meanwhile closes its link and dials
+-- at once, its link likely gone stale (A11.10); a desktop window that only
+-- lost focus kept updating its link and keeps it
 function Session.resume()
   local s = Session.current
   if not (s and s.pausedAt) then return end
   local away = s.clock() - s.pausedAt
-  s.pausedAt = nil
-  if s.kind == "join" and s.inGame and away > Session.RESUME_AFTER
+  -- a window that kept updating meanwhile (a desktop window that only lost
+  -- focus) kept its link alive: at least one frame a second ran
+  local ran = s.frames - (s.pausedFrames or s.frames)
+  s.pausedAt, s.pausedFrames = nil, nil
+  if s.kind == "join" and s.inGame and away > Session.RESUME_AFTER and ran < away
      and s.client and s.client.status == "joined" then
     s.client.conn:close()
     s.redialNow = true
@@ -508,7 +528,12 @@ function Session:update(dt, game)
       require("src.coop.campaign.Items").openBag(game.data)
       self:_report(game)
       require("src.coop.game.SharedWorld").step(self.window, game)
+      -- this window's own wild slots, once a link (#9, design A13.4)
+      require("src.coop.game.WildMix").step(c, game.data)
       require("src.coop.game.Battles").step(game)
+      require("src.coop.game.Scenes").step(game) -- rival scenes (#59)
+      require("src.coop.game.Friends").step(game) -- #23
+      require("src.coop.game.League").step(self) -- the League run (#55)
     end
     self:_narrate()
   end

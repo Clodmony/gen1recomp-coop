@@ -321,8 +321,9 @@ function S.play(p, menu, c)
   local soloI, soloRow = rowOf(rows, "solo")
   local label = Games.label(version)
   local soloW = fitWidth(L("PLAY SOLO →"))
+  -- which games play together (#9): Red with Blue, Yellow with Yellow
   p:para(c.x, y + 5, c.w - soloW - 8,
-    L("%s → %s · Matching cartridge required today", label, label), "muted", 1, 2)
+    L("%s plays with %s", label, CoopMenu.togetherText(version)), "muted", 1, 2)
   rowButton(p, c.x + c.w - soloW, y, soloW, 22, soloI, soloRow,
     { style = "quiet", label = L("PLAY SOLO →") })
   y = y + 30
@@ -512,9 +513,11 @@ function S.settings(p, menu, c)
     textSpeed = L("How fast text appears."),
     animations = L("Attack animations in battle."),
     battleStyle = L("SHIFT asks before the next Pokemon; SET does not."),
+    mods = L("The mods installed on this device, each on or off for this game."),
   }
   local groups = {
     { "launcher", L("LAUNCHER") }, { "video", L("VIDEO") }, { "audio", L("AUDIO") }, { "game", L("GAME") },
+    { "mods", L("MODS") },
   }
   for _, g in ipairs(groups) do
     local mine = {}
@@ -707,6 +710,115 @@ function S.saves(p, menu, c)
   return savesList(p, saves, c)
 end
 
+-- the MODS page (#30): the installed mods as cards, the install and the
+-- optional file screens
+local function modsList(p, mods, c)
+  local rows = mods:items()
+  local label = Games.label(mods.version)
+  local y = c.y + heading(p, c, c.y, L("Mods for %s", label),
+    L("Mods installed on this device. A change takes effect when the game starts."), true)
+  local byMod = {}
+  for i, r in ipairs(rows) do
+    if r.mod then
+      byMod[r.mod] = byMod[r.mod] or { optional = {} }
+      if r.id == "toggle" then byMod[r.mod].toggle = i end
+      if r.id == "optional" then byMod[r.mod].optional[r.import] = i end
+    end
+  end
+  for _, m in ipairs(mods.mods) do
+    local idx = byMod[m.id] or { optional = {} }
+    local bw = math.max(fitWidth(L("ON")), fitWidth(L("OFF"))) + 8
+    local tw = c.w - bw - 30
+    local lines = {}
+    lines[#lines + 1] = { m.problem and L("Cannot load: %s", m.problem) or m.description, "muted" }
+    local tags = {}
+    if m.engine then tags[#tags + 1] = L("PATCHES ENGINE CODE") end
+    if m.link then tags[#tags + 1] = L("CHANGES LINK PLAY") end
+    if #tags > 0 then lines[#lines + 1] = { table.concat(tags, " · "), "muted" } end
+    local ch = (1 + #lines) * LINE + 14
+    local imports = {}
+    for _, imp in ipairs(m.imports or {}) do
+      imports[#imports + 1] = imp
+      ch = ch + LINE + 14
+    end
+    p:rect(c.x, y, c.w, ch, m.enabled and "lcd" or "paper")
+    p:frame(c.x, y, c.w, ch, m.enabled and "accent" or "line", m.enabled and 2 or 1)
+    local title = m.version and L("%s · %s", m.name, m.version) or m.name
+    p:text(c.x + 10, y + 7, Ui.fit(title, tw), "ink")
+    local ly = y + 7 + LINE
+    for _, line in ipairs(lines) do
+      p:text(c.x + 10, ly, Ui.fit(line[1], tw), line[2])
+      ly = ly + LINE
+    end
+    if idx.toggle then
+      rowButton(p, c.x + c.w - bw - 10, y + 7, bw, 22, idx.toggle, rows[idx.toggle],
+        { style = m.enabled and "primary" or nil })
+    end
+    for _, imp in ipairs(imports) do
+      local ib = idx.optional[imp.id]
+      local iw = fitWidth(L("IMPORT FILE"))
+      local text = imp.present and L("Optional: %s · IMPORTED", imp.name)
+        or L("Optional: %s · NOT IMPORTED", imp.name)
+      p:text(c.x + 10, ly + 9, Ui.fit(text, c.w - iw - 30), "muted")
+      if ib then rowButton(p, c.x + c.w - iw - 10, ly + 4, iw, 22, ib, rows[ib]) end
+      ly = ly + LINE + 14
+    end
+    y = y + ch + 6
+  end
+  if #mods.mods == 0 then
+    y = y + p:para(c.x, y, c.w, L("No mods on this device yet."), "muted") + 6
+  end
+  y = y + 6
+  local n = #mods.mods
+  p:text(c.x, y + 5, n == 1 and L("1 mod") or L("%d mods", n), "muted")
+  local ii, irow = rowOf(rows, "install")
+  actionsRight(p, c, y, { { index = ii, row = irow, style = "primary" } })
+  y = y + 30
+  y = y + p:para(c.x, y + 4, c.w,
+    L("A mod's code runs in the game with the game's rights. Install mods you trust. A mod that changes link play needs the same mod on every partner's device."),
+    "muted") + 4
+  return y
+end
+
+local function modsPath(p, mods, c, title, subtitle, help, foot)
+  local y = c.y + heading(p, c, c.y, title, subtitle, true)
+  local close = panel(p, c.x, y, c.w)
+  local py = y + 10
+  py = py + p:para(c.x + 10, py, c.w - 20, help, "ink") + 8
+  if mods.canType then
+    p:rect(c.x + 10, py, c.w - 20, 22, "field")
+    p:frame(c.x + 10, py, c.w - 20, 22, "line")
+    local shown = mods.path
+    while width(shown) > c.w - 40 do shown = shown:sub(2) end
+    p:text(c.x + 16, py + 5, shown .. "_", "ink")
+    py = py + 30
+  end
+  py = py + p:para(c.x + 10, py, c.w - 20, foot, "muted")
+  close(py + 10)
+  return py + 10
+end
+
+function S.mods(p, menu, c)
+  local mods = menu.mods
+  if not mods then return c.y end
+  if mods.screen == "install" then
+    return modsPath(p, mods, c, L("Install a mod"),
+      L("A mod's folder or its .zip, copied into this device's save folder."),
+      mods.canType and L("Drop the mod's folder or .zip on this window, or type the path of its .zip and press ENTER.")
+        or L("Drop the mod's folder or .zip on this window."),
+      L("The mod is installed for every game; it is on until you turn it off. A mod already installed is replaced by the new copy."))
+  end
+  if mods.screen == "import" then
+    local m, imp = mods:pendingImport()
+    return modsPath(p, mods, c, L("Import a file"),
+      m and L("%s for %s", imp.name, m.name) or nil,
+      mods.canType and L("Drop the file on this window, or type its path and press ENTER.")
+        or L("Drop the file on this window."),
+      L("The file is checked against the mod's manifest and copied into the mod's folder. Nothing is uploaded."))
+  end
+  return modsList(p, mods, c)
+end
+
 function S.import(p, menu, c)
   local label = Games.label(menu.version)
   local y = c.y + heading(p, c, c.y, L("Bring your cartridge"),
@@ -788,8 +900,11 @@ function C.list(p, coop, c, top)
     local hostI, renI, delI = idx.campaign, idx.rename, idx.delete
     local bws = { fitWidth(L("HOST →")), fitWidth(L("RENAME")), fitWidth(L("DELETE")) }
     local bw = bws[1] + bws[2] + bws[3] + 12
+    -- the switch of wild Pokémon from both versions (#9), its own line
+    local mixI = idx.mix
     local inline = c.w - bw - 20 >= 180
     local ch = inline and 3 * LINE + 14 or 3 * LINE + 44
+    if mixI then ch = ch + 28 end
     p:rect(c.x, y, c.w, ch, "paper")
     p:frame(c.x, y, c.w, ch, "line")
     local tw = inline and c.w - bw - 30 or c.w - 20
@@ -798,13 +913,17 @@ function C.list(p, coop, c, top)
     p:text(c.x + 10, y + 7 + LINE, Ui.fit(who, tw), "muted")
     p:text(c.x + 10, y + 7 + 2 * LINE, Ui.fit(when, tw), "muted")
     local bx = inline and c.x + c.w - bw - 10 or c.x + 10
-    local by = inline and y + math.floor((ch - 22) / 2) or y + 3 * LINE + 14
+    local by = inline and y + math.floor((ch - (mixI and 28 or 0) - 22) / 2) or y + 3 * LINE + 14
     for k, i in ipairs({ hostI, renI, delI }) do
       if i then
         rowButton(p, bx, by, bws[k], 22, i, rows[i], {
           label = k == 1 and L("HOST →") or nil, style = k == 1 and "primary" or nil })
       end
       bx = bx + bws[k] + 6
+    end
+    if mixI then
+      local mw = fitWidth(rows[mixI].label)
+      rowButton(p, c.x + c.w - mw - 10, y + ch - 28, mw, 22, mixI, rows[mixI])
     end
     y = y + ch + 6
   end
@@ -831,6 +950,22 @@ function C.list(p, coop, c, top)
   return y + 30
 end
 
+-- HOW YOU START and the row under it (#57): a label and a button each,
+-- as the form's other rows; returns the y under them
+local START_ROWS = { how = true, starter = true, save = true }
+local function startRows(p, c, rows, py)
+  for i, row in ipairs(rows) do
+    if START_ROWS[row.id] then
+      p:text(c.x + 10, py, row.label, "ink")
+      py = py + LINE + 2
+      rowButton(p, c.x + 10, py, c.w - 20, 24, i, row,
+        { label = row.value, detail = row.id == "save" and L("PICK") or L("CHANGE") })
+      py = py + 32
+    end
+  end
+  return py
+end
+
 function C.new(p, coop, c)
   local rows = coop:items()
   local y = c.y + heading(p, c, c.y, L("Start a shared adventure"),
@@ -844,6 +979,20 @@ function C.new(p, coop, c)
     rowButton(p, c.x + 10, py, c.w - 20, 24, i, row, { label = row.value, detail = L("EDIT") })
     py = py + 32
   end
+  -- wild Pokémon from both versions (#9, design A13.3), a game with a pair
+  do
+    local i, row = rowOf(rows, "mix")
+    if row then
+      p:text(c.x + 10, py, row.label, "ink")
+      py = py + LINE + 2
+      rowButton(p, c.x + 10, py, c.w - 20, 24, i, row, { label = row.value, detail = L("CHANGE") })
+      py = py + 28
+      py = py + p:para(c.x + 10, py, c.w - 20,
+        L("The other version's wild Pokémon appear in half of their places. Changeable later on the campaign's card."),
+        "muted") + 8
+    end
+  end
+  py = startRows(p, c, rows, py) -- how the host's player starts (#57)
   p:text(c.x + 10, py, L("CARTRIDGE"), "ink")
   p:text(c.x + 10 + 90, py, L("%s · %s", Games.label(coop.version),
     CoopMenu.languageName(coop.version)), "muted")
@@ -916,6 +1065,13 @@ function C.hosting(p, coop, c)
     p:text(a.x + 18, ly + 4 + LINE, Ui.fit(what, a.w - 36), "muted")
     ly = ly + 2 * LINE + 12
   end
+  -- wild Pokémon from both versions (#9): on, or the version it waits for
+  if d.mix then
+    local text = d.mix.waiting
+      and L("Wild Pokémon from both versions: waiting for a %s player.", Games.label(d.mix.waiting))
+      or L("Wild Pokémon from both versions: on.")
+    ly = ly + p:para(a.x + 10, ly, a.w - 20, text, "ink") + 4
+  end
   ly = ly + p:para(a.x + 10, ly, a.w - 20, L("You can enter now. Friends can join later."), "muted")
   close(ly + 10)
   local by = wide and y or ly + 22
@@ -974,7 +1130,7 @@ function C.join(p, coop, c)
         or L("%d players", n.players)), tw), "muted")
     local fit = n.fit == coop.version and L("Your cartridge fits")
       or (n.fit and L("Joins with %s", Games.label(n.fit)))
-      or L("Needs %s", Games.label(n.game))
+      or L("Needs %s", CoopMenu.togetherText(n.game)) -- #9: or the other of its pair
     p:text(a.x + 10, ly + 6 + 2 * LINE, Ui.fit(fit, tw), n.fit and "muted" or "error")
     rowButton(p, a.x + a.w - bw - 10, ly + math.floor((ch - 22) / 2), bw, 22, it.index, it.row,
       { label = it.row.label .. " →" })
@@ -1053,6 +1209,7 @@ function C.connecting(p, coop, c)
     py = py + p:para(c.x + 10, py, c.w - 20,
       L("This device is %s in that campaign.", d.known), "muted") + 2
   end
+  if rowOf(rows, "how") then py = startRows(p, c, rows, py + 4) end -- a new player (#57)
   for _, tip in ipairs(d.tips or {}) do
     p:text(c.x + 10, py, "·", "muted")
     py = py + p:para(c.x + 22, py, c.w - 32, tip, "ink") + 4
@@ -1062,11 +1219,36 @@ function C.connecting(p, coop, c)
   local list = {}
   for i, row in ipairs(rows) do
     local primary = row.id == "join" or row.id == "retry" or row.id == "switch"
-    list[#list + 1] = { index = i, row = row, style = primary and "primary" or nil,
-      label = (row.id == "join" or row.id == "switch") and (row.label .. " →") or nil }
+    if not START_ROWS[row.id] then
+      list[#list + 1] = { index = i, row = row, style = primary and "primary" or nil,
+        label = (row.id == "join" or row.id == "switch") and (row.label .. " →") or nil }
+    end
   end
   actionsRight(p, c, y, list)
   return y + 30
+end
+
+-- BRING A SAVE's pick (#57, design A4.1): this device's solo saves of the
+-- game, those past Oak's lab
+function C.bring(p, coop, c)
+  local rows = coop:items()
+  local y = c.y + heading(p, c, c.y, L("Bring a trainer"),
+    L("Your team, PC, bag, money and place come along. The solo save stays as it is."), true)
+  local any = false
+  for i, row in ipairs(rows) do
+    if row.id == "slot" then
+      any = true
+      local sv = row.save
+      local sub = L("BADGES %d · POKéDEX %d · TIME %s", sv.badges or 0, sv.dex or 0, sv.time or "0:00")
+      if not sv.bringable then sub = L("%s · NO STARTER YET", sub) end
+      rowButton(p, c.x, y, c.w, 36, i, row, { sub = sub })
+      y = y + 42
+    end
+  end
+  if not any then
+    y = y + p:para(c.x, y, c.w, L("No single-player save of this game on this device."), "muted") + 8
+  end
+  return y + 8
 end
 
 function C.entry(p, coop, c, ui)
@@ -1142,6 +1324,9 @@ local function screenOf(menu)
   if menu.screen == "saves" and menu.saves then
     return function(p, c) return S.saves(p, menu, c) end, menu.saves
   end
+  if menu.screen == "mods" and menu.mods then
+    return function(p, c) return S.mods(p, menu, c) end, menu.mods
+  end
   local fn = S[menu.screen] or S.play
   return function(p, c) return fn(p, menu, c) end, menu
 end
@@ -1187,6 +1372,7 @@ function Screens.build(menu, ui, opts)
   -- a new screen: the focus starts on the model's cursor, the page at its top
   local sig = menu.screen .. "/" .. tostring(menu.coop and menu.coop.screen)
     .. "/" .. tostring(menu.saves and menu.saves.screen)
+    .. "/" .. tostring(menu.mods and menu.mods.screen)
   if ui.sig ~= sig then
     ui.sig, ui.model = sig, nil
     if ui.focus and not ui.focus:find("^tab:") then ui.focus = nil end

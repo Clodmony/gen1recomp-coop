@@ -54,8 +54,21 @@
 -- battle engine; src/coop/battle/HostBattles.lua keeps each battle's
 -- opening, inputs and question, and every window in it runs the battle
 -- from those (src/coop/battle/Replica.lua).
+--
+-- Rival scenes (#59, design A10.5): src/coop/session/HostScenes.lua keeps
+-- one driver a map; `state.scenes` names them.
+--
+-- Red and Blue (#9, design A13, G33): a cartridge fits when it is the
+-- host's, or the other game of its pair with both verified dumps
+-- (Versions.lua); the host's log says why one did not.  With the
+-- campaign's "wild Pokémon from both versions" switch (opts.mix), each
+-- window's own wild slots (`wild`) are kept in memory only and passed to
+-- the players of the other version, once a link.
+--
+-- Friend battles and trades (#23, design A12, G31): invitations, the
+-- pairings, the link battle messages between the two windows and a
+-- trade's swap, committed once, are src/coop/friends/HostFriends.lua's.
 
-local GameVersion = require("src.core.GameVersion")
 local Json = require("src.link.Json")
 local Protocol = require("src.coop.session.Protocol")
 local Random = require("src.coop.session.Random")
@@ -64,6 +77,11 @@ local Campaign = require("src.coop.campaign.Campaign")
 local World = require("src.coop.campaign.World")
 local Ownership = require("src.coop.campaign.Ownership")
 local HostBattles = require("src.coop.battle.HostBattles")
+local HostScenes = require("src.coop.session.HostScenes")
+local Versions = require("src.coop.session.Versions")
+local HostCable = require("src.coop.session.HostCable")
+local HostFriends = require("src.coop.friends.HostFriends")
+local League = require("src.coop.battle.League")
 
 local Host = {}
 Host.__index = Host
@@ -124,6 +142,10 @@ function Host.new(opts)
     -- (design A3.7)
     battles = {}, joins = {},
     missed = {}, -- player id -> battles that ended while their link was down (#20)
+    -- Red and Blue (#9): the campaign's "wild Pokémon from both versions"
+    -- switch, each version's wild slots as a window of it sent them (in
+    -- memory, never stored), and the versions whose players have been in
+    mix = opts.mix == true, wild = {}, versionsIn = { [opts.cartridge.game] = true },
   }, Host)
   self.state = opts.state or Campaign.new({
     id = self.campaign.id, title = self.campaign.title,
@@ -163,14 +185,22 @@ function Host:_log(kind, data, player)
   if self.log then self.log:write("host", kind, data, player and player.id) end
 end
 
--- the cartridge rule: the same game and the same dump.  Red with Blue
--- (design A1.7, A13) is decided in #9.  Languages never mix (D95, #25):
--- German plays with German only, whatever #9 lets pair.
+-- the cartridge rule (design A1.7, A13, #9): the same game and the same
+-- dump, or the other game of the pair (Red with Blue, Rot with Blau) when
+-- both are verified dumps.  Languages never mix (D95, #25).  Returns
+-- whether it fits, and why not ("language", "game", "dump").
 function Host:cartridgeFits(game, sha1)
-  if GameVersion.language(game) ~= GameVersion.language(self.cartridge.game) then
-    return false
-  end
-  return game == self.cartridge.game and sha1 == self.cartridge.sha1
+  local why = Versions.misfit(self.cartridge.game, self.cartridge.sha1, game, sha1)
+  return why == nil, why
+end
+
+-- a cartridge that does not fit: refused, with why in the host's log
+function Host:_misfit(link, kind, game, sha1)
+  local fits, why = self:cartridgeFits(game, sha1)
+  if fits then return false end
+  self:_log("misfit", { kind = kind, game = game, why = why,
+                        host = self.cartridge.game }, link.player)
+  return true
 end
 
 -- lobby view: what a probe and the LAN beacon show
@@ -282,6 +312,9 @@ function Host:_disconnect(link, why)
     self.dirty = true
     self:_log("left", { why = why }, p)
     HostBattles.left(self, p)
+    HostScenes.left(self, p) -- a driver who dropped lets go (#59)
+    HostCable.left(self, p) -- #60: their cable is gone, for their mate too
+    HostFriends.left(self, p, why) -- #23
     -- a player leaving saves the campaign (design A3.9); nobody has to save
     -- before leaving (A3.12)
     if self.status == "running" then self:_autosave("leave") end
@@ -307,9 +340,9 @@ end
 
 -- a player's world from the campaign, after the welcome: their own keys
 -- with the story over them, as a Continue opens it (design A5.19)
-function Host:_sendWorld(link, p)
+function Host:_sendWorld(link, p, restart)
   local save = self.state:worldFor(p.id)
-  local msg = { type = "world", fresh = true }
+  local msg = { type = "world", fresh = true, restart = restart }
   if save then
     msg.fresh = false
     msg.save = World.encode(save)
@@ -386,6 +419,7 @@ function Host:_world(link, msg)
   local save, why = World.decode(msg.save)
   if save then
     self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+    HostFriends.layOver(self, p, save) -- #23: a traded Pokémon stays traded
     local ok, bad = self.state:setWorld(p.id, save)
     if not ok then save, why = nil, bad end
     if ok then self:_sendUids(link, bad) end
@@ -430,6 +464,7 @@ function Host:_holdings(link, msg)
   local world, why = World.join(msg.world, msg.boxes)
   if world then
     self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+    HostFriends.layOver(self, p, world) -- #23
     local ok, assigned = self.state:setHoldings(p.id, world)
     if ok then
       self:_log("holdings", { revision = self.state.revision, bytes = #msg.world,
@@ -458,6 +493,85 @@ function Host:_opening(link, msg)
                          chose = chose and msg.chose or nil }, p)
 end
 
+-- Red and Blue (#9, design A13.3, A13.4) ---------------------------------
+
+-- A window's own wild slots: kept in memory for its version, never stored
+-- (no cartridge data in the campaign file or the log); a version without a
+-- pair has nothing to share
+function Host:_wild(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  local n = 0
+  for _ in pairs(msg.maps) do n = n + 1 end
+  local kept = Versions.pair(p.game) ~= nil
+  if kept then self.wild[p.game] = msg.maps end
+  self:_log("wild", { game = p.game, maps = n, kept = kept }, p)
+end
+
+-- the other version's tables, once a link, while the switch is on
+function Host:_sendWild(link, p)
+  if not self.mix or link.wildSent then return end
+  local other = Versions.pair(p.game)
+  local maps = other and self.wild[other]
+  if not maps then return end
+  link.wildSent = other
+  self:_log("wild_sent", { game = other }, p)
+  self:_send(link, { type = "wild", game = other, maps = maps })
+end
+
+-- With the switch on: the version of the pair whose player the host still
+-- waits for (until one of each has been in, every world keeps its own
+-- tables), or nil
+function Host:wildWaiting()
+  local games = Versions.together(self.cartridge.game)
+  if not self.mix or #games < 2 then return nil end
+  for _, game in ipairs(games) do
+    if not self.versionsIn[game] then return game end
+  end
+  return nil
+end
+
+-- How a new player starts (#57, design A4.1 to A4.3, G28): the world a
+-- window started with, in Pallet Town or brought from a solo save.  The
+-- host keeps it unless it has this player's world already (A4.3: a
+-- returning player is never replaced), seeds a campaign with no story yet
+-- from it (Campaign:start), and answers once the story is on its way, so
+-- the window opens on the campaign's story.
+function Host:_start(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+  local save, why = World.decode(msg.save)
+  local ok, assigned, seeded = false, nil, false
+  if save then
+    ok, assigned, seeded = self.state:start(p.id, save)
+    if not ok then why = assigned end
+  end
+  if not ok then
+    self:_log("start_refused", { how = msg.how, why = why }, p)
+    return self:_refuse(link, msg.seq, why == "returning" and "returning" or "bad_world")
+  end
+  p.opening = nil
+  self.dirty = true
+  self:_log("start", { how = msg.how, seeded = seeded, chose = self.state.chose,
+                       revision = self.state.revision, bytes = #msg.save }, p)
+  self:_sendStory(link, p)
+  self:_sendUids(link, assigned)
+  self:_send(link, { type = "started", seq = msg.seq, seeded = seeded == true })
+end
+
+-- A window restarts (#55, design A10.7): after the Hall of Fame or a
+-- reset its game waits for what it sent to be applied, which the link's
+-- order gives here, and reopens this player's world as a Continue: the
+-- answer is their world, naming the restart.
+function Host:_restart(link, msg)
+  local p = self:_sequence(link, msg)
+  if not p then return end
+  self:_log("restart", { kind = msg.kind }, p)
+  self.dirty = true
+  self:_sendWorld(link, p, msg.seq)
+end
+
 -- messages --------------------------------------------------------------
 
 function Host:_probe(link, msg, protocolOk)
@@ -466,10 +580,20 @@ function Host:_probe(link, msg, protocolOk)
   view.refused = ""
   if not protocolOk then
     view.refused = "protocol_mismatch"
-  elseif not self:cartridgeFits(msg.game, msg.sha1) then
+  elseif self:_misfit(link, "probe", msg.game, msg.sha1) then
     view.refused = "content_mismatch"
   end
   local you = protocolOk and self:resolve(msg.known, msg.name)
+  -- the same seat of the same device names a connected player: most likely
+  -- its game crashed and started again; its old link is made sure of now,
+  -- and the hello that follows waits for it (Host:_hold)
+  local id = protocolOk and type(msg.known) == "table" and msg.known[self.campaign.id] or nil
+  local p = id and self.byId[id]
+  if not you and p and p.connected and p.link and msg.device and p.device == msg.device
+     and p.seat == msg.seat then
+    p.link.conn:suspect()
+    you = p
+  end
   view.you = you and { player = you.id, name = you.name } or {}
   self:_send(link, view)
 end
@@ -477,9 +601,11 @@ end
 function Host:_hello(link, msg)
   if link.player then return self:_refuse(link, -1, "already_joined") end
   if self.status ~= "running" then return self:_turnAway(link, "shutting_down") end
-  if not self:cartridgeFits(msg.game, msg.sha1) then
+  if self:_misfit(link, "hello", msg.game, msg.sha1) then
     return self:_turnAway(link, "content_mismatch")
   end
+  self:_takeBack(msg)
+  if self:_hold(link, msg) then return end
   local p = self:resolve(msg.known, msg.name)
   if not p then
     if #self.players >= self.maxPlayers then
@@ -497,7 +623,7 @@ function Host:_hello(link, msg)
   p.game = msg.game
   p.device, p.seat, p.via = msg.device, msg.seat, msg.via
   link.player = p
-  link.device = msg.device
+  link.device, link.window = msg.device, msg.window
   link.shareLogs = msg.logs ~= nil and msg.logs.share == true
   self.dirty = true
   self:_send(link, {
@@ -507,12 +633,61 @@ function Host:_hello(link, msg)
   self:_log("joined", { name = p.name, seat = p.seat, device = p.device,
                         logs = link.shareLogs }, p)
   self.state:addPlayer({ id = p.id, name = p.name, game = p.game })
+  self.versionsIn[p.game] = true -- #9: a player of this version has been in
   -- a player the campaign has no world for plays the opening (#22, design
   -- A4.8) until their window says otherwise
-  p.opening = self.state:player(p.id).world == nil or nil
+  -- (#66: unless their hello says they start in Pallet or bring a save)
+  p.opening = (self.state:player(p.id).world == nil
+               and (msg.start == nil or msg.start == "opening")) or nil
   self:_sendWorld(link, p)
   self:_sendLogBacklog(link)
   HostBattles.back(self, p)
+end
+
+-- A window that redials while this host still holds its old link (its
+-- link timed out on the window's side only, as when the host's own window
+-- stopped running): the old link is its own, gone stale, and lets go, so
+-- the hello takes the player back rather than making a second one.  A
+-- second window of the same device is another window id: someone new (A1.9).
+function Host:_takeBack(msg)
+  local id = type(msg.known) == "table" and msg.known[self.campaign.id] or nil
+  local p = id and self.byId[id]
+  local old = p and p.connected and p.link
+  if not (old and msg.window and old.window == msg.window and p.device == msg.device
+          and p.seat == msg.seat) then
+    return
+  end
+  self:_disconnect(old, "replaced")
+  old.conn:close()
+end
+
+-- Another window of the same device and seat names a connected player: a
+-- game started again after a crash, whose old link the host has not seen
+-- die yet, or a second window (A1.9).  The hello waits up to HOLD seconds
+-- while the old link is made sure of: one that closes meanwhile was the
+-- crashed game's, and the player comes back; one still there is a second
+-- window, someone new.
+Host.HOLD = 5
+
+function Host:_hold(link, msg)
+  if link.heldDone then return false end
+  local id = type(msg.known) == "table" and msg.known[self.campaign.id] or nil
+  local p = id and self.byId[id]
+  local old = p and p.connected and p.link
+  if not (old and p.device == msg.device and p.seat == msg.seat) then return false end
+  old.conn:suspect()
+  link.held = { msg = msg, at = self.clock(), pid = p.id }
+  self:_log("hello_held", { name = p.name }, p)
+  return true
+end
+
+-- a held hello goes on once the old link closed or HOLD is over
+function Host:_holdStep(link)
+  local held = link.held
+  local p = self.byId[held.pid]
+  if p and p.connected and self.clock() - held.at < Host.HOLD then return end
+  link.held, link.heldDone = nil, true
+  self:_hello(link, held.msg)
 end
 
 -- per-player sequence numbers (design A1.5): strictly increasing; a number
@@ -544,6 +719,7 @@ function Host:_move(link, msg)
     end
   end
   p.map, p.x, p.y, p.facing, p.travel = msg.map, msg.x, msg.y, msg.facing, msg.travel
+  HostScenes.moved(self, p) -- a driver on another map lets go (#59)
   self.dirty = true
 end
 
@@ -648,6 +824,10 @@ end
 local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    log = Host._logBatch, world = Host._world, patch = Host._patch,
                    holdings = Host._holdings, opening = Host._opening,
+                   wild = Host._wild, -- #9
+                   start = Host._start, -- #57
+                   -- the League run and the restart (#55)
+                   league = battleHandler(League.message), restart = Host._restart,
                    battle_open = battleHandler(HostBattles.open),
                    battle_join = battleHandler(HostBattles.join),
                    battle_cmd = battleHandler(HostBattles.cmd),
@@ -655,7 +835,20 @@ local HANDLERS = { hello = Host._hello, move = Host._move, bye = Host._bye,
                    battle_at = battleHandler(HostBattles.at),
                    battle_leave = battleHandler(HostBattles.leave),
                    battle_rejoin = battleHandler(HostBattles.rejoin),
-                   battle_takeover = battleHandler(HostBattles.takeover) }
+                   battle_takeover = battleHandler(HostBattles.takeover),
+                   -- rival scenes (#59)
+                   scene = battleHandler(HostScenes.claim),
+                   -- the Cable Club (#60): same shape, a refusal changes nothing
+                   cable = battleHandler(HostCable.enter),
+                   cable_link = battleHandler(HostCable.link),
+                   -- friend battles and trades (#23)
+                   invite = battleHandler(HostFriends.invite),
+                   invite_answer = battleHandler(HostFriends.answer),
+                   pair_msg = battleHandler(HostFriends.msg),
+                   pair_end = battleHandler(HostFriends.finish),
+                   trade_team = battleHandler(HostFriends.team),
+                   trade_pick = battleHandler(HostFriends.pick),
+                   trade_confirm = battleHandler(HostFriends.confirm) }
 
 function Host:_receive(link, raw)
   if self.status ~= "running" then return end -- ending: nothing counts
@@ -678,7 +871,9 @@ function Host:_receive(link, raw)
   -- their handlers, as a summary; a window's battle reports are many
   local t = msg.type
   if t ~= "log" and t ~= "world" and t ~= "patch" and t ~= "holdings" and t ~= "battle_open"
-     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" then
+     and t ~= "battle_join" and t ~= "battle_at" and t ~= "opening" and t ~= "wild"
+     and t ~= "start" and t ~= "cable_link" -- #60: HostCable logs what a cable does
+     and t ~= "pair_msg" and t ~= "trade_team" then -- #23: many, or long
     self:_log("message", msg, link.player)
   end
   if msg.type == "probe" then return self:_probe(link, msg, true) end
@@ -687,10 +882,11 @@ end
 
 -- state -----------------------------------------------------------------
 
-local function publicView(p, battle)
+local function publicView(p, battle, cable)
   return { id = p.id, name = p.name, game = p.game, connected = p.connected,
            map = p.map, x = p.x, y = p.y, facing = p.facing,
-           travel = p.map and p.travel or nil, battle = battle, opening = p.opening }
+           travel = p.map and p.travel or nil, battle = battle, opening = p.opening,
+           cable = cable } -- #60: in a Cable Club room
 end
 
 function Host:_broadcast()
@@ -699,7 +895,8 @@ function Host:_broadcast()
   local busy = self:busy() or ""
   local players = {}
   for i, p in ipairs(self.players) do
-    players[i] = publicView(p, HostBattles.fighting(self, p.id))
+    players[i] = publicView(p, HostBattles.fighting(self, p.id), HostCable.room(self, p.id))
+    players[i].meeting = HostFriends.meeting(self, p.id) -- #23
   end
   local battles = HostBattles.summaries(self)
   for _, link in ipairs(self.links) do
@@ -714,7 +911,8 @@ function Host:_broadcast()
       self:_send(link, { type = "state", players = players, you = p.id,
                          last_seq = p.lastSeq, nearby = nearby,
                          saved_ago = savedAgo, busy = busy, battles = battles,
-                         rival = self.state.rival, chose = self.state.chose })
+                         rival = self.state.rival, chose = self.state.chose,
+                         scenes = HostScenes.summaries(self) })
     end
   end
 end
@@ -735,6 +933,7 @@ function Host:update()
   local keep = {}
   for _, link in ipairs(self.links) do
     link.conn:update()
+    if link.held and not link.conn.closed then self:_holdStep(link) end
     if link.flooded then
       link.conn:discard()
     elseif not self:_meter(link, now) then
@@ -762,10 +961,13 @@ function Host:update()
       if p and p.link == link and not link.conn.closed then
         self:_sendStory(link, p)
         self:_sendGifts(link, p)
+        self:_sendWild(link, p) -- #9
         HostBattles.sendTo(self, link, p)
+        HostFriends.sendTo(self, link, p) -- #23
       end
     end
     HostBattles.sweep(self)
+    League.tick(self) -- the run's clear, once nothing holds it (#55)
   end
   if self.status == "running" and self.store then
     local busy = self:busy()
@@ -782,6 +984,8 @@ function Host:update()
   if self.status == "running" then
     self:_shareOwnLog()
     HostBattles.tick(self, now)
+    HostCable.tick(self, now) -- #60: a stalled trade goes back to its lists
+    HostFriends.tick(self) -- #23
   end
   if self.status == "ending" and (#self.links == 0 or now >= self.endAt) then
     self:_finish()
@@ -799,6 +1003,7 @@ function Host:shutdown(reason)
   if self.store and not self:_autosave("shutdown") then self.store:poll(true) end
   -- battles still running end as fled, and their players hear it (A11.7)
   HostBattles.endAll(self)
+  HostFriends.endAll(self) -- #23
   for _, link in ipairs(self.links) do
     if link.player and link.player.link == link and not link.conn.closed then
       HostBattles.sendTo(self, link, link.player)

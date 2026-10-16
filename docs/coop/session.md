@@ -40,13 +40,20 @@ over ENet. One host serves both kinds at once (G3).
 
 ## Protocol
 
-Version 10 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
+Version 17 (1 was #10; 2 added shared logs, #31, and the `flood` refusal,
 #32; 3 added how a player travels, #15; 4 added campaign files, #13:
 [campaign.md](campaign.md); 5 added the shared world, #14:
 [world.md](world.md); 6 added story items, #16: [items.md](items.md); 7
 added co-op battles, #18: [battles.md](battles.md); 8 added holdings and
 uids, #17: [campaign.md](campaign.md); 9 added unique encounters, #21:
-[battles.md](battles.md); 10 added the opening, #22: [opening.md](opening.md)). Every message is a JSON object with a `type`. Every field from the
+[battles.md](battles.md); 10 added the opening, #22: [opening.md](opening.md);
+11 added rival scenes, #59: [battles.md](battles.md); 12 added the wild
+tables of both versions, #9: [versions.md](versions.md); 13 added how a new
+player starts, #57: [opening.md](opening.md); 14 added the Cable Club,
+#60: [cable.md](cable.md); 15 added friend battles and trades, #23:
+[friends.md](friends.md); 16 added the team's League run and the Hall of
+Fame's continue, #55: [battles.md](battles.md); 17 added how a new player
+starts on `hello`, #66: [opening.md](opening.md)). Every message is a JSON object with a `type`. Every field from the
 other end is untrusted. A message is kept only when each field has its type,
 range and format, and only the schema's fields are kept. Anything else is
 dropped whole and counted. This holds in both directions, so a client also
@@ -54,8 +61,8 @@ checks what the host sends.
 
 | Client to host | Fields |
 |---|---|
-| `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
-| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log) |
+| `probe` | `protocol`, `build`, `name`, `game`, `sha1`, `known`, and optional `device`, `seat`: asked before `hello` on the same link. Answered whatever the protocol; creates nobody. |
+| `hello` | the probe's fields and `device`, `seat` (1 or 2), `via` (the address dialled), `logs` (`share`: this link carries the device's shared log), `start` (optional: how a new player starts, `opening`, `pallet` or `save`, #66), `window` (optional: the game window's own id, the same on each link it redials) |
 | `move` | `seq`, `map`, `x`, `y`, `facing`, `warp` (the map changed or the player jumped), `travel` (`walk`, `run`, `bike`, `surf`) |
 | `bye` | `seq`: leaving on purpose. A dropped link leaves the same way. |
 | `log` | `lines`: the device's own session log lines since its last batch (see *Session logs*) |
@@ -63,18 +70,32 @@ checks what the host sends.
 | `patch` | `seq`, `set` (story path to value: a boolean or a whole number 0 to 255), `unset` (paths): this window's change to the shared story since its last patch, at most 8192 entries each, `bag` (optional, #16: `gained` and `lost`, item id to a count 1 to 999, and `spent`, the money went down; the window's bag change in the same rest-to-rest change) |
 | `battle_open`, `battle_join`, `battle_cmd`, `battle_suggest`, `battle_at` | co-op battles (#18): [battles.md](battles.md) |
 | `opening` | `seq`, `done` (the window plays the opening, or finished it), `rival` (optional: the rival's name given in Oak's speech), `chose` (optional, with `done`: the starter it took) (#22): [opening.md](opening.md) |
+| `scene` | `seq`, `map`, `key`, `on`: a claim of a rival scene on that map (on), refused `scene_taken` while another player drives it, or its release (#59): [battles.md](battles.md) |
+| `wild` | `seq`, `maps` (map id to `grass` and `water`, each at most ten slots of `species` and `level` 1 to 100, at most 256 maps): this window's own version's wild slots, once a link (#9): [versions.md](versions.md) |
+| `start` | `seq`, `how` (`pallet` or `save`), `save` (the world the launcher started, the game's save text with the PC, at most 1.5 MiB): a new player's start, sent once per link at the window's first rest point (#57): [opening.md](opening.md) |
+| `cable` | `seq`, `room` (`trade`, `colosseum`, or `none` to leave), `with` (optional: the partner this player offered the cable to) (#60): [cable.md](cable.md) |
+| `cable_link` | `seq`, `round`, `link` (a message of upstream's link cable, checked by its own `Wire.sanitize`), `uids` (optional, with a `party`: each Pokémon's uid, "" for none) (#60) |
+| `invite`, `invite_answer`, `pair_msg`, `pair_end`, `trade_team`, `trade_pick`, `trade_confirm` | friend battles and trades (#23): [friends.md](friends.md) |
+| `league` | `seq`, `event` (`lobby`: the window entered the Indigo Plateau lobby and asks for the run's clear; `inducted`: it went through the Hall of Fame) (#55): [battles.md](battles.md) |
+| `restart` | `seq`, `kind` (`hall` after the Hall of Fame, `reset` otherwise): the window froze its world and waits for it (#55) |
 
 | Host to client | Fields |
 |---|---|
 | `probe` | the lobby view (`kind`, `protocol`, `build`, `campaign`, `title`, `game`, `sha1`, `host`, `players` with `name`, `game`, `connected`), `refused` (empty, `protocol_mismatch` or `content_mismatch`), `you` (the player this device or name would get back) and `port` |
 | `welcome` | `protocol`, `player`, `campaign`, `last_seq` |
-| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map), `saved_ago` (seconds since the campaign was saved, -1 never), `busy` (why a save would be refused now, or empty); since #22 each player's `opening`, and the campaign's `rival` and `chose` ([opening.md](opening.md)) |
-| `world` | once after `welcome`: `fresh` (the campaign has no world for this player), `save` (their world) |
+| `state` | `players` (`id`, `name`, `game`, `connected`, and `map`, `x`, `y`, `facing`, `travel` once known), `you`, `last_seq`, `nearby` (connected players on your map), `saved_ago` (seconds since the campaign was saved, -1 never), `busy` (why a save would be refused now, or empty); since #22 each player's `opening`, and the campaign's `rival` and `chose` ([opening.md](opening.md)); since #59 `scenes`, the rival scenes being played (`map`, `key`, `by`) ([battles.md](battles.md)) |
+| `world` | once after `welcome`, and as the answer to a `restart` (`restart`: its seq, #55): `fresh` (the campaign has no world for this player), `save` (their world) |
 | `saved` | `ok`, `by` (who saved), `you` (this player asked), `reason` (a refusal: `battle_in_progress`, `bad_world`, `save_failed`), `kind` |
 | `story` | `rev`, `base` (the whole story, replacing the window's), `set`, `unset` (what changed since the last `story` to this player), `applied` (the last of this player's patches the host applied) |
 | `gifts` | `list` (#16): items the campaign owes this player, oldest first, each `seq`, `item`, `qty` (below 0 takes), `once` (not given to a player who holds one), `from` (the partner's name), `race` (a take-back); at most 256 a message |
 | `battle` | a battle this player is in or joining (#18): [battles.md](battles.md); `state` then also names each player's `battle` and lists the running `battles` |
+| `wild` | `game`, `maps` (as the client's): the other version's wild slots, once a link while the campaign's switch is on (#9): [versions.md](versions.md) |
+| `cable` | this player's Cable Club room (`none`: out of it), `round`, and once paired `mate`, `name`, `lead` (#60); `state` names each player's `cable` room |
+| `cable_link` | `round`, `link` (the mate's link message), `uid` (with the trade's last yes: the uid of the Pokémon this player receives) (#60) |
+| `invite`, `pair`, `pair_msg` | friend battles and trades (#23): [friends.md](friends.md); `state` then also names each player's `meeting` (`battle`, `trade`) |
 | `rejected` | `seq` (-1 for a refused hello), `reason` |
+| `started` | `seq` (the window's `start`), `seeded` (it began the campaign's story): the host kept the start; the story went first (#57) |
+| `rejected` | `seq` (-1 for a refused hello), `reason` (a `start` is refused `returning` when the campaign has the player's world, #57) |
 | `ended` | `reason` |
 | `log` | `lines`: other devices' log lines, passed on once |
 
@@ -83,10 +104,13 @@ Rules (design A1):
 - **Versions.** A probe or hello of another protocol version is answered
   with `protocol_mismatch` before anything else in it is read.
 - **Cartridge.** The game id and the ROM's SHA-1 must match the host's, or
-  the hello is refused with `content_mismatch`. Red with Blue is #9. A
-  cartridge of another language (German `red_de`/`blue_de` against English,
-  [german.md](german.md)) is refused first, whatever #9 lets pair (D95). No
-  ROM data is ever sent.
+  be the other game of its pair (Red with Blue, Rot with Blau) with both
+  dumps verified ones (#9, [versions.md](versions.md)); otherwise the probe
+  and the hello are refused with `content_mismatch`, and the host's log
+  (`misfit`) says why: `language`, `dump` or `game`. A cartridge of another
+  language (German `red_de`/`blue_de` against English,
+  [german.md](german.md)) is refused first (D95). No ROM data is ever sent;
+  the wild tables of #9 are the windows' own, held in memory.
 - **Refused hellos.** The host sends `rejected` with seq -1 and drops the
   link after `Host.GRACE` (1 s), so the reason arrives first.
 - **Sequence numbers.** Per player and strictly increasing. A number seen
@@ -96,8 +120,21 @@ Rules (design A1):
 - **Identity.** The hello carries the seat's `{ campaign = player }` map
   for this host. A remembered player who is not connected gets their player
   back. If that player is connected already (a second window), the device
-  joins as someone new. A device that lost its id is recognised by the same
-  name. Split-screen has two seats, so a device remembers two players per
+  joins as someone new. A hello from the same window (its `window`, device
+  and seat) as the connected player's link is that window redialling while
+  the host still holds its old link, which timed out on the window's side
+  only (found in the integrated live run: a host whose window stopped
+  running for 45 s made every guest a second player); the old link lets
+  go and the player comes back. A hello from another window of the same
+  device and seat (a game started again after a crash, before the host saw
+  the old link die; found in the same run) waits up to 5 s
+  (`Host.HOLD`) while the host makes sure of the old link (ENet times it
+  out within about two seconds unless it answers; ENet's own timeouts come
+  back after 6 s): one that closes was the crashed game's, and the player
+  comes back; one still there is a second window, someone new. A probe
+  from that seat (with its `device` and `seat`) already names the player,
+  so REJOIN joins at once. A device that lost its id is recognised by the
+  same name. Split-screen has two seats, so a device remembers two players per
   campaign.
 - **Worlds** (#13). A `world` is kept only when it parses with the game's
   own save parser and has a save's shape (a team of at most six, twelve
@@ -231,8 +268,12 @@ running from the launcher into the game:
   keeps running and sends nothing meanwhile; the shared world's window and
   the battle copies follow the new link; the first position after counts
   as a warp. A game back from a pause (focus or visibility lost) longer than
-  3 s closes its link and dials at once (A11.10); a hosting game put away
-  saves its campaign (#13).
+  3 s closes its link and dials at once (A11.10), but only when it stopped
+  running meanwhile (less than a frame a second, an app put away): a
+  desktop window that only lost focus keeps updating its link and keeps it
+  (found in the owner's playtest, 2026-10-16, where every switch between
+  two windows redialled and ended a trade in progress); a hosting game put
+  away saves its campaign (#13).
 - A session that ends under the game (the host stopped it, the link stayed
   lost for two minutes) shows why over the world for 3 s (A11.11), then
   main.lua goes back to the launcher; leaving on purpose (the game window
@@ -287,6 +328,22 @@ The run found three faults, now fixed and tested:
 Two machines on a LAN, the beacon across machines, Windows, macOS and mobile
 have not been run. The launcher's co-op screens were run the same way
 (#12); [launcher.md](launcher.md) says what was run.
+
+**Focus, visibility and stalls** (integrated Group 11 build, 2026-10-16;
+Linux desktop, LÖVE 11.5, US Red, offscreen, two processes over ENet, each
+entering through the fork's launcher with BRING A SAVE): the host's and
+the guest's windows lost focus (`love.focus(false)`) or were hidden
+(`love.visible(false)`) for 3 to 30 s while their frames ran, in the
+launcher's hosting and connection screens and in the game (the opening,
+a frozen rival scene, a joined League battle, the Hall of Fame's
+continue): every link was kept. Windows whose process stopped running
+(no frames, no network) for 10, 45 and 60 s: a guest that stalled closed
+its link on resuming and came back as the same player; guests whose host
+stalled timed out and redialled, and came back as the same players once
+the host ran again (a second player per guest before the `window` fix
+above). A guest killed and started again at once came back through
+REJOIN as the same player, over loopback. A real minimized window,
+Wayland and other systems have not been run.
 
 ## Tests
 

@@ -39,7 +39,8 @@ return {
   ["Import ROM"] = "ROM importieren",
   ["PLAY SOLO"] = "ALLEIN SPIELEN",
   ["PLAY SOLO →"] = "ALLEIN SPIELEN →",
-  ["%s → %s · Matching cartridge required today"] = "%s → %s · Vorerst nur mit demselben Modul",
+  ["%s plays with %s"] = "%s spielt mit %s",
+  ["%s or %s"] = "%s oder %s",
   ["HOST A CAMPAIGN"] = "KAMPAGNE HOSTEN",
   ["Your save. Friends can join anytime."] = "Dein Spielstand. Freunde kommen jederzeit dazu.",
   ["JOIN A FRIEND"] = "BEI FREUNDEN MITSPIELEN",
@@ -308,6 +309,15 @@ return {
     "Die Kampagne verschwindet aus der Liste. Ihr letzter Stand bleibt als Sicherung, die du zurückholen kannst.",
   ["CANCEL"] = "ABBRECHEN",
   ["DELETE AND KEEP BACKUP"] = "LÖSCHEN, SICHERUNG BEHALTEN",
+  -- #9: wild Pokémon from both versions
+  ["WILD POKéMON"] = "WILDE POKéMON",
+  ["BOTH VERSIONS"] = "BEIDE EDITIONEN",
+  ["THIS VERSION ONLY"] = "NUR DIESE EDITION",
+  ["CHANGE"] = "WECHSELN",
+  ["The other version's wild Pokémon appear in half of their places. Changeable later on the campaign's card."] =
+    "Die wilden Pokémon der anderen Edition erscheinen an der Hälfte ihrer Plätze. Später auf der Karte der Kampagne änderbar.",
+  ["BOTH VERSIONS: ON"] = "BEIDE EDITIONEN: AN",
+  ["BOTH VERSIONS: OFF"] = "BEIDE EDITIONEN: AUS",
 
   -- hosting
   ["Hosting %s · %s · Direct connection"] = "Du hostest %s · %s · Direkte Verbindung",
@@ -315,6 +325,9 @@ return {
   ["Host · this device"] = "Host · dieses Gerät",
   ["Connected trainer"] = "Verbundener Trainer",
   ["You can enter now. Friends can join later."] = "Du kannst jetzt los. Freunde kommen später dazu.",
+  ["Wild Pokémon from both versions: waiting for a %s player."] =
+    "Wilde Pokémon beider Editionen: wartet auf jemanden mit %s.",
+  ["Wild Pokémon from both versions: on."] = "Wilde Pokémon beider Editionen: an.",
   ["FRIENDS JOIN AT"] = "FREUNDE TRETEN BEI UNTER",
   ["VPN"] = "VPN",
   ["HOME NETWORK"] = "HEIMNETZ",
@@ -391,7 +404,10 @@ return {
   ["USE %s"] = "%s NEHMEN",
   ["The host plays %s in %s, this game is %s in %s. Both need the same language."] =
     "Der Host spielt %s auf %s, dieses Spiel ist %s auf %s. Beide brauchen dieselbe Sprache.",
-  ["The host plays %s. This game is %s."] = "Der Host spielt %s. Dieses Spiel ist %s.",
+  ["The host plays %s. This game is %s. %s plays with %s only."] =
+    "Der Host spielt %s. Dieses Spiel ist %s. %s spielt nur mit %s.",
+  ["%s and %s play together only from verified dumps. One of the two ROMs is another dump."] =
+    "%s und %s spielen nur als geprüfte Dumps zusammen. Eines der beiden ROMs ist ein anderer Dump.",
   ["The host's %s ROM is another dump than this one."] = "Das %s-ROM des Hosts ist ein anderer Dump als dieses.",
   ["The host runs another version of this co-op game. Both need the same one."] =
     "Der Host hat eine andere Version dieses Koop-Spiels. Beide brauchen dieselbe.",
@@ -414,6 +430,70 @@ return {
   ["Is the address the host's current one?"] = "Ist das die aktuelle Adresse des Hosts?",
   ["Is a game on this device hosting?"] = "Hostet ein Spiel auf diesem Gerät?",
   ["Is the address spelled right?"] = "Ist die Adresse richtig geschrieben?",
+
+  -- #57: how a new player starts
+  ["HOW YOU START"] = "SO BEGINNST DU",
+  ["THE OPENING"] = "DER SPIELANFANG",
+  ["START IN PALLET"] = "START IN ALABASTIA",
+  ["BRING A SAVE"] = "SPIELSTAND MITBRINGEN",
+  ["STARTER"] = "STARTER",
+  ["BULBASAUR"] = "BISASAM",
+  ["CHARMANDER"] = "GLUMANDA",
+  ["SQUIRTLE"] = "SCHIGGY",
+  ["SAVE"] = "SPIELSTAND",
+  ["PICK A SAVE"] = "SPIELSTAND WÄHLEN",
+  ["PICK"] = "WÄHLEN",
+  ["CHANGE"] = "WECHSELN",
+  ["Bring a trainer"] = "Bring einen Trainer mit",
+  ["Your team, PC, bag, money and place come along. The solo save stays as it is."] =
+    "Team, PC, Beutel, Geld und Ort kommen mit. Der Solo-Spielstand bleibt, wie er ist.",
+  ["%s · NO STARTER YET"] = "%s · NOCH KEIN STARTER",
+  ["No single-player save of this game on this device."] =
+    "Kein Solo-Spielstand dieses Spiels auf diesem Gerät.",
+  ["Your start could not be made: %s"] = "Dein Start ließ sich nicht anlegen: %s",
+
+  -- #30: mods
+  ["MODS"] = "MODS",
+  ["%s →"] = "%s →",
+  ["The mods installed on this device, each on or off for this game."] =
+    "Die Mods auf diesem Gerät, jeder an oder aus für dieses Spiel.",
+  ["Mods for %s"] = "Mods für %s",
+  ["Mods installed on this device. A change takes effect when the game starts."] =
+    "Auf diesem Gerät installierte Mods. Eine Änderung wirkt beim nächsten Spielstart.",
+  ["Cannot load: %s"] = "Lädt nicht: %s",
+  ["PATCHES ENGINE CODE"] = "ÄNDERT DEN SPIELCODE",
+  ["CHANGES LINK PLAY"] = "ÄNDERT DAS LINK-SPIEL",
+  ["IMPORT FILE"] = "DATEI IMPORTIEREN",
+  ["Optional: %s · IMPORTED"] = "Optional: %s · IMPORTIERT",
+  ["Optional: %s · NOT IMPORTED"] = "Optional: %s · NICHT IMPORTIERT",
+  ["No mods on this device yet."] = "Noch keine Mods auf diesem Gerät.",
+  ["1 mod"] = "1 Mod",
+  ["%d mods"] = "%d Mods",
+  ["A mod's code runs in the game with the game's rights. Install mods you trust. A mod that changes link play needs the same mod on every partner's device."] =
+    "Der Code eines Mods läuft im Spiel mit den Rechten des Spiels. Installiere nur Mods, denen du traust. Ein Mod, der das Link-Spiel ändert, muss auf dem Gerät jedes Partners derselbe sein.",
+  ["+ INSTALL MOD"] = "+ MOD INSTALLIEREN",
+  ["Install a mod"] = "Einen Mod installieren",
+  ["A mod's folder or its .zip, copied into this device's save folder."] =
+    "Der Ordner eines Mods oder seine .zip, kopiert in den Speicherordner dieses Geräts.",
+  ["Drop the mod's folder or .zip on this window, or type the path of its .zip and press ENTER."] =
+    "Zieh den Ordner oder die .zip des Mods auf dieses Fenster, oder tippe den Pfad der .zip und drücke ENTER.",
+  ["Drop the mod's folder or .zip on this window."] =
+    "Zieh den Ordner oder die .zip des Mods auf dieses Fenster.",
+  ["The mod is installed for every game; it is on until you turn it off. A mod already installed is replaced by the new copy."] =
+    "Der Mod wird für jedes Spiel installiert und ist an, bis du ihn ausschaltest. Ein schon installierter Mod wird durch die neue Kopie ersetzt.",
+  ["Import a file"] = "Eine Datei importieren",
+  ["%s for %s"] = "%s für %s",
+  ["Drop the file on this window, or type its path and press ENTER."] =
+    "Zieh die Datei auf dieses Fenster, oder tippe ihren Pfad und drücke ENTER.",
+  ["Drop the file on this window."] = "Zieh die Datei auf dieses Fenster.",
+  ["The file is checked against the mod's manifest and copied into the mod's folder. Nothing is uploaded."] =
+    "Die Datei wird mit dem Manifest des Mods geprüft und in den Ordner des Mods kopiert. Nichts wird hochgeladen.",
+  ["Installed %s %s. It runs when the game starts."] = "%s %s ist installiert. Er läuft beim nächsten Spielstart.",
+  ["Could not install %s: %s"] = "%s ließ sich nicht installieren: %s",
+  ["it is not a .zip this build opens"] = "es ist keine .zip, die dieser Build öffnet",
+  ["To install a mod, open SETTINGS > MODS and drop it there."] =
+    "Zum Installieren eines Mods öffne OPTIONEN > MODS und zieh ihn dorthin.",
+  ["Imported %s for %s."] = "%s für %s importiert.",
 
   -- text entry
   ["Type on the keyboard, or pick the letters with a pad or a tap. START or END finishes."] =

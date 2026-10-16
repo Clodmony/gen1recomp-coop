@@ -20,6 +20,9 @@
 -- who joined a battle elsewhere is not drawn; a battle this player is free
 -- to join is told in a notice.
 --
+-- The Cable Club (#60, design A14.4): a partner in a Cable Club room is not
+-- drawn; the trade screen names them (src/coop/game/CableClub.lua).
+--
 -- The opening (#22, design A4.4, A4.8): a partner who plays the opening is
 -- not drawn and gets no arrow or TOWN MAP mark, and while this player plays
 -- it they see nobody and hear of no battle to join.  A partner who joins in
@@ -168,8 +171,28 @@ function Actor:walkPhase()
   return (t >= 4 and t < 12) and 1 or 0
 end
 
+-- The sprite a render pipeline draws (#30; pose() is the pipelines' view of
+-- an entity, the 2D pass calls draw).  A pipeline colours a sprite from the
+-- map's palette unless its sheet is true colour, so the partner's goes out
+-- as one: the same renderer, its sheet marked finished, its image in the
+-- partner's colour (SpriteRenderer:resolveImage).
+local function finished(s)
+  if not s then return nil end
+  local f = s.coopFinished
+  if not f then
+    local def = {}
+    for k, v in pairs(s.def) do def[k] = v end
+    def.trueColor = true
+    f = setmetatable({ def = def,
+                       resolveImage = function() return s:resolveImage() end },
+                     { __index = s })
+    s.coopFinished = f
+  end
+  return f
+end
+
 function Actor:pose()
-  return self:sprite(Presence.data), self.px, self.py, self.facing,
+  return finished(self:sprite(Presence.data)), self.px, self.py, self.facing,
     self:walkPhase(), self.stepFlip, false
 end
 
@@ -340,9 +363,10 @@ function Presence.step(game)
         tintOwn(ow, colors, group)
         Presence.tinted = true
       end
-    elseif p.connected and p.map and not alone and not p.opening
+    elseif p.connected and p.map and not alone and not p.opening and not p.cable
            and not (p.battle and (battleOf(state, p) or {}).by ~= p.id) then
-      -- (a partner who joined a battle elsewhere is not drawn, A14.4)
+      -- (a partner who joined a battle elsewhere is not drawn, A14.4; nor
+      -- one in a Cable Club room, #60)
       local a = Presence.actors[p.id] or Actor.new(p.id)
       keep[p.id] = a
       a.colors, a.colorGroup = Colors.palette(place)
@@ -364,9 +388,33 @@ end
 -- the overworld's world pass (OverworldState:draw): the arrows
 function Presence.drawWorld(game, ow)
   if not Presence.state then return end
+  -- a render pipeline drew the world (#30): its field-effect pass drew
+  -- these under its own camera (Presence.drawFx)
+  if game.renderer and game.renderer.worldOverride then return end
   Arrow.draw(game, ow, Presence.partners(), Presence.frame)
   for _, a in pairs(Presence.actors) do
     if a.inBattle and a.visible then Presence.drawBubble(game, ow, a) end
+  end
+end
+
+-- A render pipeline's field-effect pass (#30; OverworldState:drawWorld's
+-- ctx.drawFx, a marked hook): the arrows and the "!" bubbles, which the
+-- pipeline's world image would cover in the world pass.  `at(fn, wx, wy)`
+-- draws fn's flat drawing anchored at a world point under the pipeline's
+-- camera; `project(wx, wy)` maps a world point to the canvas (nil when not
+-- seen), `scale` is canvas pixels per world pixel.
+function Presence.drawFx(game, ow, at, project, scale)
+  if not Presence.state then return end
+  local canvas = love.graphics.getCanvas and love.graphics.getCanvas()
+  if type(canvas) == "table" and canvas[1] then canvas = canvas[1] end
+  local W, H
+  if canvas and canvas.getDimensions then W, H = canvas:getDimensions() end
+  if not (W and H) then W, H = love.graphics.getDimensions() end
+  Arrow.draw(game, ow, Presence.partners(), Presence.frame, project, scale, W, H)
+  for _, a in pairs(Presence.actors) do
+    if a.inBattle and a.visible then
+      at(function() Presence.drawBubble(game, ow, a) end, a.px + 8, a.py + 16)
+    end
   end
 end
 
@@ -395,7 +443,7 @@ function Presence.drawUI()
 end
 
 -- the partners as the CO-OP menu and the arrow see them: { id, name,
--- place, connected, map, x, y, battle, opening, hidden } in session order,
+-- place, connected, map, x, y, battle, opening, meeting, hidden } in session order,
 -- this player left out; hidden: not shown on the map (an arrow, a TOWN MAP
 -- mark) since one of the two plays the opening (#22)
 function Presence.partners()
@@ -407,6 +455,7 @@ function Presence.partners()
       out[#out + 1] = { id = p.id, name = p.name, place = place, connected = p.connected,
                         map = p.map, x = p.x, y = p.y, actor = Presence.actors[p.id],
                         battle = p.battle, opening = p.opening,
+                        meeting = p.meeting, -- #23: a friend battle or trade
                         hidden = alone or p.opening == true }
     end
   end

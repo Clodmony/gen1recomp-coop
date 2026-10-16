@@ -5,9 +5,11 @@ one player's world met, with every player's team on the allied side (#18,
 area A8 in [design.md](design.md), decision G24, accepted), shown with the
 cartridge's own battle screen and menus (#19, area A9); leaving it, coming
 back and taking over for a player who dropped (#20, area A11); what the
-world shows of partners in a battle (#34, area A14); and the unique
+world shows of partners in a battle (#34, area A14); the unique
 encounters, trainers and static Pokémon met once per campaign (#21, area
-A10, decision G26).
+A10, decision G26); the rival's scenes, one driver a map (#59, A10.5,
+decision G29); and the team's League run and the Hall of Fame's
+continue (#55, A10.6, A10.7, decision G30).
 
 ## How a co-op battle runs (G24)
 
@@ -59,8 +61,15 @@ The battle only moves when the command comes back as an input.
   a fight held while away; battles built again after coming back; the end
   of a battle in the window.
 - `src/coop/game/Presence.lua`: partners in a battle in the world (#34).
+- `src/coop/game/Scenes.lua` and `src/coop/session/HostScenes.lua`: the
+  rival's scenes, the window's side and the host's (#59).
+- `src/coop/battle/League.lua` (#55): the team's League run on the host:
+  the run's clear, what holds it, what it erases.
+- `src/coop/game/League.lua` (#55): the Indigo Plateau lobby in a co-op
+  world. `src/coop/game/Restart.lua` (#55): the Hall of Fame's continue,
+  and every reset in a co-op window.
 - `src/coop/session/Protocol.lua`, `Host.lua`, `Client.lua`: protocol 7
-  (8 adds `room`, #17; 9 adds `encounter`, #21).
+  (8 adds `room`, #17; 9 adds `encounter`, #21; 11 adds `scene`, #59).
 
 Upstream files, with marked hooks:
 
@@ -73,7 +82,15 @@ Upstream files, with marked hooks:
   a method of its own (`sendOutReplacement`), so a co-op battle sends out the
   owner's pick; and a battle may award experience its own way (`expAward`,
   `expTrainerId`).
+- `src/script/ScriptRunner.lua`: `run` tells `Scenes.started` of each
+  script it starts, so a rival scene is claimed (#59).
 - `src/coop/game/CoopMenu.lua` (the fork's own): the JOIN rows.
+- `data/scripts/story6.lua` (#55): `INDIGO_PLATEAU_LOBBY.onEnter` asks
+  `League.lobby` before its reset.
+- `src/script/Commands.lua` (#55): `record_hall_of_fame` asks
+  `Restart.take` before its boot movie and title; `src/core/Game.lua`:
+  `Game:returnToTitle` asks it first (START > QUIT, the soft reset chord,
+  the touch skin's reset).
 
 ## The copy in a window
 
@@ -236,8 +253,8 @@ sprite) is none.
   abandoned battle or a shutdown releases it. A window walking into a done
   one is refused `beaten`: its world's `onFinish` hears a win after the
   battle transition, with no fight and no prize, under "<FOE> was already
-  beaten.". The League's rooms are never kept done: every run fights
-  everyone again until the team's League run (#55, A10.6).
+  beaten.". The League's fights are kept done only while the team's run
+  lasts (#55, below).
 - **The sight gate** (A10.4). `state` names each running battle's
   encounter; a trainer the host names as in a battle spots nobody
   (`Battles.engaged`, a marked hook in `checkTrainerSight`). Talking to it,
@@ -250,9 +267,117 @@ sprite) is none.
   beaten (`EVENT_BEAT_CHAMPION_RIVAL`, a campaign flag), so it stays the
   campaign's.
 
-Rival scenes, the team's League run and the Hall of Fame's continue
-(A10.5 to A10.7) are #55. A rival on a map object is already one
-encounter, so two windows starting the scene at once fight it together.
+## Rival scenes (#59)
+
+The rival meets the player in scenes after the opening: Route 22 (twice),
+Cerulean's Nugget Bridge, the S.S. Anne 2F, Pokémon Tower 2F and Silph
+Co. 7F. Each is played by **one driver a map** (A10.5, decision G29):
+
+- **Which scripts are scenes.** The engine keeps no map-script bytes
+  (G21), so a scene is a script the script runner starts on one of those
+  maps whose rows fight the rival (`rival_battle` with his class for that
+  scene), while the scene's flag (`EVENT_BEAT_..._RIVAL`) is not set. That
+  catches each way a scene starts: the map script's ambush when the player
+  steps on its cells, and talking to the rival where he waits (Cerulean,
+  the tower). The scene ends when that script ends (`Scenes.LIST`,
+  `Scenes.of`; a marked hook in `ScriptRunner:run`). The Champion's room is
+  not on the list: it has no lock. The list is Red and Blue's; Yellow's
+  Jessie and James scenes and its rival maps are #9's (an entry may name
+  another battle verb).
+- **The driver.** The window whose world started a scene claims its map on
+  the host (`scene`, on). The first claim of a map drives, and every
+  player's `state` names it (`scenes`: map, key, driver). A second claim
+  of that map is refused `scene_taken`; that window plays its scene on, and
+  its battle joins the driver's as one unique encounter: the rival is his
+  map object (`trainer:<MAP>_obj_<n>`, #21), so two windows starting at
+  once fight him together. A window on a link that came back claims a
+  scene it still plays again.
+- **The end.** The driver's window lets go at its first rest point after
+  the scene, in the same frame as and after its patch, so the partners hear
+  the scene's result (the rival's flag, his object hidden) before the
+  release. It lets go at once when the player leaves the map (a whiteout
+  after a loss). The host lets go when the driver's move names another
+  map, or the driver drops or leaves (`HostScenes.lua`). A scene that did
+  not finish sent nothing, so whoever meets the rival next meets him from
+  the start.
+- **A partner on that map** waits from its next rest point (standing
+  between two cells, not in a battle or a menu), frozen under "<NAME> is
+  facing the rival here. Wait, or join the battle...". A joins the
+  driver's battle once it runs (the JOIN of the CO-OP menu); START or
+  SELECT opens the CO-OP menu. The frozen world counts as resting
+  (`SharedWorld.busy`), so it takes the story as it comes. The box goes on
+  a rest frame once the claim has gone: by then the window has taken the
+  result the release came behind, so the scene's step lands at once and
+  the rival does not start again. A player in the opening is never held.
+- **Costs.** The claims live in host memory only. A partner anywhere on a
+  large map (Cerulean City) waits, as the design says, even far from the
+  rival.
+
+## The team's League run (#55)
+
+The Elite Four is one run for the team (A10.6, G30):
+
+- **Beaten for the team.** Each member's beaten flag
+  (`EVENT_BEAT_<ROOM>_TRAINER_0`, `EVENT_BEAT_LANCE`) and beaten trainer
+  (`defeatedTrainers/<ROOM>_obj_<n>`) are story entries
+  ([world.md](world.md)). A window standing in that room reloads it when
+  the flag lands, so the exit opens; a partner arriving later finds the
+  door open, hears the member's line after the battle when talking to
+  them, and walks through.
+- **Won at once.** A League fight won is a unique encounter kept done
+  until the run's clear. A window that walks into one, the Champion
+  included, hears `beaten`: its world counts the fight as won without a
+  battle, under "<FOE> was already beaten.". A late player who reaches the
+  Champion so gets the rival's lines, Oak's scene, their own Hall of Fame,
+  the credits and the continue.
+- **Each player's.** The walk-ins, Lance's door lock, the started bit
+  (`EVENT_STARTED_ELITE_4`) and the Champion room's run flag
+  (`EVENT_BEAT_CHAMPION_RIVAL_THIS_RUN`): every window that reaches the
+  Champion's room meets him there, whoever beat AGATHA.
+- **The run's clear.** The engine erases a run in the Indigo Plateau lobby
+  (after a whiteout, or on the way to a new run). In a co-op world the
+  lobby resets only the player's part of it and sends `league` `lobby` to
+  the host; each induction into the Hall of Fame sends `league`
+  `inducted`. The host keeps the request (`host.league`) and applies it
+  once nothing holds it: no connected player in the League (the four
+  rooms, the Champion's room, the Hall of Fame), no League fight running,
+  and, after the Champion fell, every connected player inducted. Applied,
+  it erases the run's story entries and forgets the League's encounters
+  and their victory commits, so the next run fights everyone again.
+  `EVENT_BEAT_CHAMPION_RIVAL` stays (the Cerulean Cave guard, A10.8). So a
+  player who whited out while a partner is still inside walks back through
+  the rooms the team has beaten.
+- **Costs.** The hold lives in host memory; a disconnected player inside
+  holds nothing. Every lobby entry asks for the clear, so a run left over
+  from a host that forgot its hold ends with the next visit.
+
+## The Hall of Fame's continue (#55)
+
+On the cartridge, THE END saves and resets into the title. In a co-op
+window (A10.7, G30), that reset, and every other one there (START > QUIT,
+the soft reset chord, the touch skin's reset), continues the co-op world:
+
+- The world freezes: a blank screen, "Waiting for the host..." after a
+  second.
+- The window sends `restart`; after the Hall of Fame it first sends the
+  world it just saved, as one that asks for no save (a SAVE the host
+  refused while another battle ran still reaches it), and `league`
+  `inducted`. The host handles a link's messages in order, so its answer,
+  the player's world with the story laid over it (`world` with `restart`),
+  comes once it has applied everything sent before. A dropped link waits;
+  the restart is said again on the new link.
+- The world reopens from the answer with the game's own CONTINUE (facing
+  down, the title's song fading into the map's). A world left in the
+  Hall of Fame goes to the engine's post-game home (Pallet Town, healed),
+  where the cartridge's fly warp lands too. A player the campaign has no
+  world for (still in the opening) starts the opening again.
+- The window opens again as a late one, finished battles are dropped, and
+  a battle still running that this player is in comes back from its
+  record, as after a drop.
+
+A reset loses what the window had not sent yet, as a reset on the
+cartridge loses what was not saved: the host's world is the last
+holdings and the last SAVE.
 
 ## Leaving, coming back, taking over (#20)
 
@@ -293,7 +418,13 @@ nobody is left.
   owner's. The owner decides again the moment they are back.
 - **Nobody left** (A11.7). A battle nobody is present in waits two minutes
   (a redial's budget), then ends as fled; at shutdown every battle still
-  running ends as fled, and its players hear it before `ended`.
+  running ends as fled, and its players hear it before `ended`. A unique
+  encounter's battle nobody is present in ends as fled at once when
+  another player meets that encounter, who then fights it afresh: a
+  walk-in could not go in (no one is there to bring the battle to a
+  question), so the player waited the two minutes on a silent screen
+  (found in the integrated live run: the rival scene's driver quit during
+  the battle's intro).
 - **The end while away** (A11.8). A join still queued is released; a player
   whose link was down when their battle ended hears the end once back: the
   window builds the battle from the record, plays it out of sight and ends
@@ -312,15 +443,16 @@ nobody is left.
   under the cartridge's "!" bubble (A14.3); a partner who joined a battle
   elsewhere is not drawn until it ends (A14.4);
 - the CO-OP menu offers JOIN <NAME> for each partner's battle with room, or
-  REJOIN for one this player left, and the box names a partner in a battle
-  IN A BATTLE (A14.8);
+  REJOIN for one this player left, each with VS <FOE> on its second line
+  (#23), and the box names a partner in a battle IN A BATTLE (A14.8);
+  friend battles are not co-op battles ([friends.md](friends.md));
 - a partner's new battle this player is free to join is told over the
   world: "BLUE is in a battle against wild PIDGEY. START > CO-OP to join."
   (A14.10);
 - in a co-op battle SELECT opens nothing: the battle screen is on top and
   its SELECT swaps moves as in the cartridge (A14.9).
 
-## Protocol 7 (8, 9)
+## Protocol 7 (8, 9, 11)
 
 | Client to host | Fields |
 |---|---|
@@ -332,11 +464,12 @@ nobody is left.
 | `battle_leave` | `seq`, `battle`: LEAVE BATTLE, or call off a queued join (#20) |
 | `battle_rejoin` | `seq`, `battle`: REJOIN (#20) |
 | `battle_takeover` | `seq`, `battle`, `owner`: stand in for a dropped owner (#20) |
+| `scene` | `seq`, `map`, `key` (the scene, `Scenes.LIST`), `on` (true: a claim, refused `scene_taken` while another player drives that map; false: past it) (11, #59) |
 
 | Host to client | Fields |
 |---|---|
 | `battle` | `id`, `rev`, `seed`, `from`, `inputs` (from `from` on, at most 256 a message), `players` (`id`, `present`, `left`), the `open`ing with the first inputs (and `by`, who opened it), `ask`, `by` (who decides) and `owner` (whose Pokémon it is about), `offer` (a dropped owner the present players may take over for), `standins` (`owner`, `by`), `suggestions` (`by`, `cmd`), `ended` |
-| `state` | each player's `battle` (the one they fight in), and `battles`: `id`, `by`, `kind`, `foe`, `players`, `joinable`, `encounter` (9) |
+| `state` | each player's `battle` (the one they fight in), and `battles`: `id`, `by`, `kind`, `foe`, `players`, `joinable`, `encounter` (9); `scenes`: `map`, `key`, `by` (the driver) (11, #59) |
 
 A command is `kind` (`move`, `struggle`, `fight`, `switch`, `item`,
 `ball`, `run` answer the menu; `replace`, `learn`, `mimic`, `choice` the
@@ -418,6 +551,96 @@ players, split-screen, and a trainer that uses items; for #21, a static
 Pokémon with the cartridge, a scripted fight (a gym leader), a walk-in
 through a trainer's sight during a partner's walk-up, and a full fight.
 
+Rival scenes (#59, same setup, US Red; each player given a MEWTWO and
+the Pokédex flag by the drivers, which also answered the move questions):
+
+- Route 22's first fight: RED stepped onto (29,4) and the host named RED
+  the driver of `route22_1`; GREEN, standing on Route 22, was frozen under
+  "RED is facing the / rival here. Wait, / or join the / battle..." and its
+  window kept resting. The battle was the rival's map object
+  (`trainer:ROUTE_22_obj_1`). A in GREEN's box joined it; it was won with
+  both teams; GREEN stood under the box again until RED's walk-out ended;
+  then the host had the rival's flag in the story, released the claim
+  (`done`), and GREEN's box went with the flag already in GREEN's world.
+- Cerulean's Nugget Bridge: GREEN stepped onto (20,6) and drove
+  (`cerulean`); RED, elsewhere in Cerulean City, was frozen under "GREEN
+  is facing / the rival here. / Wait, or join the / battle...". GREEN's
+  process then quit without a bye mid-scene: the host let go when the ENet
+  link timed out (6.2 s later, `left`), RED's box went, the story had no
+  rival flag, and RED stepping onto (20,6) met the rival from the start,
+  drove the scene (its own claim), won and released it.
+- Two at once: RED and GREEN stepped onto Route 22's two trigger cells at
+  the same moment. RED's claim came first; GREEN's was refused
+  `scene_taken` and GREEN's scene played on: its battle was RED's (one
+  battle on the host, both teams in it), both worlds ended with the
+  rival's flag, and the claim was released after the scene.
+- The host's session logs of both runs showed no `battle_desync`.
+
+Not run for #59: the S.S. Anne, Pokémon Tower and Silph Co. scenes and
+Route 22's second fight with the cartridge (the ROM-free test starts each
+from its map script), a loss in a scene, a partner joining from the
+CO-OP menu instead of the box, a driver whose link comes back mid-scene,
+split-screen, and real pads.
+
+Integrated Group 11 build (2026-10-16, same setup, both players entering
+through the fork's launcher with BRING A SAVE and the RIVAL save, walking
+and pressing A; no teleports, no given Pokémon): ASH walked left onto
+x 29 and drove `route22_1`; MISTY, standing at (33,5), was frozen under
+the box, lost focus for 5 s and was hidden for 5 s while frozen (link
+and box kept), ASH's window was hidden for 5 s mid-scene, A joined
+ASH's battle, it was won, MISTY was released with the rival's flag, and
+walking past x 29 started nothing. With MISTY driving, her process quit
+during the battle's intro: ASH's box went, and ASH meeting the rival
+waited two silent minutes for the abandon (A11.7) until the fix under
+*Leaving, coming back, taking over*; since, ASH's own fight opens at once
+and was won. No `battle_desync`.
+The team's League run and the Hall of Fame's continue (#55, same setup:
+each player given three level 100 MEWTWO by the drivers, which also put
+them in the rooms, answered the move questions and pressed A through the
+scenes):
+
+- RED beat LORELEI as a co-op battle (`trainer:LORELEIS_ROOM_obj_1`);
+  the campaign kept her done and her beaten flag reached GREEN's story.
+- GREEN entered her room later: the exit block stood open, talking to
+  LORELEI gave no battle, and GREEN walked through into BRUNO's room.
+- GREEN then stood in the Indigo Plateau lobby (put there as a whiteout
+  would) while RED was in BRUNO's room: GREEN's started bit and walk-in
+  were reset, LORELEI's beaten flag stayed in GREEN's world and in the
+  story, and the host held the lobby's clear (`in_league`).
+- RED met the Champion, won, and went through Oak's scene, the Hall of
+  Fame and the credits. THE END's press froze the world (no boot movie,
+  no title) and it continued at Pallet Town facing down, healed, with one
+  Hall of Fame entry; the host had the induction and still held the run.
+- GREEN met the Champion afterwards: the host refused `beaten`, the
+  notice read "<RIVAL> was already beaten.", no battle showed, and GREEN
+  got Oak's scene, the Hall of Fame, the credits and the same continue
+  at Pallet Town.
+- Once GREEN was back in Pallet Town the host cleared the run (two story
+  entries, two encounters); `EVENT_BEAT_CHAMPION_RIVAL` stayed, and both
+  worlds lost LORELEI's beaten flag.
+- The host's session log showed no `battle_desync`.
+
+Not run live: a real whiteout into the lobby, BRUNO, AGATHA and LANCE, a
+soft reset or START > QUIT in a co-op window, a dropped link during the
+continue, a disconnected player inside, split-screen, and Blue or Yellow
+(ROM-free tests cover the reset, the dropped link and the disconnected
+player).
+
+Integrated Group 11 build (2026-10-16, same setup, both bringing the
+LEAGUE save through the launcher, walking every room and fighting with
+their own teams): ASH beat LORELEI and BRUNO alone while MISTY's window
+lost focus; MISTY walked through both rooms (LORELEI's line, no battle);
+MISTY walked in to ASH's AGATHA fight (one battle, her copy; her window
+lost focus 5 s in it) and they won; ASH beat LANCE and the Champion, lost
+focus during the Hall of Fame, and continued at Pallet Town; MISTY walked
+through LANCE's room, met the Champion as already beaten, got her own
+Hall of Fame and the continue. With both back in Pallet Town, ASH went
+back to the plateau (put there as a fly would), the lobby cleared the
+run, and LORELEI fought again. MISTY's START > QUIT > YES continued the
+co-op world (hidden 5 s meanwhile) with her team. No `battle_desync`.
+Still not run: a real whiteout, a dropped link during the continue,
+split-screen, Blue and Yellow.
+
 ## Tests
 
 ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
@@ -426,8 +649,9 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   loopback: the encounter in the record and in `state`, a walk-in queued as
   a join (one instance), a win and a catch done and kept in the file,
   `beaten`, a loss, a flight, an abandoned battle and a shutdown
-  releasing, the League never kept done, a walk-in into a full fight or
-  while in another, the protocol's check, the cave guard's flag.
+  releasing, the League kept done during the team's run (#55), a walk-in
+  into a full fight or while in another, the protocol's check, the cave
+  guard's flag.
 - `tests/coop/encounters_game_test.lua` (#21): the fixture overworld: the
   key of a trainer, a static object and a battle in the grass; the sight
   gate on and off; RED's world walking into BLUE's trainer fight and
@@ -435,6 +659,36 @@ ROM-free, in the `engine` group of `scripts/test.sh` and so in coop-ci:
   counting as won without a fight or prize; talking to a static object;
   a walk-in into a full fight ending without one.
 
+- `tests/coop/scenes_test.lua` (#59): the host's claims over loopback:
+  the first claim drives and `state` names it, a second claim of the map
+  refused `scene_taken`, another map's own driver, a release only by the
+  driver, the result patch heard before the release, a map change, a
+  dropped link and a bye letting go, the protocol's check.
+- `tests/coop/scenes_game_test.lua` (#59): the cartridge's six scenes as
+  the hand-ported map scripts start them (and none once beaten, none in
+  the Champion's room); the fixture overworld: RED's world claiming its
+  scene (again on a new link), BLUE's claim refused, BLUE's battle against
+  the same rival joining RED's, the result before the release; RED frozen
+  while BLUE drives, resting, joining BLUE's fight with A, BLUE's result
+  in RED's world before the box goes; a claim on another map; BLUE
+  changing map or dropping letting RED go.
+- `tests/coop/league_test.lua` (#55): the host over loopback: a League
+  fight kept done while the run lasts and `beaten` for a partner, the
+  lobby's clear held by a connected player in the League and by a running
+  League fight, the clear erasing the run's entries, encounters and
+  commits (the Champion's flag kept), the hold after the Champion fell
+  until every connected player is inducted, a late Champion won at once,
+  a disconnected player holding nothing, a restart answered with the
+  player's world, the protocol's checks.
+- `tests/coop/league_game_test.lua` (#55): the fixture overworld: the
+  lobby's reset solo and in a co-op world (the player's part reset, the
+  campaign's kept while a partner is inside, then the clear at a rest
+  point); the Hall of Fame's end frozen and continued at the post-game
+  home, healed, with the induction on the host; a reset continuing from
+  the host's world and dropping finished battles; a world left in the
+  Hall of Fame flying home; a dropped link waiting and the restart said
+  on the new link; a player without a world starting again; solo still
+  showing the title.
 - `tests/coop/holdings_test.lua` (#17): a catch for the named player, the
   name list offering only players with room, the host's refusal, a ball
   kept when nobody has room, and the Pokédex of both players.

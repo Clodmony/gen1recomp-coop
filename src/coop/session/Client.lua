@@ -25,7 +25,8 @@
 -- (Window.lua applies each once and drops it).  Pokémon (#17): the window
 -- sends its holdings at rest points (c:sendHoldings(world, boxes), Window
 -- decides when); c.uids lists the uids the host gave its rows, for the
--- window to stamp.
+-- window to stamp.  A new player's start (#57): c:sendStart(how, text), and
+-- c.started holds the seq of the start the host kept.
 --
 -- Co-op battles (#18): c.battles holds each battle this player is in or
 -- joining, as the host sent it: { id, seed, open, inputs, rev, players, ask,
@@ -33,6 +34,22 @@
 -- host ended stays in c.battles with `ended` until the window drops it
 -- (Client:dropBattle).  battleOpen/battleJoin/battleCmd/battleSuggest/
 -- battleAt send the intentions.
+--
+-- Red and Blue (#9): c:sendWild(maps) sends this window's own wild slots
+-- once a link (src/coop/game/WildMix.lua); c.wild is the other version's,
+-- { game, maps }, once the host passed them (the campaign's switch on).
+--
+-- The Cable Club (#60): c.cable is this player's cable as the host last
+-- said it ({ room, round, mate, name, lead }; nil before any), c.cableLinks
+-- the mate's link-cable messages not yet taken ({ round, link, uid }, in
+-- order); cableEnter and cableLink send the intentions.
+--
+-- Friend battles and trades (#23): c.invites holds the invitations this
+-- player sent or got, by id, as the host last told them (`answer` once
+-- settled); c.pairs the pairings this player is in, by id; c.relay the
+-- partner's link battle messages per pairing, in order ({ n, list }).
+-- invite/answerInvite/pairMsg/pairEnd/tradeTeam/tradePick/tradeConfirm
+-- send the intentions.
 --
 -- status: idle, probing, probed, joining, joined, refused, ended, closed.
 -- A refusal or an end leaves its reason in c.reason.
@@ -61,13 +78,14 @@ function Client.new(conn, opts)
     name = opts.name or "PLAYER",
     game = opts.game, sha1 = opts.sha1 or "",
     build = opts.build or "dev",
-    device = opts.device or "0", seat = opts.seat or 1,
+    device = opts.device or "0", seat = opts.seat or 1, window = opts.window,
+    start = opts.start, -- how a new player starts, said on hello (#66)
     known = opts.known or {}, via = opts.via,
     status = "idle", reason = nil,
     seq = 0, player = nil, campaign = nil,
     lobby = nil, state = nil,
     rejections = {}, -- { seq, reason } for intentions the host refused
-    world = nil, -- the player's world from the campaign: { fresh, save }
+    world = nil, -- the player's world from the campaign: { fresh, save, restart }
     saves = {}, -- `saved` messages not yet taken: { ok, by, you, reason }
     savedAt = nil, -- clock time the campaign was last saved, by the host's word
     story = nil, -- the shared story as the host last sent it (#14)
@@ -75,6 +93,9 @@ function Client.new(conn, opts)
     gifts = {}, -- items the host owes this player, oldest first (#16)
     uids = {}, -- uids the host gave this player's rows: { box, slot, uid, fp } (#17)
     battles = {}, -- battles this player is in or joining, by id (#18)
+    wild = nil, -- the other version's wild slots: { game, maps } (#9)
+    cable = nil, cableLinks = {}, -- the Cable Club (#60)
+    invites = {}, pairs = {}, relay = {}, -- friend battles and trades (#23)
     dropped = 0,
     onWelcome = opts.onWelcome,
     log = opts.log, clock = opts.clock or defaultClock, sharedAt = nil,
@@ -90,7 +111,9 @@ end
 
 function Client:probe()
   self.status = "probing"
-  self.conn:send(self:_identity("probe"))
+  local probe = self:_identity("probe")
+  probe.device, probe.seat = self.device, self.seat
+  self.conn:send(probe)
 end
 
 function Client:sharesLog()
@@ -100,7 +123,9 @@ end
 function Client:join()
   local hello = self:_identity("hello")
   hello.device, hello.seat, hello.via = self.device, self.seat, self.via
+  hello.window = self.window
   hello.logs = { share = self:sharesLog() }
+  hello.start = self.start
   self.status = "joining"
   self.conn:send(hello)
 end
@@ -151,6 +176,42 @@ function Client:sendOpening(done, rival, chose)
                      chose = chose })
 end
 
+-- A rival scene (#59, design A10.5): this window's world started the
+-- scene `key` on `map` (on: a claim; the host refuses it `scene_taken`
+-- when another player drives that map) or is past it (on false).  The
+-- claims stand in state.scenes.  Returns the seq, or nil when not joined.
+function Client:sendScene(map, key, on)
+  return self:send({ type = "scene", map = map, key = key, on = on and true or false })
+end
+
+-- Red and Blue (#9, design A13.4): this window's own version's wild slots
+-- (WildMix.tables).  Returns the seq, or nil when not joined.
+function Client:sendWild(maps)
+  return self:send({ type = "wild", maps = maps })
+end
+
+-- How a new player starts (#57, design A4.1 to A4.3): the world the
+-- launcher started, whole (World.encode's text); how: "pallet" or "save".
+-- The host answers `started` (c.started: that seq; c.seeded: it began the
+-- campaign's story) or refuses it.  Returns the seq, or nil when not joined.
+function Client:sendStart(how, text)
+  return self:send({ type = "start", how = how, save = text })
+end
+
+-- The team's League run (#55, design A10.6): "lobby" (this window entered
+-- the Indigo Plateau lobby) or "inducted" (it went through the Hall of
+-- Fame).  Returns the seq, or nil when not joined.
+function Client:sendLeague(event)
+  return self:send({ type = "league", event = event })
+end
+
+-- The window restarts (#55, design A10.7): "hall" after the Hall of Fame,
+-- "reset" otherwise; the host answers with this player's world (c.world
+-- with `restart` = this seq).  Returns the seq, or nil when not joined.
+function Client:sendRestart(kind)
+  return self:send({ type = "restart", kind = kind })
+end
+
 -- co-op battles (#18, design A8) ----------------------------------------
 
 -- a battle this window's world opened: opening = { kind, enemy, map,
@@ -196,8 +257,71 @@ function Client:battleTakeover(id, owner)
   return self:send({ type = "battle_takeover", battle = id, owner = owner })
 end
 
+-- the Cable Club (#60, design A12.7) -------------------------------------
+
+-- enter a room behind the receptionist ("trade", "colosseum"; with: the
+-- partner this player offered the cable to), or leave it ("none")
+function Client:cableEnter(room, with)
+  return self:send({ type = "cable", room = room, with = with })
+end
+
+-- a link-cable message for the mate, in the trade's round; uids: with a
+-- party, each Pokémon's uid ("" for none)
+function Client:cableLink(round, link, uids)
+  return self:send({ type = "cable_link", round = round, link = link, uids = uids })
+end
+
+-- the mate's link messages since the last call, oldest first
+function Client:takeCableLinks()
+  local out = self.cableLinks
+  self.cableLinks = {}
+  return out
+end
+
 function Client:dropBattle(id)
   self.battles[id] = nil
+end
+
+-- friend battles and trades (#23, design A12) ------------------------------
+
+function Client:invite(to, kind)
+  return self:send({ type = "invite", to = to, kind = kind })
+end
+
+function Client:answerInvite(id, yes)
+  return self:send({ type = "invite_answer", invite = id, yes = yes and true or false })
+end
+
+function Client:pairMsg(pair, n, msg)
+  return self:send({ type = "pair_msg", pair = pair, n = n, msg = msg })
+end
+
+function Client:pairEnd(pair, result)
+  return self:send({ type = "pair_end", pair = pair, result = result })
+end
+
+function Client:tradeTeam(pair, text)
+  return self:send({ type = "trade_team", pair = pair, team = text })
+end
+
+function Client:tradePick(pair, slot)
+  return self:send({ type = "trade_pick", pair = pair, slot = slot })
+end
+
+function Client:tradeConfirm(pair, yes)
+  return self:send({ type = "trade_confirm", pair = pair, yes = yes and true or false })
+end
+
+-- the partner's link battle messages, kept in order once each
+function Client:_pairMsg(msg)
+  local r = self.relay[msg.pair]
+  if not r then
+    r = { n = 0, list = {} }
+    self.relay[msg.pair] = r
+  end
+  if msg.n ~= r.n + 1 then return end
+  r.n = msg.n
+  r.list[#r.list + 1] = msg.msg
 end
 
 function Client:_battle(msg)
@@ -263,7 +387,7 @@ function Client:_handle(msg)
       self.savedAt = self.clock() - msg.saved_ago
     end
   elseif t == "world" then
-    self.world = { fresh = msg.fresh, save = msg.save }
+    self.world = { fresh = msg.fresh, save = msg.save, restart = msg.restart }
   elseif t == "story" then
     -- the whole story, or what changed since the last one
     if msg.base or not self.story then self.story = {} end
@@ -272,8 +396,28 @@ function Client:_handle(msg)
     self.storyApplied, self.storyRev = msg.applied, msg.rev
   elseif t == "battle" then
     self:_battle(msg)
+  elseif t == "cable" then
+    -- another room, mate or round: the mate's messages still waiting
+    -- belong to the cable before (a new pairing starts at round 1 again)
+    local was = self.cable
+    if not was or was.room ~= msg.room or was.mate ~= msg.mate or was.round ~= msg.round then
+      self.cableLinks = {}
+    end
+    self.cable = msg
+  elseif t == "cable_link" then
+    self.cableLinks[#self.cableLinks + 1] = msg
+  elseif t == "invite" then
+    self.invites[msg.id] = msg
+  elseif t == "pair" then
+    self.pairs[msg.id] = msg
+  elseif t == "pair_msg" then
+    self:_pairMsg(msg)
   elseif t == "gifts" then
     for _, g in ipairs(msg.list) do self.gifts[#self.gifts + 1] = g end
+  elseif t == "wild" then
+    self.wild = { game = msg.game, maps = msg.maps } -- #9
+  elseif t == "started" then
+    self.started, self.seeded = msg.seq, msg.seeded -- #57
   elseif t == "uids" then
     for _, u in ipairs(msg.list) do self.uids[#self.uids + 1] = u end
   elseif t == "saved" then

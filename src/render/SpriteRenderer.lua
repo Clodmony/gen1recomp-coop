@@ -332,6 +332,11 @@ end
 
 function SpriteRenderer:resolveImage()
   if liveTrueColor(self.def) then return self.image end
+  -- co-op (#30): a player's colour (src/coop/game/Colors.lua), as draw
+  -- wears it, for a render pipeline that textures the sprite itself
+  if self.coopColors then
+    return getObpImage(self.def.image, self.coopColors, self.coopGroup or "coop")
+  end
   if self.objColors then
     return getObpImage(self.def.image, self:gen2Obp())
   end
