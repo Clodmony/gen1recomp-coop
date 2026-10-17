@@ -6,7 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-17 (#69 merged; Group 10's #70 in PR #71; #7 left in Group 10).
+Last updated 2026-10-17 (#71 merged; Group 10's #7 in PR #74; #72 and #73 filed in Group 10).
 
 ## Testing rule (owner, 2026-10-16)
 
@@ -35,20 +35,28 @@ on.
 - **Merged 2026-10-17** (owner): #69 (#27), locally as Claude; the owner
   pushed the merge (the push-guard cannot review a merge commit with no
   patch of its own, so it needs the owner's `--no-verify` push).
-- Protocol and campaign file unchanged by #27 and #70. Decision G38 (#27's
-  entries) recorded from the owner's answers.
+- **Merged 2026-10-17** (owner said merge once coop-ci is green): #71
+  (#70). Pushed as a **fast-forward** of `gen1recomp-coop` to the PR's
+  head (the owner chose it over a merge commit: the push-guard cannot
+  review a merge commit and the owner was away); no merge commit, #70
+  closed.
+- Protocol and campaign file unchanged by #27, #70 and #7. Decision G38
+  (#27's entries) recorded from the owner's answers; **G39 (#7) proposed**.
 - Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15
-  (owner-side checks); Group 10 holds #7 (mobile) and #27 (in PR #69).
-  Group 9 has no issues. Group 10 now: #7 and #70 (in PR #71).
+  (owner-side checks). Group 9 has no issues. Group 10 now: #7 (in PR
+  #74), #72 (quick save/load/speed in a session) and #73 (A15.2 swipe and
+  tap gestures on a phone).
 
 ## Open pull requests
 
-- **#71** `coop/group10-editor-close` → `gen1recomp-coop`, draft: #70.
-  A pad's B right after a refused window close (unsaved edit) discarded
-  the edit at once; it now asks once more (`tools/save-editor/App.lua`,
-  marked co-op #70). Needs the owner's merge (and a `--no-verify` push of
-  the merge commit, see above). Verify: ALL PASSED at 5ad7df66 (38/38
-  tiers); live: 40 real-input runs before the fix, 11 after.
+- **#74** `coop/group10-mobile` → `gen1recomp-coop`, draft: #7 (Closes).
+  The launcher on a phone (file picker for ROM/save/mod, save-as export,
+  drag to scroll, SETTINGS > ON-SCREEN CONTROLS opening upstream's
+  touch-controls editor and skin studio), `tools/build_android.sh` (local
+  debug APK, fork app id, upstream launcher stripped), `docs/coop/mobile.md`,
+  G39 proposed. Verify: ALL PASSED at d6bc715d (38/38 tiers); live on an
+  Android 14 emulator incl. co-op with a desktop host and the 3D mod.
+  Needs the owner's answers (below) and merge.
 
 ## #70's answers (owner, 2026-10-17: every recommendation taken)
 
@@ -147,14 +155,15 @@ Forfeit EXP became #67 (Group 12).
 
 ## Next candidates
 
-- **First: merge #71** if the owner says so (once coop-ci is green).
-- **#7 mobile** (Group 10): an Android build of the fork's
-  launcher (check which upstream mobile build scripts work without the
-  proprietary launcher), touch on the launcher, and the skin studio and
-  touch-controls editor entries #27 left to it (`main.lua`'s
-  `openTouchControlsEditor`, `src/ui/TouchControlsEditor.lua`). The
-  owner chose an Android emulator on this machine, no split-screen on a
-  phone for now.
+- **First: merge #74** if the owner says so (once coop-ci is green; a
+  fast-forward when `gen1recomp-coop` has not moved, else a merge commit
+  the owner pushes with `--no-verify`).
+- **#72** (Group 10): F1/F2/speed (and the phone's quick bar SAVE, LOAD,
+  SPEED) in a co-op session. First step: a two-process test where the
+  guest gives an item away and presses F2; see what the host's record does.
+- **#73** (Group 10): A15.2 swipe/tap over the CO-OP menu and co-op
+  battles on a phone. First step: a test feeding `love.touchmoved` over an
+  open CO-OP menu; then the emulator (recipe below).
 - Group 2's #12 and #15 are owner-side checks.
 
 ## Live-run recipe
@@ -281,6 +290,22 @@ Forfeit EXP became #67 (Group 12).
   the editor runs. Wrap `love.update` in the driver to act on
   `package.loaded.App.getState()` and call `App.save()` and `App.close()`,
   the calls its buttons make.
+- **Android emulator (#7).** Everything under
+  `~/dev-scratch/gen1recomp-coop/` (not in the repo): `android-sdk/setup.sh`
+  installs the SDK without root, `android-sdk/emu.sh` starts the headless
+  AVD `coop34` (port 5580; `-wipe-data` resets it), `bin/` has `adbe`
+  (adb to that emulator), `taptext "Text"` (tap a system view via
+  uiautomator), `pad a|b|start|select|up|down|left|right [n] [gap]` (the
+  built-in on-screen pad in portrait) and a Python stand-in `zip` (this
+  machine has no `zip`; put `bin/` first on PATH for
+  `tools/build_android.sh`). Build with `--abi x86_64`, `adbe install -r`.
+  `adbe shell input keyevent KEYCODE_DPAD_DOWN` / `KEYCODE_Z` reach the
+  game as keys. The emulator reaches this machine as 10.0.2.2: host on the
+  desktop (offscreen LÖVE, `POKEPORT_COOP_HOST`), JOIN by address on the
+  phone. A desktop host from `newGame` is in its own opening (sees nobody):
+  give it `EVENT_GOT_STARTER` and a party Pokémon first. Taps are window
+  pixels of the 1080 x 2400 screen. The voxel mod builds its cache once
+  (about 5 min on the emulator).
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -293,13 +318,15 @@ Forfeit EXP became #67 (Group 12).
 
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
-- The Superset worktree `veiled-degree-…` is on
-  `coop/group10-editor-close` (PR #71); remove it once #71 is merged.
-  `coop/group10-launcher-entries` is deleted (GitHub and local).
-- The old local branches (`coop/group8-opening`, `coop/group7a-party-pc`,
-  `veiled-degree-51672277`) are deleted. No background processes.
-- Scratch: `g11/`, `g12/`, `g10/` and `g10b/` (#70's import, drivers,
-  runs, PR body) are deleted. `mod-dl/dsv` is the owner's
+- The Superset worktree `veiled-degree-…` is on `coop/group10-mobile`
+  (PR #74). `coop/group10-editor-close` (#71, merged) still exists
+  locally and on GitHub: the owner's call below.
+- No background processes (the emulator and the desktop host are stopped).
+- Scratch: `g7/` (#7's runs, host import, PR body) is deleted.
+  `android-sdk/` (9.7 GB: SDK, NDK, emulator, the AVD `coop34`, whose
+  app data still holds an imported Red cache) and `android-build/`
+  (1.2 GB, incremental gradle tree) are kept for #73 unless the owner says
+  otherwise; `bin/` holds the helpers above; `mod-dl/dsv` is the owner's
   copy of the 3D mod (never committed); `verify/` holds verify logs.
 
 ## Still open
@@ -308,7 +335,9 @@ Forfeit EXP became #67 (Group 12).
   and disable upstream's workflows.
 - Local tools: luacheck is not installed yet; the owner runs `sudo pacman
   -S luacheck` (then `tools/verify.sh` runs the lint gate too). CI gates
-  it on every pull request. JDK 17 is installed.
+  it on every pull request. JDK 17 is installed. `zip` is not installed
+  (`sudo pacman -S zip`); until then `tools/build_android.sh` runs with the
+  stand-in in scratch `bin/`.
 
 ## Cleanup
 
