@@ -390,6 +390,11 @@ local function handlePadAction(action)
     elseif S.speciesPicker or S.movePicker or S.itemPicker or S.itemMenu or S.chromeMenu
         or Kit.focus or S.editingMon or (S.tab == "map" and S.mapFocused) then
       App.keypressed("escape")
+    elseif S.dirty and S._quitArmed and S._quitArmedByWindow then
+      -- co-op (#70): a refused window close armed Discard?, and B (Close)
+      -- right after it dropped the edit with no ask; ask once more first
+      S._quitArmedByWindow = nil
+      Ops.say(S, "Unsaved changes,  Save first or press B again to discard", "warn")
     else
       App.close()
     end
@@ -467,6 +472,7 @@ function App.close()
   end
   if S.dirty and not S._quitArmed then
     S._quitArmed = true
+    S._quitArmedByWindow = nil -- co-op (#70)
     Ops.say(S, "Unsaved changes,  Save first or click Close again to discard", "warn")
     return false
   end
@@ -1238,6 +1244,7 @@ function App.quit()
     -- simple: block quit once and set status; user saves or force-quits again
     if not S._quitArmed then
       S._quitArmed = true
+      S._quitArmedByWindow = true -- co-op (#70): see handlePadAction
       Ops.say(S, "Unsaved changes,  save or press quit again", "warn")
       return true
     end

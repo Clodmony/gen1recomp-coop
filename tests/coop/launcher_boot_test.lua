@@ -470,6 +470,29 @@ do
   check(tostring(st.path or ""):find(slot, 1, true) ~= nil, "on the slot's file: " .. tostring(st.path))
   check(not table.concat(drawnText(), " "):find("SAVES", 1, true), "the launcher is not drawn under it")
   noLauncherModules("with the save editor open")
+  -- #70: a window close with an unsaved edit is refused, and the editor
+  -- stays up over the next frames (it closed on its own once, 10 frames on)
+  st.dirty = true
+  check(love.quit() == true, "a window close with an unsaved edit is refused")
+  frames(30)
+  check(App.getState() ~= nil and not table.concat(drawnText(), " "):find("SAVES", 1, true),
+    "the editor stays open after the refused close")
+  check(st._quitArmed == true, "and offers Discard?")
+  -- #70: the cause, a pad's B (the editor's Close) right after the refused
+  -- close discarded the edit with no second ask; now it asks again first
+  local pad = setmetatable({}, { __index = function() return function() return false end end })
+  love.gamepadpressed(pad, "b")
+  love.gamepadreleased(pad, "b")
+  frames(2)
+  check(App.getState() ~= nil and st.dirty == true, "a pad's B after the refused close keeps the editor and the edit")
+  love.gamepadpressed(pad, "b")
+  love.gamepadreleased(pad, "b")
+  frames(2)
+  check(App.getState() == nil, "a second B discards, as before")
+  eq(Launcher.current, l, "and comes back to the same launcher")
+  click(l, "edit", nil)
+  frames(2)
+  check(App.getState() ~= nil, "EDIT opens the editor again")
   if App then App.close() end
   frames(2)
   eq(Launcher.current, l, "Close comes back to the same launcher")
