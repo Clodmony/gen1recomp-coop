@@ -48,7 +48,8 @@ language, under every page and every message.
   the launcher; the editor's Close (Discard? with unsaved edits) brings
   the same launcher back on the SAVES page; a slot the editor cannot open
   is answered there ("Could not open the save editor: …"). A window close
-  with unsaved edits asks the editor first, as upstream's does. IMPORT .SAV takes a 32 KB cartridge save (.sav/.srm, as an
+  with unsaved edits asks the editor first, as upstream's does; a pad's B
+  (the editor's Close) right after it asks once more before it discards (#70). IMPORT .SAV takes a 32 KB cartridge save (.sav/.srm, as an
   emulator or a cartridge reader writes it) by a dropped file or a typed or
   pasted path and puts it into a new slot, made active; a bigger file asks
   whether to take its first 32 KB; a file that is no save is refused with
@@ -399,10 +400,23 @@ unsaved edit was refused; the editor's Save and Close (its own calls)
 brought the same launcher back on the SAVES page, and CONTINUE booted Red
 with the 3D Dramatic Shape mod (#30) at level 4 holding the edited money.
 In one of eleven runs the editor closed on its own after the refused
-window close and the edit was not saved. It did not happen again, not
-even with the test machine's real gamepads muted, and the cause is not
-known. The editor's growing of a small desktop window, a real mouse and
-keyboard in the editor, and Blue and Yellow saves have not been run.
+window close and the edit was not saved.
+
+That close (#70) was then run with real input: the game under a private
+headless gamescope (its own Xwayland, SDL's X11 driver), a real mouse
+click on EDIT, real pointer moves, clicks and keys, a real focus loss and
+back (a second X window took the focus) and a real window close (the
+window manager's WM_DELETE_WINDOW), 40 runs with the test machine's
+gamepads muted and not. The refused close never closed the editor; the
+editor's Save and Close by real clicks brought the launcher back with the
+edit saved. The one failing run had a real pad press reach the process
+(the launcher went back from SAVES after the editor closed), and that
+gives the cause: B on a pad is the editor's Close, and the refused window
+close had armed Discard?, so one B dropped the edit at once (reproduced by
+a B pushed through LÖVE's event queue). B now asks once more after a
+refused window close; a second B, Discard? and a second window close
+still discard. Blue and Yellow saves and the editor's growing of a small
+desktop window have not been run.
 
 ## Tests
 
