@@ -41,7 +41,8 @@ on.
   review a merge commit and the owner was away); no merge commit, #70
   closed.
 - Protocol and campaign file unchanged by #27, #70 and #7. Decision G38
-  (#27's entries) recorded from the owner's answers; **G39 (#7) proposed**.
+  (#27's entries) recorded from the owner's answers; G39 (#7) accepted
+  as built (owner, 2026-10-17).
 - Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15
   (owner-side checks). Group 9 has no issues. Group 10 now: #7 (in PR
   #74), #72 (quick save/load/speed in a session) and #73 (A15.2 swipe and
@@ -56,7 +57,17 @@ on.
   debug APK, fork app id, upstream launcher stripped), `docs/coop/mobile.md`,
   G39 proposed. Verify: ALL PASSED at d6bc715d (38/38 tiers); live on an
   Android 14 emulator incl. co-op with a desktop host and the 3D mod.
-  Needs the owner's answers (below) and merge.
+  The next session merges it as Claude once coop-ci is green (owner).
+
+## #7's answers (owner, 2026-10-17: every recommendation taken)
+
+- #74: the next session merges it locally as Claude once coop-ci is
+  green (a merge commit, if `gen1recomp-coop` moved, is pushed by the
+  owner with `--no-verify`).
+- G39 accepted as built.
+- Scratch `android-sdk/` and `android-build/` kept for #73; the
+  emulator's app data was wiped (done; the AVD boots clean).
+- `coop/group10-editor-close` deleted locally and on GitHub (done).
 
 ## #70's answers (owner, 2026-10-17: every recommendation taken)
 
@@ -319,14 +330,12 @@ Forfeit EXP became #67 (Group 12).
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
 - The Superset worktree `veiled-degree-…` is on `coop/group10-mobile`
-  (PR #74). `coop/group10-editor-close` (#71, merged) still exists
-  locally and on GitHub: the owner's call below.
+  (PR #74). `coop/group10-editor-close` (#71, merged) is deleted.
 - No background processes (the emulator and the desktop host are stopped).
 - Scratch: `g7/` (#7's runs, host import, PR body) is deleted.
-  `android-sdk/` (9.7 GB: SDK, NDK, emulator, the AVD `coop34`, whose
-  app data still holds an imported Red cache) and `android-build/`
-  (1.2 GB, incremental gradle tree) are kept for #73 unless the owner says
-  otherwise; `bin/` holds the helpers above; `mod-dl/dsv` is the owner's
+  `android-sdk/` (9.7 GB: SDK, NDK, emulator, the AVD `coop34`,
+  app data wiped) and `android-build/` (1.2 GB, incremental gradle tree)
+  are kept for #73 (owner); `bin/` holds the helpers above; `mod-dl/dsv` is the owner's
   copy of the 3D mod (never committed); `verify/` holds verify logs.
 
 ## Still open
