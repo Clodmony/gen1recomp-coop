@@ -6,7 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (Group 10's #27 in PR #69; #7 left in Group 10).
+Last updated 2026-10-17 (#69 merged; Group 10's #70 in PR #71; #7 left in Group 10).
 
 ## Testing rule (owner, 2026-10-16)
 
@@ -32,23 +32,23 @@ on.
   locally as Claude. CI passed every check on it, luacheck included.
 - Protocol 18; campaign file version 5. Decisions G1 to G37 all accepted
   (G36 the owner's own call on #67; G37 accepted as built, 2026-10-16).
-- Protocol and campaign file unchanged by #27. Decision G38 (#27's
+- **Merged 2026-10-17** (owner): #69 (#27), locally as Claude; the owner
+  pushed the merge (the push-guard cannot review a merge commit with no
+  patch of its own, so it needs the owner's `--no-verify` push).
+- Protocol and campaign file unchanged by #27 and #70. Decision G38 (#27's
   entries) recorded from the owner's answers.
 - Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15
   (owner-side checks); Group 10 holds #7 (mobile) and #27 (in PR #69).
-  Group 9 has no issues.
+  Group 9 has no issues. Group 10 now: #7 and #70 (in PR #71).
 
 ## Open pull requests
 
-- **#69** `coop/group10-launcher-entries` → `gen1recomp-coop`, draft:
-  #27. EDIT on a solo SAVES row opens upstream's save editor
-  (`main.lua`'s `openEditor`, now passed as `onEditSave`). Needs the
-  owner's merge. Verify: ALL PASSED at e1c43d16 (38/38 tiers).
-  One unexplained run: 1 of 11 live runs closed the editor on its own
-  after a refused window close (edit lost), and it did not happen again
-  (launcher.md *Checked*). This machine's real gamepads reach offscreen
-  test windows; a driver that does not use pads should mute them (see
-  the recipe).
+- **#71** `coop/group10-editor-close` → `gen1recomp-coop`, draft: #70.
+  A pad's B right after a refused window close (unsaved edit) discarded
+  the edit at once; it now asks once more (`tools/save-editor/App.lua`,
+  marked co-op #70). Needs the owner's merge (and a `--no-verify` push of
+  the merge commit, see above). Verify: ALL PASSED at 5ad7df66 (38/38
+  tiers); live: 40 real-input runs before the fix, 11 after.
 
 ## #27's answers (owner, 2026-10-16: every recommendation taken)
 
@@ -138,9 +138,7 @@ Forfeit EXP became #67 (Group 12).
 
 ## Next candidates
 
-- **First: merge #69** once coop-ci is green on it (owner-approved).
-- **#70** (Group 10): the editor's one early close; a live run with a
-  real mouse and keyboard.
+- **First: merge #71** if the owner says so (once coop-ci is green).
 - **#7 mobile** (Group 10): an Android build of the fork's
   launcher (check which upstream mobile build scripts work without the
   proprietary launcher), touch on the launcher, and the skin studio and
@@ -257,6 +255,18 @@ Forfeit EXP became #67 (Group 12).
   visible to an offscreen LÖVE run. A driver that uses no pads should
   replace `love.gamepadpressed` and the other joystick callbacks with
   no-ops and `love.joystick.getJoysticks` with an empty list.
+- **Real input (#70).** `gamescope --backend headless -W 1280 -H 900 -w
+  1280 -h 900 -- run.sh` with `env -u WAYLAND_DISPLAY -u DISPLAY` and a
+  private `XDG_RUNTIME_DIR` (mode 700) runs the game with
+  `SDL_VIDEODRIVER=x11` on gamescope's own Xwayland, off the owner's
+  screen. python-xlib's XTEST sends real pointer moves, clicks and keys;
+  gamescope puts the one window at the root origin, so window coordinates
+  are root coordinates. A window close is a `WM_PROTOCOLS` /
+  `WM_DELETE_WINDOW` client message; a focus loss is a second mapped X
+  window taking `set_input_focus`. The editor's buttons: set
+  `Kit.audit = {}` before each draw and read the `control` entries by
+  label. Real pads still reach the process: mute them (*Real pads*) unless
+  the run is about pads. Drivers were in `g10b/` (deleted).
 - **The save editor (#27).** main.lua does not resume the driver while
   the editor runs. Wrap `love.update` in the driver to act on
   `package.loaded.App.getState()` and call `App.save()` and `App.close()`,
@@ -274,12 +284,13 @@ Forfeit EXP became #67 (Group 12).
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
 - The Superset worktree `veiled-degree-…` is on
-  `coop/group10-launcher-entries` (PR #69); remove it once #69 is
-  merged. `coop/group12-followups` is deleted.
+  `coop/group10-editor-close` (PR #71); remove it once #71 is merged.
+  `coop/group10-launcher-entries` (merged #69) is still on GitHub and
+  locally: delete both with the owner's approval.
 - The old local branches (`coop/group8-opening`, `coop/group7a-party-pc`,
   `veiled-degree-51672277`) are deleted. No background processes.
-- Scratch: `g11/`, `g12/` and `g10/` (#27's import, probes, PR body)
-  are deleted. `mod-dl/dsv` is the owner's
+- Scratch: `g11/`, `g12/`, `g10/` and `g10b/` (#70's import, drivers,
+  runs, PR body) are deleted. `mod-dl/dsv` is the owner's
   copy of the 3D mod (never committed); `verify/` holds verify logs.
 
 ## Still open
