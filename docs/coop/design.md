@@ -1646,7 +1646,7 @@ sibling's D-numbers.
   app id with upstream's launcher taken out of `game.love`. iOS stays
   unbuilt (needs macOS). Details: [mobile.md](mobile.md).
 - **G40. The quick keys in a session: SAVE saves the campaign, LOAD is
-  off, SPEED stays each player's** (#72, 2026-10-17, proposed). F1 and
+  off, SPEED stays each player's** (#72, 2026-10-17, accepted as built by the owner the same day). F1 and
   the quick bar's SAVE are `Game:writeSave`, so they save the campaign
   (A3.11). Where START > SAVE refuses (A3.10: a battle running, the
   opening), F1 writes nothing and shows the save box's text as a notice.

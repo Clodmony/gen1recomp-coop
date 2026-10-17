@@ -49,7 +49,7 @@ on.
   owner said they would push it themselves (`af169152:gen1recomp-coop`,
   with the push-guard bypass only the owner may use). Until then GitHub
   shows #74 open.
-- Decision G40 (#72) proposed.
+- Decision G40 (#72) accepted as built (owner, 2026-10-17).
 - Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15
   (owner-side checks). Group 9 has no issues. Group 10 now: #72 (in PR
   #76), #73 (A15.2 swipe and tap gestures on a phone) and #75 (the
@@ -62,11 +62,20 @@ on.
 - **#76** `coop/group10-quick-keys` → `gen1recomp-coop`, draft: #72
   (Closes). F1/SAVE saves the campaign and is refused with a notice
   wherever START > SAVE refuses. F2/LOAD loads nothing in a session.
-  Notices age in real frames, so they last as long at 4X. G40 proposed;
+  Notices age in real frames, so they last as long at 4X. G40 accepted;
   `docs/coop/campaign.md` § The quick keys. The branch starts at
   `af169152`, so its diff shows #74's commits until that merge is
   pushed. Verify: ALL PASSED at a184b2be (38/38 tiers). Live: two
   processes with US Red, once with the 3D mod (see the PR).
+
+## #72's answers (owner, 2026-10-17: every recommendation taken)
+
+- G40 accepted as built.
+- #76: the next session merges it locally as Claude once `af169152` is
+  on `origin/gen1recomp-coop` and coop-ci is green on #76.
+- German "Kein Laden im Koop: Die Welt liegt beim Host.": kept, for the
+  owner's later review of `german-wording.md`.
+- Next session: #75 (the `>` glyph).
 
 ## #7's answers (owner, 2026-10-17: every recommendation taken)
 
@@ -176,7 +185,8 @@ Forfeit EXP became #67 (Group 12).
 ## Next candidates
 
 - **First:** check that `af169152` reached `origin/gen1recomp-coop` (#74
-  closed). Then merge #76 if the owner says so.
+  closed), then merge #76 locally as Claude once coop-ci is green (owner).
+- **Then #75** (the owner's pick for the next session).
 - **#75** (Group 10, small): the partner-battle notice's `>`. First
   step: a test that draws every co-op notice and menu string with
   `Font` and fails on a missing glyph.
