@@ -50,6 +50,15 @@ on.
   the merge commit, see above). Verify: ALL PASSED at 5ad7df66 (38/38
   tiers); live: 40 real-input runs before the fix, 11 after.
 
+## #70's answers (owner, 2026-10-17: every recommendation taken)
+
+- B after a refused window close asks once more: kept as built.
+- #71: the next session merges it locally as Claude once coop-ci is
+  green; the owner pushes the merge commit with `--no-verify`.
+- `coop/group10-launcher-entries` deleted on GitHub and locally (done).
+- #7: test on an Android emulator on this machine; split-screen on a
+  phone left out for now.
+
 ## #27's answers (owner, 2026-10-16: every recommendation taken)
 
 - This session: #27 (not #7).
@@ -143,8 +152,9 @@ Forfeit EXP became #67 (Group 12).
   launcher (check which upstream mobile build scripts work without the
   proprietary launcher), touch on the launcher, and the skin studio and
   touch-controls editor entries #27 left to it (`main.lua`'s
-  `openTouchControlsEditor`, `src/ui/TouchControlsEditor.lua`). Ask the
-  owner first: emulator or device, split-screen on a phone or not.
+  `openTouchControlsEditor`, `src/ui/TouchControlsEditor.lua`). The
+  owner chose an Android emulator on this machine, no split-screen on a
+  phone for now.
 - Group 2's #12 and #15 are owner-side checks.
 
 ## Live-run recipe
@@ -285,8 +295,7 @@ Forfeit EXP became #67 (Group 12).
   it to the owner).
 - The Superset worktree `veiled-degree-…` is on
   `coop/group10-editor-close` (PR #71); remove it once #71 is merged.
-  `coop/group10-launcher-entries` (merged #69) is still on GitHub and
-  locally: delete both with the owner's approval.
+  `coop/group10-launcher-entries` is deleted (GitHub and local).
 - The old local branches (`coop/group8-opening`, `coop/group7a-party-pc`,
   `veiled-degree-51672277`) are deleted. No background processes.
 - Scratch: `g11/`, `g12/`, `g10/` and `g10b/` (#70's import, drivers,
