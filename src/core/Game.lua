@@ -888,10 +888,14 @@ function Game:keypressed(key)
     local hk = Input.hotkeyKey(key)
     if key == "f1" then
       if not self:quickSaveAllowed() then return end
+      -- co-op (#72): refused where the save box refuses (CampaignSave.lua)
+      if not require("src.coop.game.CampaignSave").quickSave(self) then return end
       self:writeSave()
       return
     elseif key == "f2" then
       if not self:quickSaveAllowed() then return end
+      -- co-op (#72): no loading in a session (CampaignSave.lua)
+      if not require("src.coop.game.CampaignSave").quickLoad(self) then return end
       local loaded, recovered = SaveData.load()
       if loaded then
         -- F2 jumps straight to the loaded save's map/position, with no

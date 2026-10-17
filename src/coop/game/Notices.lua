@@ -1,7 +1,8 @@
 -- Notices over the world in a co-op session (#15, design A14.10): a partner
 -- joins or leaves, a refusal; plain sentences in the cartridge's font, light
 -- on a dark backdrop at the top of the screen, that fade after a few seconds.
--- Presence.step ages them every logic frame; the overworld draws them
+-- Presence.step ages them every logic frame, by the frame's share of a real
+-- one (#72: as long at 4X as at 1X); the overworld draws them
 -- (OverworldState:drawUI), under every box and menu.
 
 local Font = require("src.render.Font")
@@ -42,10 +43,12 @@ function Notices.push(text)
   while #list > Notices.MAX do table.remove(list, 1) end
 end
 
-function Notices.step()
+-- speed: the game's logic frames per real frame (Game._frameSpeed)
+function Notices.step(speed)
   local keep = {}
+  local by = 1 / math.max(1, speed or 1)
   for _, n in ipairs(Notices.list) do
-    n.age = n.age + 1
+    n.age = n.age + by
     if n.age < Notices.SHOW then keep[#keep + 1] = n end
   end
   Notices.list = keep

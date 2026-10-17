@@ -328,7 +328,7 @@ function Presence.step(game)
   local s = Presence.session()
   if not s and cur and (cur.endShowUntil or cur.status == "reconnecting") then
     -- the link is down: the notices still show over the world
-    Notices.step()
+    Notices.step(game._frameSpeed)
     return
   end
   if not s then
@@ -382,7 +382,7 @@ function Presence.step(game)
       if a:place(ow, offsetOf) then ow.entities[#ow.entities + 1] = a end
     end
   end
-  Notices.step()
+  Notices.step(game._frameSpeed)
 end
 
 -- the overworld's world pass (OverworldState:draw): the arrows
