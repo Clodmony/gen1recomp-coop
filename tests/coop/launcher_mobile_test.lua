@@ -203,7 +203,6 @@ do
   local page = l:_page()
   check((page.maxScroll or 0) > 0, "SETTINGS is longer than a phone's screen on its side ("
     .. tostring(page.maxScroll) .. ")")
-  local x, y = target(l, "tab:play")
   local screen = l.menu.screen
   love.touchpressed(50, 1200, 900, 0, 0, 1)
   for i = 1, 10 do love.touchmoved(50, 1200, 900 - i * 60, 0, -60, 1) end
@@ -216,7 +215,7 @@ do
   love.touchreleased(51, 1200, 600, 0, 0, 1)
   check(l.ui.scroll < scrolled, "dragging down scrolls back")
   l.ui.scroll = 0
-  x, y = target(l, "tab:play")
+  local x, y = target(l, "tab:play")
   love.touchpressed(52, x, y, 0, 0, 1)
   love.touchmoved(52, x + 3, y + 2, 3, 2, 1)
   love.touchreleased(52, x + 3, y + 2, 0, 0, 1)
