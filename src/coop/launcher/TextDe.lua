@@ -164,6 +164,8 @@ return {
     "Jeder Platz ist ein Abenteuer. Das Spiel setzt den aktiven fort.",
   ["PLAY →"] = "SPIELEN →",
   ["EXPORT"] = "EXPORTIEREN",
+  ["EDIT"] = "BEARBEITEN",
+  ["Could not open the save editor: %s"] = "Der Spielstand-Editor ließ sich nicht öffnen: %s",
   ["IMPORT"] = "IMPORTIEREN",
   ["+ NEW SAVE"] = "+ NEUER SPIELSTAND",
   ["IMPORT .SAV"] = ".SAV IMPORTIEREN",

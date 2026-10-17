@@ -40,8 +40,15 @@ language, under every page and every message.
   PLAY makes a slot the active one and boots the game to continue it, + NEW
   SAVE adds an empty slot and boots on it (the game offers NEW GAME), EXPORT
   writes the slot as a cartridge save to `exports/<game>/gen1recomp-<game>-<slot>.sav`
-  in the save folder and names the file, DELETE asks first and removes the
-  slot for good. IMPORT .SAV takes a 32 KB cartridge save (.sav/.srm, as an
+  in the save folder and names the file, EDIT (#27) opens upstream's save
+  editor (`tools/save-editor`, GPL) on the slot's file, DELETE asks first
+  and removes the slot for good. EDIT is offered for a solo slot that holds
+  a save; a campaign's slot is the host's world and an empty slot has
+  nothing to edit. While the editor runs, `main.lua`'s `openEditor` parks
+  the launcher; the editor's Close (Discard? with unsaved edits) brings
+  the same launcher back on the SAVES page; a slot the editor cannot open
+  is answered there ("Could not open the save editor: …"). A window close
+  with unsaved edits asks the editor first, as upstream's does. IMPORT .SAV takes a 32 KB cartridge save (.sav/.srm, as an
   emulator or a cartridge reader writes it) by a dropped file or a typed or
   pasted path and puts it into a new slot, made active; a bigger file asks
   whether to take its first 32 KB; a file that is no save is refused with
@@ -242,8 +249,9 @@ says so and names its backup instead of hosting it.
 - `Keypad.lua`: the text entry grid.
 - `Saves.lua` (#6): the SAVES page's model: the slots with their summary,
   PLAY, NEW SAVE, DELETE and its question, IMPORT .SAV (typed, pasted or
-  dropped, the oversized question) and EXPORT of any slot (made active for
-  upstream's export, the active slot put back).
+  dropped, the oversized question), EXPORT of any slot (made active for
+  upstream's export, the active slot put back) and EDIT, a command
+  `Launcher.lua` hands to `main.lua`'s `openEditor` (`onEditSave`).
 - `Mods.lua` (#30): the MODS page's model: the installed mods, ON/OFF,
   the install and the optional file screens. The mods themselves are
   `src/coop/mods/Installed.lua`, on the GPL mod modules (`Manifest`,
@@ -273,14 +281,24 @@ splash and theme videos that play files from `assets/launcher/`.
 each boot path above. `LauncherWindow.lua` (the launcher's window size and
 fullscreen memory) is not on the licence's list and stays.
 
-Upstream features that only its launcher reaches are not offered yet: mod
-updates, profiles and indexes (the MODS page turns mods on and off and
-installs them, #30) and mod updates before a shortcut boot (`main.lua` asks
-for none),
-the save editor, the skin studio, the touch-controls editor, the Box, carts and
-the other games. Mobile is #7; the game's CONTROLS and OPTIONS menus stay
-in the game and agree with the launcher's pages (#4, #5), and the save
-editor stays upstream's (the SAVES page lists, imports and exports, #6).
+Upstream features that only its launcher reached, as #27 decided them
+(owner, 2026-10-16, decision G38 in [design.md](design.md)):
+
+- **Mods**: the MODS page (#30) turns mods on and off and installs them.
+  Mod updates, profiles and indexes and mod updates before a shortcut boot
+  (`main.lua` asks for none) are not offered.
+- **The save editor**: EDIT on a SAVES row (above). The editor itself
+  stays upstream's.
+- **The skin studio and the touch-controls editor**: left to #7 (mobile),
+  which decides and builds their entries; they matter on touch screens.
+- **Carts** (`src/carts`, mod sets packaged as a cartridge): left out for
+  now. A co-op campaign needs both players on one game and one set of
+  mods, and a cart would add a third thing to match; revisit after the
+  playthrough.
+- The Box and the other games (Gold and later) are not offered.
+
+The game's CONTROLS and OPTIONS menus stay in the game and agree with the
+launcher's pages (#4, #5).
 
 ## Save folder and upstream services
 
@@ -373,6 +391,19 @@ German at 1024 x 768 and 480 x 400, and PLAY booting Red on the slot: the
 game's save held BRIO with the badges. A real cartridge dump's .sav, a
 dropped file under LÖVE and a phone have not been run.
 
+EDIT (#27) was run on Linux (LÖVE 11.5, offscreen) with a private US Red
+import and a solo save made by NEW GAME in the game: a mouse click on EDIT
+opened upstream's editor on `saves/red/slot1.lua`; it ran its frames
+through focus lost and back and hidden and shown; a window close with an
+unsaved edit was refused; the editor's Save and Close (its own calls)
+brought the same launcher back on the SAVES page, and CONTINUE booted Red
+with the 3D Dramatic Shape mod (#30) at level 4 holding the edited money.
+In one of eleven runs the editor closed on its own after the refused
+window close and the edit was not saved. It did not happen again, not
+even with the test machine's real gamepads muted, and the cause is not
+known. The editor's growing of a small desktop window, a real mouse and
+keyboard in the editor, and Blue and Yellow saves have not been run.
+
 ## Tests
 
 `tests/coop/` runs in the `engine` group of `scripts/test.sh` (and so in
@@ -393,6 +424,11 @@ DELETE and its question, the import of a fixture-built .sav (and of an
 oversized one after the question, and the refusal of a wrong file), EXPORT
 of a slot that is not active, and the round trip of the export back in;
 the boot test drops a .sav on the launcher, exports, asks DELETE and plays.
+EDIT (#27): `saves_test.lua` checks the row (a solo slot with a save only,
+none without an editor) and its command; the boot test clicks EDIT, gets
+upstream's real editor on the slot's file with no upstream launcher module
+loaded, closes it back to the same launcher's SAVES page and has a slot
+the editor cannot open answered on the page.
 `game_options_test.lua` (#5) reads the defaults from no file, steps every
 row and reads each change back from `options.lua`, falls back from a broken
 file, and walks the rows in the menu (A, left, right); the boot test sets

@@ -437,4 +437,58 @@ do
   SaveData.invalidateOptionsCache()
 end
 
+-- 11. EDIT (#27): a solo save opens upstream's save editor (GPL,
+-- tools/save-editor) over the fork's launcher; its Close comes back to the
+-- SAVES page; a slot the editor cannot open is answered on the page
+do
+  Launcher.current = nil
+  local SaveData = require("src.core.SaveData")
+  love.filesystem.remove("options.lua")
+  SaveData.invalidateOptionsCache()
+  SaveData.resetSlotState()
+  ready = { red = true }
+  love.load({})
+  frames(2)
+  local l = Launcher.current
+  for _, old in ipairs(SaveData.listSlots("red")) do SaveData.deleteSlot("red", old.id) end
+  local slot = SaveData.createSlot("red")
+  SaveData.writeSlot("red", slot, { version = "red", player = { name = "BRIO", map = "PALLET_TOWN", x = 5, y = 6 },
+    pokedex = { seen = {}, owned = {} }, inventory = {}, playTime = 0 })
+  l.menu:select("red")
+  l.menu:go("solo")
+  l.menu:openSaves()
+  frames(1)
+  eq(l.menu.screen, "saves", "the SAVES page of Red")
+  -- the stub has no require path of its own: main.lua then puts the
+  -- editor's folders on package.path, relative to the source
+  love.filesystem.getSource = love.filesystem.getSource or function() return "." end
+  click(l, "edit", nil)
+  frames(2)
+  local App = package.loaded["App"]
+  check(App ~= nil and App.getState and App.getState() ~= nil, "EDIT opens the save editor")
+  local st = App and App.getState and App.getState() or {}
+  check(tostring(st.path or ""):find(slot, 1, true) ~= nil, "on the slot's file: " .. tostring(st.path))
+  check(not table.concat(drawnText(), " "):find("SAVES", 1, true), "the launcher is not drawn under it")
+  noLauncherModules("with the save editor open")
+  if App then App.close() end
+  frames(2)
+  eq(Launcher.current, l, "Close comes back to the same launcher")
+  eq(l.menu.screen, "saves", "on the SAVES page")
+  check(showsCredit(), "which shows the credit line")
+  love.keypressed("down")
+  frames(1)
+  check(l.menu.saves ~= nil, "the page takes keys again")
+  -- a slot the editor cannot resolve on disk: the page says why
+  local savedPath = SaveData.slotDiskPath
+  SaveData.slotDiskPath = function() return nil end
+  click(l, "edit", nil)
+  frames(1)
+  SaveData.slotDiskPath = savedPath
+  eq(Launcher.current, l, "a refused EDIT keeps the launcher")
+  check(l.menu:currentNotice() and l.menu:currentNotice():find("save slot on disk", 1, true),
+    "and says why: " .. tostring(l.menu:currentNotice()))
+  noLauncherModules("after the save editor")
+  Launcher.current = nil
+end
+
 T.finish()

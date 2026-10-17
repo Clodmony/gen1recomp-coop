@@ -1625,3 +1625,12 @@ sibling's D-numbers.
   row back with its next world: a clone) and the same gap in a direct
   trade, which also lost the host's lay-over on a host restart. Details:
   [friends.md](friends.md), [cable.md](cable.md).
+- **G38. The fork's launcher reaches the save editor; touch tools wait
+  for mobile; carts stay out** (#27, owner, 2026-10-16). Of the upstream
+  features only upstream's launcher reached: mods are the MODS page
+  (#30); the save editor (`tools/save-editor`, GPL) opens from EDIT on a
+  solo SAVES row through `main.lua`'s `openEditor`, never on a campaign's
+  slot (the host's world); the skin studio and the touch-controls editor
+  are #7's to decide with mobile; carts are left out for now, since a
+  campaign would have to match them between players. Details:
+  [launcher.md](launcher.md) *What it leaves out*.

@@ -6,7 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-16 (Group 12 merged as #68; Group 10 next).
+Last updated 2026-10-16 (Group 10's #27 in PR #69; #7 left in Group 10).
 
 ## Testing rule (owner, 2026-10-16)
 
@@ -32,12 +32,36 @@ on.
   locally as Claude. CI passed every check on it, luacheck included.
 - Protocol 18; campaign file version 5. Decisions G1 to G37 all accepted
   (G36 the owner's own call on #67; G37 accepted as built, 2026-10-16).
-- Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15 (owner-side checks); Group 10 holds #7
-  (mobile) and #27 (launcher entries). Group 9 has no issues.
+- Protocol and campaign file unchanged by #27. Decision G38 (#27's
+  entries) recorded from the owner's answers.
+- Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15
+  (owner-side checks); Group 10 holds #7 (mobile) and #27 (in PR #69).
+  Group 9 has no issues.
 
 ## Open pull requests
 
-None.
+- **#69** `coop/group10-launcher-entries` → `gen1recomp-coop`, draft:
+  #27. EDIT on a solo SAVES row opens upstream's save editor
+  (`main.lua`'s `openEditor`, now passed as `onEditSave`). Needs the
+  owner's merge. Verify: ALL PASSED at e1c43d16 (38/38 tiers).
+  One unexplained run: 1 of 11 live runs closed the editor on its own
+  after a refused window close (edit lost), and it did not happen again
+  (launcher.md *Checked*). This machine's real gamepads reach offscreen
+  test windows; a driver that does not use pads should mute them (see
+  the recipe).
+
+## #27's answers (owner, 2026-10-16: every recommendation taken)
+
+- This session: #27 (not #7).
+- Save editor: EDIT on a solo save row; campaign worlds not editable.
+- Skin studio and touch-controls editor: deferred to #7.
+- Carts: left out for now; revisit after the playthrough.
+- At the handoff: merge #69 locally as Claude once coop-ci passes on it
+  (the next session does it, then removes this worktree); the editor's
+  one early close is filed as #70 (Group 10), to be looked at again in a
+  live run with a real mouse; BEARBEITEN and the refusal line are kept
+  for the owner's later review in `german-wording.md`; the merged local
+  branch `coop/group12-followups` is deleted.
 
 ## Group 12's answers (owner, 2026-10-16: every recommendation taken)
 
@@ -114,8 +138,15 @@ Forfeit EXP became #67 (Group 12).
 
 ## Next candidates
 
-- **Group 10** (#7 mobile, #27 launcher entries): it needs the owner's
-  decisions per feature; ask them first, with the issues' options.
+- **First: merge #69** once coop-ci is green on it (owner-approved).
+- **#70** (Group 10): the editor's one early close; a live run with a
+  real mouse and keyboard.
+- **#7 mobile** (Group 10): an Android build of the fork's
+  launcher (check which upstream mobile build scripts work without the
+  proprietary launcher), touch on the launcher, and the skin studio and
+  touch-controls editor entries #27 left to it (`main.lua`'s
+  `openTouchControlsEditor`, `src/ui/TouchControlsEditor.lua`). Ask the
+  owner first: emulator or device, split-screen on a phone or not.
 - Group 2's #12 and #15 are owner-side checks.
 
 ## Live-run recipe
@@ -222,6 +253,14 @@ Forfeit EXP became #67 (Group 12).
   - Group 11's and 12's drivers and save templates are deleted. A new
     live run imports the cartridge again (*Import* above) and makes new
     solo saves with `newGame`.
+- **Real pads (2026-10-16).** This machine's connected controllers are
+  visible to an offscreen LÖVE run. A driver that uses no pads should
+  replace `love.gamepadpressed` and the other joystick callbacks with
+  no-ops and `love.joystick.getJoysticks` with an empty list.
+- **The save editor (#27).** main.lua does not resume the driver while
+  the editor runs. Wrap `love.update` in the driver to act on
+  `package.loaded.App.getState()` and call `App.save()` and `App.close()`,
+  the calls its buttons make.
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -234,12 +273,13 @@ Forfeit EXP became #67 (Group 12).
 
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
-- The Superset worktree `veiled-degree-…` is on the merged
-  `coop/group12-followups`; the owner kept it. Its branch is deleted on
-  GitHub; delete it locally when the worktree goes.
+- The Superset worktree `veiled-degree-…` is on
+  `coop/group10-launcher-entries` (PR #69); remove it once #69 is
+  merged. `coop/group12-followups` is deleted.
 - The old local branches (`coop/group8-opening`, `coop/group7a-party-pc`,
   `veiled-degree-51672277`) are deleted. No background processes.
-- Scratch: `g11/` and `g12/` are deleted. `mod-dl/dsv` is the owner's
+- Scratch: `g11/`, `g12/` and `g10/` (#27's import, probes, PR body)
+  are deleted. `mod-dl/dsv` is the owner's
   copy of the 3D mod (never committed); `verify/` holds verify logs.
 
 ## Still open
