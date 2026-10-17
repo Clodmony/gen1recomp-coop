@@ -407,7 +407,7 @@ P["SAVED JUST NOW"] = "GERADE GESPEICHERT"
 P["SAVED %d MIN AGO"] = "VOR %d MIN GESP."
 P["SAVED %d H AGO"] = "VOR %d H GESP."
 P["AUTOSAVE: ON"] = "AUTO-SPEICHERN: AN"
-P["No loading in co-op: the host keeps the world."] = "Kein Laden im Koop: Die Welt liegt beim Host." -- #72
+P["No loading in co-op: the host keeps the world."] = "Kein Laden im Koop: Die Welt liegt beim Host."
 -- co-op story items (#16)
 P["%s shared %s."] = "%s teilt %s."
 P["%s went to the PC."] = "%s liegt jetzt im PC."
