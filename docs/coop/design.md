@@ -1635,8 +1635,8 @@ sibling's D-numbers.
   campaign would have to match them between players. Details:
   [launcher.md](launcher.md) *What it leaves out*.
 - **G39. A phone gets the file picker, the save-as screen and the
-  on-screen controls' tools; the fork builds its own APK** (proposed, #7,
-  2026-10-17; the owner chose an Android emulator on this machine and no
+  on-screen controls' tools; the fork builds its own APK** (#7, accepted
+  as built by the owner, 2026-10-17; the owner chose an Android emulator on this machine and no
   split-screen on a phone for now). On Android and iOS the launcher's
   import screens open the system's file picker (CHOOSE FILE) instead of a
   typed path, EXPORT opens the save-as screen, a tap presses on release
