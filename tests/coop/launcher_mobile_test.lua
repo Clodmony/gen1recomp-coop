@@ -162,6 +162,8 @@ do
   local rel = "exports/red/gen1recomp-red-s1.sav"
   love.filesystem.write(rel, "SRAM")
   saves.exportSlot = function() return true, love.filesystem.getSaveDirectory() .. "/" .. rel end
+  check(texts(l):find("EXPORT asks where to put the file", 1, true) ~= nil,
+    "SAVES says an export asks where the file goes")
   check(tap(l, "export"), "SAVES has EXPORT on the slot")
   eq(created[1], "gen1recomp-red-s1.sav", "it opens the system's save-as screen with the file's name")
   eq(love.filesystem.read("pending_export.sav"), "SRAM", "with the exported bytes staged")
@@ -219,6 +221,33 @@ do
   love.touchmoved(52, x + 3, y + 2, 3, 2, 1)
   love.touchreleased(52, x + 3, y + 2, 0, 0, 1)
   eq(l.menu.screen, "play", "a tap that wobbles a little still presses")
+end
+
+-- 6. SETTINGS has the on-screen controls on a phone: their layout opens
+-- upstream's touch-controls editor and their look its skin studio (both
+-- GPL, src/ui), each over the parked launcher, and each closes back to it
+do
+  love.graphics.getDimensions = function() return 1080, 2400 end
+  l.menu:openTab("settings")
+  l.ui = { scroll = 0 }
+  frames(1)
+  check(texts(l):find("ON-SCREEN CONTROLS", 1, true) ~= nil, "SETTINGS has the on-screen controls")
+  check(tap(l, "touch_layout"), "with LAYOUT")
+  frames(2)
+  local Editor = package.loaded["src.ui.TouchControlsEditor"]
+  check(Editor ~= nil and Editor.onClose ~= nil, "which opens the touch-controls editor")
+  if Editor and Editor.onClose then Editor.onClose() end
+  frames(2)
+  eq(Launcher.current, l, "its close comes back to the same launcher")
+  eq(l.menu.screen, "settings", "on SETTINGS")
+  check(tap(l, "touch_skin"), "with SKIN")
+  frames(2)
+  local Studio = package.loaded["src.ui.SkinStudio"]
+  check(Studio ~= nil and Studio.onClose ~= nil, "which opens the skin studio")
+  if Studio and Studio.onClose then Studio.onClose() end
+  frames(2)
+  eq(Launcher.current, l, "its close comes back to the same launcher")
+  eq(l.menu.screen, "settings", "on SETTINGS")
 end
 
 T.finish()

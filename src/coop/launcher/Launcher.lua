@@ -88,6 +88,7 @@ function Launcher.new(onBoot, opts)
   local self = setmetatable({
     onBoot = onBoot, bootOnImport = opts.bootOnImport == true,
     onEditSave = opts.onEditSave,
+    onTouchControls = opts.onTouchControls,
     readyCache = {}, saveCache = {}, clock = 0, axis = {},
     ui = { scroll = 0 }, device = mobile() and "touch" or "keys",
   }, Launcher)
@@ -119,6 +120,7 @@ function Launcher.new(onBoot, opts)
     canQuit = not mobile(),
     canType = not mobile(),
     canPick = canPick(),
+    touchControls = mobile() and opts.onTouchControls ~= nil,
     canOpenLogs = canOpenLogs,
     initial = initial,
     settings = settings,
@@ -416,6 +418,10 @@ function Launcher:_run(command)
     else
       self.menu:notify(L("The file picker could not be opened."))
     end
+  elseif command.kind == "touch_layout" or command.kind == "touch_skin" then
+    -- co-op (#7): main.lua parks this launcher while the editor or studio
+    -- runs and hands it back on their close
+    self.onTouchControls(command.kind == "touch_skin" and "skin" or "layout", command.version)
   elseif command.kind == "export_sav" then
     self:_exportSav(command)
   elseif command.kind == "boot" then

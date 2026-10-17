@@ -13,6 +13,9 @@
 --   { kind = "boot", version = v, newGame = bool }
 --   { kind = "import", path = p }          (a typed ROM path)
 --   { kind = "pick", what = "rom" }        (the system's file picker, #7)
+--   { kind = "touch_layout" }, { kind = "touch_skin" }
+--                                          (the on-screen controls' editor and
+--                                          skin studio, a phone, #7)
 --   { kind = "quit" }
 --   { kind = "open_logs" }
 --   { kind = "settings" }                  (language or theme changed)
@@ -62,6 +65,7 @@ end
 --   canType           -> the import screen takes a typed path
 --   canPick           -> the import screens open the system's file picker
 --                        (a phone, #7)
+--   touchControls     -> SETTINGS has the on-screen controls (a phone, #7)
 --   initial           -> preselect this game
 --   coop(version)     -> the co-op screens' env (CoopMenu.lua), or nil for
 --                        no co-op
@@ -81,6 +85,7 @@ function Menu.new(opts)
     canQuit = opts.canQuit ~= false,
     canType = opts.canType ~= false,
     canPick = opts.canPick == true,
+    touchControls = opts.touchControls == true,
     canOpenLogs = opts.canOpenLogs == true,
     coopEnv = opts.coop,
     settings = opts.settings,
@@ -160,6 +165,11 @@ function Menu:items()
     if self.modsOf then
       add({ id = "mods", group = "mods", label = L("MODS"),
             detail = L("%s →", gameLabel(self.version)) })
+    end
+    -- the on-screen controls of a phone (#7): upstream's editor and studio
+    if self.touchControls then
+      add({ id = "touch_layout", group = "touch", label = L("LAYOUT"), detail = L("EDIT →") })
+      add({ id = "touch_skin", group = "touch", label = L("SKIN"), detail = L("STUDIO →") })
     end
   elseif s == "import" then
     if self.canPick then add({ id = "pick", label = L("CHOOSE FILE") }) end
@@ -484,6 +494,9 @@ function Menu:press(action)
     if id == "mods" then
       self:openMods(self.version)
       return nil
+    end
+    if id == "touch_layout" or id == "touch_skin" then
+      return { kind = id, version = self.version }
     end
     if id == "language" then
       local nextLanguage = Text.language == "de" and "en" or "de"

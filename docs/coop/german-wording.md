@@ -533,6 +533,15 @@ The credit line of upstream's licence is not translated.
 | The chosen file could not be read. | Die gewählte Datei ließ sich nicht lesen. | |
 | the chosen file | die gewählte Datei | |
 | Exported %s. | %s ist exportiert. | |
+| ON-SCREEN CONTROLS | TASTEN AUF DEM BILDSCHIRM | |
+| LAYOUT | ANORDNUNG | |
+| SKIN | AUSSEHEN | |
+| EDIT → | ÄNDERN → | |
+| STUDIO → | STUDIO → | |
+| Move, resize or hide the buttons drawn over the game. | Die Tasten über dem Spiel verschieben, in der Größe ändern oder ausblenden. | |
+| The look of those buttons. | Wie diese Tasten aussehen. | |
+| A mod's .zip, copied into this device's save folder. | Die .zip eines Mods, kopiert in den Speicherordner dieses Geräts. | |
+| A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. EXPORT asks where to put the file. | Eine .sav ist das Format des Moduls, wie ein Emulator oder ein Modul-Lesegerät es schreibt. EXPORTIEREN fragt, wohin die Datei soll. | |
 <!-- end of the made part -->
 
 ## The games (#25)

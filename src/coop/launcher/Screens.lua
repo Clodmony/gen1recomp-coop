@@ -523,10 +523,12 @@ function S.settings(p, menu, c)
     animations = L("Attack animations in battle."),
     battleStyle = L("SHIFT asks before the next Pokemon; SET does not."),
     mods = L("The mods installed on this device, each on or off for this game."),
+    touch_layout = L("Move, resize or hide the buttons drawn over the game."),
+    touch_skin = L("The look of those buttons."),
   }
   local groups = {
     { "launcher", L("LAUNCHER") }, { "video", L("VIDEO") }, { "audio", L("AUDIO") }, { "game", L("GAME") },
-    { "mods", L("MODS") },
+    { "mods", L("MODS") }, { "touch", L("ON-SCREEN CONTROLS") },
   }
   for _, g in ipairs(groups) do
     local mine = {}
@@ -668,7 +670,9 @@ local function savesList(p, saves, c)
   actionsRight(p, c, y, { { index = ii, row = irow }, { index = ni, row = nrow, style = "primary" } })
   y = y + 30
   y = y + p:para(c.x, y + 4, c.w,
-    L("A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. Exports go to the exports folder of this device."),
+    saves.canPick
+      and L("A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. EXPORT asks where to put the file.")
+      or L("A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. Exports go to the exports folder of this device."),
     "muted") + 4
   return y
 end
@@ -819,7 +823,8 @@ function S.mods(p, menu, c)
   if not mods then return c.y end
   if mods.screen == "install" then
     return modsPath(p, mods, c, L("Install a mod"),
-      L("A mod's folder or its .zip, copied into this device's save folder."),
+      mods.canPick and L("A mod's .zip, copied into this device's save folder.")
+        or L("A mod's folder or its .zip, copied into this device's save folder."),
       mods.canType and L("Drop the mod's folder or .zip on this window, or type the path of its .zip and press ENTER.")
         or mods.canPick and L("Choose the mod's .zip; the system's file picker opens.")
         or L("Drop the mod's folder or .zip on this window."),
