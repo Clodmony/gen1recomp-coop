@@ -12,6 +12,7 @@
 -- A press may return a command for the host:
 --   { kind = "boot", version = v, newGame = bool }
 --   { kind = "import", path = p }          (a typed ROM path)
+--   { kind = "pick", what = "rom" }        (the system's file picker, #7)
 --   { kind = "quit" }
 --   { kind = "open_logs" }
 --   { kind = "settings" }                  (language or theme changed)
@@ -59,6 +60,8 @@ end
 --   saveInfo(version) -> nil or { name, badges, time }, the active save
 --   canQuit           -> offer QUIT (desktop; a phone closes the app itself)
 --   canType           -> the import screen takes a typed path
+--   canPick           -> the import screens open the system's file picker
+--                        (a phone, #7)
 --   initial           -> preselect this game
 --   coop(version)     -> the co-op screens' env (CoopMenu.lua), or nil for
 --                        no co-op
@@ -77,6 +80,7 @@ function Menu.new(opts)
     saveInfo = opts.saveInfo or function() return nil end,
     canQuit = opts.canQuit ~= false,
     canType = opts.canType ~= false,
+    canPick = opts.canPick == true,
     canOpenLogs = opts.canOpenLogs == true,
     coopEnv = opts.coop,
     settings = opts.settings,
@@ -157,6 +161,8 @@ function Menu:items()
       add({ id = "mods", group = "mods", label = L("MODS"),
             detail = L("%s →", gameLabel(self.version)) })
     end
+  elseif s == "import" then
+    if self.canPick then add({ id = "pick", label = L("CHOOSE FILE") }) end
   elseif s == "help" then
     local settings = self.settings or {}
     add({ id = "share", label = L("SHARE LOGS"), detail = settings.shareLogs == false
@@ -404,6 +410,7 @@ function Menu:press(action)
   end
   if screen == "import" and (action == "a" or action == "start") then
     if self.path ~= "" then return { kind = "import", path = self.path } end
+    if self.canPick then return { kind = "pick", what = "rom" } end
     return nil
   end
   -- left and right step a game option (#5); elsewhere they move

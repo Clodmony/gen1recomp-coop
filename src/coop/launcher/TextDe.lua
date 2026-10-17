@@ -509,4 +509,20 @@ return {
   ["SPACE"] = "LEER",
   ["DEL"] = "LÖSCH",
   ["END"] = "ENDE",
+  -- a phone's file picker (#7)
+  ["CHOOSE FILE"] = "DATEI WÄHLEN",
+  ["Choose the ROM file; the system's file picker opens."] =
+    "Wähl die ROM-Datei; die Dateiauswahl des Systems öffnet sich.",
+  ["Choose the .sav file; the system's file picker opens."] =
+    "Wähl die .sav-Datei; die Dateiauswahl des Systems öffnet sich.",
+  ["Choose the mod's .zip; the system's file picker opens."] =
+    "Wähl die .zip des Mods; die Dateiauswahl des Systems öffnet sich.",
+  ["Choose the file; the system's file picker opens."] =
+    "Wähl die Datei; die Dateiauswahl des Systems öffnet sich.",
+  ["The file picker could not be opened."] = "Die Dateiauswahl ließ sich nicht öffnen.",
+  ["The chosen file could not be copied to this device."] =
+    "Die gewählte Datei ließ sich nicht auf dieses Gerät kopieren.",
+  ["The chosen file could not be read."] = "Die gewählte Datei ließ sich nicht lesen.",
+  ["the chosen file"] = "die gewählte Datei",
+  ["Exported %s."] = "%s ist exportiert.",
 }

@@ -117,6 +117,15 @@ local function rowOf(rows, id)
   return nil
 end
 
+-- co-op (#7): an import screen's CHOOSE FILE on a phone (the system's file
+-- picker); its height, 0 without one
+local function pickButton(p, c, rows, y)
+  local i, row = rowOf(rows, "pick")
+  if not i then return 0 end
+  rowButton(p, c.x + 10, y, fitWidth(row.label), 24, i, row, { style = "primary" })
+  return 32
+end
+
 -- a heading: title at twice the size, the subtitle, a BACK button
 local function heading(p, c, y, title, subtitle, back)
   local backW = back and fitWidth(L("← BACK")) or 0
@@ -687,8 +696,10 @@ local function savesImport(p, saves, c)
   local py = y + 10
   local help = saves.canType
     and L("Drop the .sav file on this window, or type its path and press ENTER.")
+    or saves.canPick and L("Choose the .sav file; the system's file picker opens.")
     or L("Drop the .sav file on this window.")
   py = py + p:para(c.x + 10, py, c.w - 20, help, "ink") + 8
+  py = py + pickButton(p, c, saves:items(), py)
   if saves.canType then
     p:rect(c.x + 10, py, c.w - 20, 22, "field")
     p:frame(c.x + 10, py, c.w - 20, 22, "line")
@@ -789,6 +800,7 @@ local function modsPath(p, mods, c, title, subtitle, help, foot)
   local close = panel(p, c.x, y, c.w)
   local py = y + 10
   py = py + p:para(c.x + 10, py, c.w - 20, help, "ink") + 8
+  py = py + pickButton(p, c, mods:items(), py)
   if mods.canType then
     p:rect(c.x + 10, py, c.w - 20, 22, "field")
     p:frame(c.x + 10, py, c.w - 20, 22, "line")
@@ -809,6 +821,7 @@ function S.mods(p, menu, c)
     return modsPath(p, mods, c, L("Install a mod"),
       L("A mod's folder or its .zip, copied into this device's save folder."),
       mods.canType and L("Drop the mod's folder or .zip on this window, or type the path of its .zip and press ENTER.")
+        or mods.canPick and L("Choose the mod's .zip; the system's file picker opens.")
         or L("Drop the mod's folder or .zip on this window."),
       L("The mod is installed for every game; it is on until you turn it off. A mod already installed is replaced by the new copy."))
   end
@@ -817,6 +830,7 @@ function S.mods(p, menu, c)
     return modsPath(p, mods, c, L("Import a file"),
       m and L("%s for %s", imp.name, m.name) or nil,
       mods.canType and L("Drop the file on this window, or type its path and press ENTER.")
+        or mods.canPick and L("Choose the file; the system's file picker opens.")
         or L("Drop the file on this window."),
       L("The file is checked against the mod's manifest and copied into the mod's folder. Nothing is uploaded."))
   end
@@ -833,8 +847,10 @@ function S.import(p, menu, c)
   py = py + LINE + 6
   local help = menu.canType
     and L("Drop the ROM file on this window, or type its path and press ENTER.")
+    or menu.canPick and L("Choose the ROM file; the system's file picker opens.")
     or L("Importing a ROM on this device comes later.")
   py = py + p:para(c.x + 10, py, c.w - 20, help, "ink") + 8
+  py = py + pickButton(p, c, menu:items(), py)
   if menu.canType then
     p:rect(c.x + 10, py, c.w - 20, 22, "field")
     p:frame(c.x + 10, py, c.w - 20, 22, "line")
