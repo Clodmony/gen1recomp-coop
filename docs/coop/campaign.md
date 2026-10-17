@@ -182,6 +182,49 @@ The CO-OP box shows when the campaign was last saved (SAVED JUST NOW, SAVED
 2 MIN AGO, NOT SAVED YET) and AUTOSAVE: ON (design A3.12). Nobody has to
 save before leaving.
 
+### The quick keys (#72, G40)
+
+The game's quick keys, and a phone's quick bar (the "•••" button: SAVE,
+LOAD, SPEED), also work in a session (`CampaignSave.quickSave` and
+`quickLoad`, hooked in `Game:keypressed`):
+- **F1 / SAVE** is `Game:writeSave`, so it saves the campaign as START >
+  SAVE does. Where the save box refuses (a battle running, the opening),
+  F1 writes nothing and shows the box's text as a notice.
+- **F2 / LOAD** loads nothing in a session, while the link redials too.
+  The notice says "No loading in co-op: the host keeps the world." A
+  loaded save would bring back what the player handed to a partner
+  since that save, and the next rest point would send it to the host.
+- **SPEED** stays the player's own. Rest points and battle questions do
+  not depend on the speed, and the host's timers run in real time. A
+  window at 4X joins a battle, fights it and walks with a partner at 1X.
+  A notice ages by the frame's share of a real frame, so it stays up
+  as long at 4X as at 1X. Friend battles and the Cable Club still force
+  1X, because they are upstream's link play.
+
+Checked live (Linux desktop, US Red, two game processes, host RED and
+guest GREEN, scripted drivers; once with the 3D Dramatic Shape mod on
+GREEN at voxel level 4):
+- GREEN's F1 put GREEN's world (money 3333) in the host's campaign file,
+  "Campaign saved." for GREEN, "GREEN saved the campaign." for RED.
+- GREEN dropped a Pokémon and spent money, then pressed F2: the party
+  and money stayed (1 Pokémon, 77), the world stayed on screen with the
+  notice, and the host's record matched. The same driver on the build
+  before the fix loaded the save back (two Pokémon and 3333 on GREEN's
+  screen), and at the next rest points the host's record took that
+  older world too. A Pokémon handed to a partner would then be in both
+  worlds.
+- GREEN's F1 during RED's battle wrote nothing to GREEN's slot, showed
+  the battle notice, and left the campaign file as it was.
+- GREEN stepped GAME SPEED to 4X and joined RED's wild battle with RED
+  at 1X. Both copies reached the same state hash at the shared revision,
+  the host logged no `battle_desync`, and the battle ended as a win in
+  both windows. GREEN then walked at 4X and RED's session had GREEN on
+  the same cell.
+- A notice on GREEN at 4X lasted 180 game frames (720 logic frames), as
+  long as at 1X; before the fix it lasted 45.
+- Before the fix, GREEN's F1 during the battle wrote GREEN's slot once,
+  and the host refused the save ("The campaign was not saved.").
+
 ## On the player's device
 
 The game plays from, and writes to, the campaign's save slot on the device:
@@ -236,6 +279,11 @@ ROM-free, in `tests/coop/`:
   - a rejoin and a host started again from the file, each giving the world
     back;
   - a broken or code-carrying world refused.
+- `quick_keys_game_test.lua` (#72): the fixture overworld hosting a
+  session. F1 saves the campaign with the notices; F2 loads nothing back
+  (a Pokémon handed away and the money spent stay so) and shows its
+  notice; F1 during a battle writes nothing and shows the save box's
+  text; a notice at 4X lasts four times the logic frames.
 - `campaign_game_test.lua`: the fixture overworld hosting a session.
   - the game's save reaching the campaign file with uids and without the
     options;

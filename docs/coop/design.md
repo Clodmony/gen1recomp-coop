@@ -1645,3 +1645,18 @@ sibling's D-numbers.
   `tools/build_android.sh` builds a local debug APK under the fork's own
   app id with upstream's launcher taken out of `game.love`. iOS stays
   unbuilt (needs macOS). Details: [mobile.md](mobile.md).
+- **G40. The quick keys in a session: SAVE saves the campaign, LOAD is
+  off, SPEED stays each player's** (#72, 2026-10-17, proposed). F1 and
+  the quick bar's SAVE are `Game:writeSave`, so they save the campaign
+  (A3.11). Where START > SAVE refuses (A3.10: a battle running, the
+  opening), F1 writes nothing and shows the save box's text as a notice.
+  F2 and the quick bar's LOAD load nothing in a session, while its link
+  redials too, and a notice says why. A loaded save would bring back
+  what was handed to a partner since that save, and the host's record is
+  the world (A3.14): in a live run before the fix, the host's record
+  took the loaded-back world at the next rest points. GAME SPEED stays each player's own: rest points,
+  battle questions and the host's real-time timers do not depend on it,
+  and notices age by real time. Upstream's link play (friend battles,
+  the Cable Club) still forces 1X. Costs: no quick undo in co-op; a
+  reset (A10.7, G30) reopens the host's world, not the last SAVE.
+  Details: [campaign.md](campaign.md) § The quick keys.
