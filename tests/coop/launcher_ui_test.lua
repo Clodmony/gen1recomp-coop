@@ -213,15 +213,18 @@ local function fakeSlots()
   function store.deleteSlot() return true end
   return store
 end
-local function newSaves(version)
-  return Saves.new({ version = version, saves = fakeSlots(),
+local function newSaves(version, phone)
+  return Saves.new({ version = version, saves = fakeSlots(), canType = not phone, canPick = phone,
     importSav = function() return false, nil, { needsConfirm = true, size = 32786 } end,
     exportSlot = function() return true, "/somewhere/exports/red/gen1recomp-red-slot1.sav" end,
     campaignOf = function(id) return id == "slot2" and "SUNDAY RUN" or nil end })
 end
 
-local function newMenu()
+-- phone: the options a phone's launcher gets (#7): no typed paths, the
+-- system's file picker, the on-screen controls on SETTINGS
+local function newMenu(phone)
   return Menu.new({
+    canType = not phone, canPick = phone, touchControls = phone,
     ready = function(v) return ready[v] == true end,
     saveInfo = function(v)
       return v == "red" and { name = "NOVA", badges = 3, time = "12:34" } or nil
@@ -229,7 +232,7 @@ local function newMenu()
     coop = env, settings = settings, campaigns = Campaigns, canOpenLogs = true,
     controls = newControls(),
     gameOptions = GameOptions.new({ fs = optionsFs }),
-    saves = newSaves,
+    saves = function(v) return newSaves(v, phone) end,
   })
 end
 
@@ -340,6 +343,14 @@ for _, c in ipairs({
     m.coop:go("connecting")
   end }
 end
+-- a phone's own screens (#7)
+SCREENS[#SCREENS + 1] = { "phone: import", function(m) m:select("yellow") m:go("import") end, phone = true }
+SCREENS[#SCREENS + 1] = { "phone: settings", function(m) m:openTab("settings") end, phone = true }
+SCREENS[#SCREENS + 1] = { "phone: saves", function(m) m:openSaves("red") end, phone = true }
+SCREENS[#SCREENS + 1] = { "phone: saves, import", function(m)
+  m:openSaves("red")
+  m.saves:go("import")
+end, phone = true }
 SCREENS[#SCREENS + 1] = { "a message", function(m)
   m:notify(Text.get("Unknown ROM. This needs a clean US Pokemon Red, Blue or Yellow dump, or a German Rote, Blaue or Gelbe Edition (SHA-1 %s).",
     ("0123456789abcdef"):rep(2) .. "01234567"))
@@ -373,7 +384,7 @@ for _, lang in ipairs({ "en", "de" }) do
   Text.missing = {}
   for _, size in ipairs(SIZES) do
     for _, sc in ipairs(SCREENS) do
-      local m = newMenu()
+      local m = newMenu(sc.phone == true)
       sc[2](m)
       local ui = { scroll = 0 }
       local page = Screens.build(m, ui, { w = size[1], h = size[2], device = "keys" })

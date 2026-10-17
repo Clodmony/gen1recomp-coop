@@ -21,6 +21,10 @@
 --   exportSlot(version, slotId) -> ok, pathOrErr, note (default: Saves.exportSlot)
 --   campaignOf(slotId) -> a campaign's title when the slot is its, or nil
 --   canType          the import screen takes a typed path (default true)
+--   canPick          the import screen opens the system's file picker
+--                    (a phone, #7; a press returns { kind = "pick", what = "sav" }),
+--                    and EXPORT hands the file on: { kind = "export_sav", path,
+--                    name, note } (the host offers the system's save-as screen)
 --   canEdit          the launcher can open the save editor (default true)
 
 local Text = require("src.coop.launcher.Text")
@@ -57,6 +61,7 @@ function Saves.new(env)
     exportSlot = env.exportSlot or Saves.exportSlot,
     campaignOf = env.campaignOf or function() return nil end,
     canType = env.canType ~= false,
+    canPick = env.canPick == true,
     canEdit = env.canEdit ~= false,
   }, Saves)
   return self
@@ -99,6 +104,8 @@ function Saves:items()
     end
     add({ id = "new", label = L("+ NEW SAVE") })
     add({ id = "import", label = L("IMPORT .SAV") })
+  elseif s == "import" then
+    if self.canPick then add({ id = "pick", label = L("CHOOSE FILE") }) end
   elseif s == "delete" then
     add({ id = "confirm", label = L("DELETE") })
     add({ id = "cancel", label = L("CANCEL") })
@@ -168,6 +175,9 @@ function Saves:press(action)
     if (action == "a" or action == "start") and self.path ~= "" then
       return { kind = "import_sav", path = self.path }
     end
+    if (action == "a" or action == "start") and self.canPick then
+      return { kind = "pick", what = "sav" }
+    end
     return nil
   end
   if action == "up" or action == "left" then move(self, -1) return nil end
@@ -200,7 +210,10 @@ function Saves:press(action)
     elseif id == "export" then
       local slot = slotOf(self, row.slot)
       local ok, pathOrErr, note = self.exportSlot(self.version, row.slot)
-      if ok then
+      if ok and self.canPick then
+        return { kind = "export_sav", path = tostring(pathOrErr),
+                 name = slot and slotWord(slot) or row.slot, note = note }
+      elseif ok then
         self:notify(L("Exported %s to %s", slot and slotWord(slot) or row.slot, tostring(pathOrErr))
           .. (note and ("\n" .. tostring(note)) or ""))
       else

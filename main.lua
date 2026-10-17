@@ -581,6 +581,11 @@ local function makeLauncher(launcherOpts)
     initialTab = launcherOpts and launcherOpts.initialTab or nil,
     notice = launcherOpts and launcherOpts.notice or nil,
     onEditSave = openEditor,  -- co-op (#27): EDIT on a SAVES row
+    -- co-op (#7): SETTINGS > ON-SCREEN CONTROLS on a phone
+    onTouchControls = function(which, version)
+      if which == "skin" then return openSkinStudio(version) end
+      return openTouchControlsEditor(version)
+    end,
   })
 end
 

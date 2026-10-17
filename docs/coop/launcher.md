@@ -290,8 +290,9 @@ Upstream features that only its launcher reached, as #27 decided them
   (`main.lua` asks for none) are not offered.
 - **The save editor**: EDIT on a SAVES row (above). The editor itself
   stays upstream's.
-- **The skin studio and the touch-controls editor**: left to #7 (mobile),
-  which decides and builds their entries; they matter on touch screens.
+- **The skin studio and the touch-controls editor**: on a phone, SETTINGS
+  > ON-SCREEN CONTROLS (LAYOUT, SKIN) opens them (#7, G39); not offered on
+  desktop. The launcher on a phone: [mobile.md](mobile.md).
 - **Carts** (`src/carts`, mod sets packaged as a cartridge): left out for
   now. A co-op campaign needs both players on one game and one set of
   mods, and a cart would add a third thing to match; revisit after the

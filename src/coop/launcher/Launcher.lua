@@ -60,6 +60,27 @@ local function mobile()
   return name == "Android" or name == "iOS"
 end
 
+-- co-op (#7): the system's file picker, a native bridge of the vendored
+-- love-android (love.system.pickFile; no LÖVE build elsewhere has it).  It
+-- copies the picked file into the save folder under a name per kind; a
+-- cancel or a failed copy leaves PICK_ERROR ("cancelled:<name>" or <name>).
+local function canPick()
+  return mobile() and love.system ~= nil and love.system.pickFile ~= nil
+end
+local PICK_KIND = { rom = "rom", sav = "sav", mod = "mod", mod_file = "required_import" }
+local PICKED = {
+  { what = "rom", file = "picked_rom.gb" },
+  { what = "sav", file = "picked_save.sav" },
+  { what = "mod", file = "picked_mod.zip" },
+  { what = "mod_file", file = "picked_required_import.bin" },
+}
+local PICK_ERROR = "pick_error.flag"
+-- the system's save-as screen (love.system.createFile, same bridge) copies
+-- PENDING_EXPORT where the player picks and leaves EXPORT_DONE
+local PENDING_EXPORT, EXPORT_DONE = "pending_export.sav", "export_done.flag"
+-- a finger that moves this far (launcher pixels) drags the page, no tap
+local TOUCH_SLOP = 6
+
 function Launcher.new(onBoot, opts)
   opts = opts or {}
   -- a split-screen second player ends with the game it played beside (#11)
@@ -67,6 +88,7 @@ function Launcher.new(onBoot, opts)
   local self = setmetatable({
     onBoot = onBoot, bootOnImport = opts.bootOnImport == true,
     onEditSave = opts.onEditSave,
+    onTouchControls = opts.onTouchControls,
     readyCache = {}, saveCache = {}, clock = 0, axis = {},
     ui = { scroll = 0 }, device = mobile() and "touch" or "keys",
   }, Launcher)
@@ -97,6 +119,8 @@ function Launcher.new(onBoot, opts)
     saveInfo = function(v) return self:saveInfo(v) end,
     canQuit = not mobile(),
     canType = not mobile(),
+    canPick = canPick(),
+    touchControls = mobile() and opts.onTouchControls ~= nil,
     canOpenLogs = canOpenLogs,
     initial = initial,
     settings = settings,
@@ -107,7 +131,7 @@ function Launcher.new(onBoot, opts)
     gameOptions = GameOptions.new({ fixedDisplay = require("src.core.VideoMode").fixedDisplay() }),
     saves = function(v) return Saves.new(self:_savesEnv(v)) end,
     -- the MODS page (#30), on the GPL mod modules (src/coop/mods/Installed.lua)
-    mods = function(v) return Mods.new({ version = v, canType = not mobile() }) end,
+    mods = function(v) return Mods.new({ version = v, canType = not mobile(), canPick = canPick() }) end,
   })
   self:_coopReturn()
   if opts.notice then self.menu:notify(opts.notice) end
@@ -289,6 +313,7 @@ function Launcher:_savesEnv(version)
   return {
     version = version,
     canType = not mobile(),
+    canPick = canPick(),
     canEdit = self.onEditSave ~= nil,
     campaignOf = function(slotId)
       for id, entry in pairs(settings.slots or {}) do
@@ -385,6 +410,20 @@ function Launcher:_run(command)
       file:close()
       self:_importModFile(data, path:match("[^/\\]+$") or path)
     end
+  elseif command.kind == "pick" then
+    -- a phone's file picker (#7); the copy is taken up in _pollPicked
+    local ok, opened = pcall(love.system.pickFile, PICK_KIND[command.what])
+    if ok and opened then
+      self.picking = command.what
+    else
+      self.menu:notify(L("The file picker could not be opened."))
+    end
+  elseif command.kind == "touch_layout" or command.kind == "touch_skin" then
+    -- co-op (#7): main.lua parks this launcher while the editor or studio
+    -- runs and hands it back on their close
+    self.onTouchControls(command.kind == "touch_skin" and "skin" or "layout", command.version)
+  elseif command.kind == "export_sav" then
+    self:_exportSav(command)
   elseif command.kind == "boot" then
     if command.newGame then
       -- a new game gets its own slot; the old save stays on disk
@@ -504,7 +543,12 @@ function Launcher:importData(data, name)
     return self:_installModZip(data, name)
   end
   -- a cartridge save goes to the SAVES page of the picked game (#6)
-  if Saves.looksLikeSav(data, name) and self.menu.savesOf then
+  if Saves.looksLikeSav(data, name) then return self:_importSav(data, name) end
+  return self:_importRom(data, name)
+end
+
+function Launcher:_importSav(data, name)
+  if self.menu.savesOf then
     local menu = self.menu
     if menu.screen ~= "saves" then
       if not self:isReady(menu.version) then
@@ -516,6 +560,10 @@ function Launcher:importData(data, name)
     self.saveCache = {}
     return
   end
+  return self:_importRom(data, name)
+end
+
+function Launcher:_importRom(data, name)
   local version, bytes, label, hash = RomImport.identify(data, name)
   if not version then
     self.menu:notify(bytes)
@@ -524,6 +572,80 @@ function Launcher:importData(data, name)
   self.job = RomImport.start(version, bytes, label, hash)
   self.menu:importStarted(version, label)
   self:_pollJob()
+end
+
+-- co-op (#7): the copy a phone's file picker left in the save folder, also
+-- one from before a restart (the system may close the app while its picker
+-- is open).  Checked each frame while a pick is open, else once a second.
+function Launcher:_pollPicked()
+  if not canPick() or self.job then return end
+  if not self.picking and self.clock < (self.nextPickPoll or 0) then return end
+  self.nextPickPoll = self.clock + 1
+  local fs = love.filesystem
+  local flag = fs.getInfo(PICK_ERROR) and fs.read(PICK_ERROR)
+  if flag then
+    fs.remove(PICK_ERROR)
+    self.picking = nil
+    if not tostring(flag):find("^cancelled:") then
+      self.menu:notify(L("The chosen file could not be copied to this device."))
+    end
+    return
+  end
+  for _, pick in ipairs(PICKED) do
+    if fs.getInfo(pick.file) then
+      local data = fs.read(pick.file)
+      fs.remove(pick.file)
+      self.picking = nil
+      if type(data) ~= "string" then
+        return self.menu:notify(L("The chosen file could not be read."))
+      end
+      local name = L("the chosen file")
+      if pick.what == "rom" then return self:_importRom(data, name) end
+      if pick.what == "sav" then
+        if self.menu.screen == "saves" and self.menu.saves then
+          self.menu.saves:importData(data, name)
+          self.saveCache = {}
+          return
+        end
+        return self:_importSav(data, name)
+      end
+      if pick.what == "mod" then return self:_installModZip(data, name) end
+      return self:_importModFile(data, name)
+    end
+  end
+end
+
+-- co-op (#7): an exported .sav on a phone goes where the player picks; the
+-- app's own folder is out of reach of the phone's file manager
+function Launcher:_exportSav(command)
+  local saves = self.menu.saves
+  local function said(text)
+    if saves then saves:notify(text) else self.menu:notify(text) end
+  end
+  local exported = L("Exported %s to %s", command.name, command.path)
+    .. (command.note and ("\n" .. tostring(command.note)) or "")
+  local fs = love.filesystem
+  local base = fs.getSaveDirectory and fs.getSaveDirectory() or ""
+  local rel = command.path
+  if base ~= "" and rel:sub(1, #base + 1) == base .. "/" then rel = rel:sub(#base + 2) end
+  local data = love.system.createFile and fs.read(rel)
+  if type(data) ~= "string" or not fs.write(PENDING_EXPORT, data) then return said(exported) end
+  fs.remove(EXPORT_DONE)
+  local ok, opened = pcall(love.system.createFile, rel:match("[^/]+$"))
+  if not (ok and opened) then return said(exported) end
+  self.exporting = { name = command.name, note = command.note }
+end
+
+function Launcher:_pollExport()
+  if not self.exporting then return end
+  local fs = love.filesystem
+  if not fs.getInfo(EXPORT_DONE) then return end
+  fs.remove(EXPORT_DONE)
+  fs.remove(PENDING_EXPORT)
+  local e = self.exporting
+  self.exporting = nil
+  local text = L("Exported %s.", e.name) .. (e.note and ("\n" .. tostring(e.note)) or "")
+  if self.menu.saves then self.menu.saves:notify(text) else self.menu:notify(text) end
 end
 
 function Launcher:startPath(path)
@@ -569,6 +691,8 @@ function Launcher:update(dt)
   self.clock = self.clock + (dt or 0)
   self.menu.clock = self.clock
   self:_pollJob()
+  self:_pollPicked()
+  self:_pollExport()
   -- co-op (#12): the session runs while the launcher shows it
   Session.tick(dt, nil)
   self:_run(self.menu:update(dt))
@@ -908,12 +1032,30 @@ function Launcher:wheelmoved(_, dy)
   self.ui.scroll = math.max(0, math.min((self.ui.scroll or 0) + step, page.maxScroll or 0))
 end
 
-function Launcher:touchpressed(_, x, y)
+-- co-op (#7): a tap presses when the finger lifts; a finger that moved
+-- drags a long page instead and presses nothing
+function Launcher:touchpressed(id, x, y)
   self.device = "touch"
-  self:_tap(x, y)
+  self.touch = { id = id, x = x, y = y, scroll = self.ui.scroll or 0 }
 end
-function Launcher:touchmoved() end
-function Launcher:touchreleased() end
+
+function Launcher:touchmoved(id, x, y)
+  local t = self.touch
+  if not t or t.id ~= id then return end
+  local scale = self:_layout()
+  local dx, dy = (x - t.x) / scale, (y - t.y) / scale
+  if not t.dragging and math.abs(dx) < TOUCH_SLOP and math.abs(dy) < TOUCH_SLOP then return end
+  t.dragging = true
+  local page = self.page or self:_page()
+  self.ui.scroll = math.max(0, math.min(math.floor(t.scroll - dy + 0.5), page.maxScroll or 0))
+end
+
+function Launcher:touchreleased(id)
+  local t = self.touch
+  if not t or t.id ~= id then return end
+  self.touch = nil
+  if not t.dragging then self:_tap(t.x, t.y) end
+end
 
 function Launcher:filedropped(file)
   if not (file and file.open) then return end

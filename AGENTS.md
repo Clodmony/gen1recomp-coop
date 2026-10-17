@@ -50,6 +50,9 @@ Read before working:
   campaign, wild Pokémon from both versions, why Yellow stays apart.
 - [docs/coop/split.md](docs/coop/split.md): split-screen, two players on one
   device (two worlds in one process, the views, input routing, seat 2).
+- [docs/coop/mobile.md](docs/coop/mobile.md): phones (#7): the local
+  Android build (`tools/build_android.sh`), the launcher on touch (file
+  picker, save-as, on-screen controls), co-op on a phone, iOS's status.
 
 ## Hard rules
 
