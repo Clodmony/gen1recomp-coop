@@ -1019,7 +1019,7 @@ SELECT on the map (#30, [mods.md](mods.md), G34).
 2. **carry** While the CO-OP menu or a co-op battle is open, a swipe over the game
    screen is one d-pad press per 16 hardware pixels of travel and a tap is A,
    fed as ordinary presses; pad touches and two-finger touches are left alone;
-   walking on the map is untouched (D99, tc P02, P07).
+   walking on the map is untouched (D99, tc P02, P07). Not built yet: #73.
 3. **adapt** Menus are drawn at the game screen's scale with no extra size setting
    (D99). Re-think for split-screen halves on a phone.
 4. **adapt** Controller pick: one chosen pad plays (kept by GUID, name, serial and
@@ -1126,7 +1126,7 @@ Every carry and adapt rule belongs to one issue of this repository.
 | A12 Friend battles and trades | #23; the Cable Club #60 ([cable.md](cable.md)) |
 | A13 Red + Blue mixing, Yellow | #9 ([versions.md](versions.md)) |
 | A14 Presence, finding the partner, CO-OP menu, run button | #15 ([presence.md](presence.md)); the battle, opening, friend battle and campaign file parts #34 |
-| A15 Mobile, touch, input and language | #7 (and #4 for pads); German: #25 |
+| A15 Mobile, touch, input and language | #7 (and #4 for pads), gestures #73; German: #25 |
 | Local split-screen (the sibling's open #53) | #11 |
 | Mods: the Dramatic Shape Voxel Mod in co-op and split-screen, the launcher's MODS page | #30 ([mods.md](mods.md)) |
 
@@ -1634,3 +1634,29 @@ sibling's D-numbers.
   are #7's to decide with mobile; carts are left out for now, since a
   campaign would have to match them between players. Details:
   [launcher.md](launcher.md) *What it leaves out*.
+- **G39. A phone gets the file picker, the save-as screen and the
+  on-screen controls' tools; the fork builds its own APK** (#7, accepted
+  as built by the owner, 2026-10-17; the owner chose an Android emulator on this machine and no
+  split-screen on a phone for now). On Android and iOS the launcher's
+  import screens open the system's file picker (CHOOSE FILE) instead of a
+  typed path, EXPORT opens the save-as screen, a tap presses on release
+  and a drag scrolls; SETTINGS > ON-SCREEN CONTROLS opens upstream's
+  touch-controls editor and skin studio (G38's deferred entries).
+  `tools/build_android.sh` builds a local debug APK under the fork's own
+  app id with upstream's launcher taken out of `game.love`. iOS stays
+  unbuilt (needs macOS). Details: [mobile.md](mobile.md).
+- **G40. The quick keys in a session: SAVE saves the campaign, LOAD is
+  off, SPEED stays each player's** (#72, 2026-10-17, accepted as built by the owner the same day). F1 and
+  the quick bar's SAVE are `Game:writeSave`, so they save the campaign
+  (A3.11). Where START > SAVE refuses (A3.10: a battle running, the
+  opening), F1 writes nothing and shows the save box's text as a notice.
+  F2 and the quick bar's LOAD load nothing in a session, while its link
+  redials too, and a notice says why. A loaded save would bring back
+  what was handed to a partner since that save, and the host's record is
+  the world (A3.14): in a live run before the fix, the host's record
+  took the loaded-back world at the next rest points. GAME SPEED stays each player's own: rest points,
+  battle questions and the host's real-time timers do not depend on it,
+  and notices age by real time. Upstream's link play (friend battles,
+  the Cable Club) still forces 1X. Costs: no quick undo in co-op; a
+  reset (A10.7, G30) reopens the host's world, not the last SAVE.
+  Details: [campaign.md](campaign.md) § The quick keys.

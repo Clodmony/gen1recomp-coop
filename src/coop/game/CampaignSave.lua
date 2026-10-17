@@ -12,6 +12,11 @@
 --     says so, writes nothing and asks nothing (A3.10).  While the player
 --     plays the opening (#22, A4.9) the box says to leave Oak's lab first,
 --     and Game:writeSave writes nothing at all (`vetoes`).
+--   * The quick keys (#72): F1 (the quick bar's SAVE) is Game:writeSave, so
+--     it saves the campaign; where the save box refuses, it writes nothing
+--     and a notice says why (`quickSave`).  F2 (the quick bar's LOAD) loads
+--     nothing in a session (`quickLoad`): the host's record is the world,
+--     and a world loaded back could hold what was handed to a partner.
 --   * The notices say who saved (A3.12): "Campaign saved." for the saver,
 --     "<NAME> saved the campaign." for the others; the CO-OP box shows how
 --     long ago (`ago`).
@@ -51,6 +56,24 @@ function CampaignSave.refusal(game)
   local why = s and s:saveRefusal()
   if not why then return nil end
   return Strings("A battle is in\nprogress!\fIt can't be saved\nright now.")
+end
+
+-- F1: true when the game may write its save now; otherwise the save box's
+-- refusal goes out as a notice and nothing is written
+function CampaignSave.quickSave(game)
+  local why = CampaignSave.refusal(game)
+  if not why then return true end
+  require("src.coop.game.Notices").push((why:gsub("[\n\f]", " ")))
+  return false
+end
+
+-- F2: true when the game may load its last save now; in a session it may
+-- not, even while its link redials, and a notice says so
+function CampaignSave.quickLoad(game)
+  local s = require("src.coop.session.Session").current
+  if not (s and s.client) then return true end
+  require("src.coop.game.Notices").push(Strings("No loading in co-op: the host keeps the world."))
+  return false
 end
 
 -- the notice for one `saved` message, or nil

@@ -16,6 +16,9 @@
 --   list() -> Installed.list's rows (default: Installed.list(version))
 --   setEnabled(id, on)          (default: Installed.setEnabled)
 --   canType                     the install screen takes a typed path
+--   canPick                     the install and import screens open the
+--                               system's file picker (a phone, #7; a press
+--                               returns { kind = "pick", what = "mod" or "mod_file" })
 
 local Text = require("src.coop.launcher.Text")
 local L = Text.get
@@ -33,6 +36,7 @@ function Mods.new(env)
     list = env.list or function() return Installed().list(version) end,
     setEnabled = env.setEnabled or function(id, on) return Installed().setEnabled(version, id, on) end,
     canType = env.canType ~= false,
+    canPick = env.canPick == true,
   }, Mods)
   self:refresh()
   return self
@@ -66,6 +70,8 @@ function Mods:items()
       end
     end
     add({ id = "install", label = L("+ INSTALL MOD") })
+  elseif (s == "install" or s == "import") and self.canPick then
+    add({ id = "pick", label = L("CHOOSE FILE") })
   end
   return rows
 end
@@ -105,6 +111,9 @@ function Mods:press(action)
       if s == "install" then return { kind = "install_mod", path = self.path } end
       local p = self.pending or {}
       return { kind = "mod_import", path = self.path, mod = p.mod, import = p.import }
+    end
+    if (action == "a" or action == "start") and self.canPick then
+      return { kind = "pick", what = s == "install" and "mod" or "mod_file" }
     end
     return nil
   end

@@ -6,7 +6,7 @@ repository so it survives any worktree path and any tool; per-checkout agent
 memory is not read by a session that starts in another worktree. State goes
 here; stable recipes go into `docs/coop/`; personal data and hardware never.
 
-Last updated 2026-10-17 (#71 merged; Group 10's #7 in PR #74; #72 and #73 filed in Group 10).
+Last updated 2026-10-17 (#74 merged locally, its push waits for the owner; #72 in PR #76; #75 filed in Group 10).
 
 ## Testing rule (owner, 2026-10-16)
 
@@ -43,21 +43,39 @@ on.
 - Protocol and campaign file unchanged by #27, #70 and #7. Decision G38
   (#27's entries) recorded from the owner's answers; G39 (#7) accepted
   as built (owner, 2026-10-17).
+- **#74 merged locally** (2026-10-17, owner): merge commit `af169152`
+  (as Claude) on top of `origin/gen1recomp-coop` (`3d3714d7`). The push
+  was blocked by the auto-mode guard (a merge with no review), and the
+  owner said they would push it themselves (`af169152:gen1recomp-coop`,
+  with the push-guard bypass only the owner may use). Until then GitHub
+  shows #74 open.
+- Decision G40 (#72) accepted as built (owner, 2026-10-17).
 - Milestones: Groups 8, 11 and 12 closed. Group 2 has #12 and #15
-  (owner-side checks). Group 9 has no issues. Group 10 now: #7 (in PR
-  #74), #72 (quick save/load/speed in a session) and #73 (A15.2 swipe and
-  tap gestures on a phone).
+  (owner-side checks). Group 9 has no issues. Group 10 now: #72 (in PR
+  #76), #73 (A15.2 swipe and tap gestures on a phone) and #75 (the
+  partner-battle notice's `>` has no glyph in the cartridge font).
 
 ## Open pull requests
 
-- **#74** `coop/group10-mobile` → `gen1recomp-coop`, draft: #7 (Closes).
-  The launcher on a phone (file picker for ROM/save/mod, save-as export,
-  drag to scroll, SETTINGS > ON-SCREEN CONTROLS opening upstream's
-  touch-controls editor and skin studio), `tools/build_android.sh` (local
-  debug APK, fork app id, upstream launcher stripped), `docs/coop/mobile.md`,
-  G39 proposed. Verify: ALL PASSED at d6bc715d (38/38 tiers); live on an
-  Android 14 emulator incl. co-op with a desktop host and the 3D mod.
-  The next session merges it as Claude once coop-ci is green (owner).
+- **#74** `coop/group10-mobile`: merged locally as `af169152` (see
+  above). It closes once that commit is pushed.
+- **#76** `coop/group10-quick-keys` → `gen1recomp-coop`, draft: #72
+  (Closes). F1/SAVE saves the campaign and is refused with a notice
+  wherever START > SAVE refuses. F2/LOAD loads nothing in a session.
+  Notices age in real frames, so they last as long at 4X. G40 accepted;
+  `docs/coop/campaign.md` § The quick keys. The branch starts at
+  `af169152`, so its diff shows #74's commits until that merge is
+  pushed. Verify: ALL PASSED at a184b2be (38/38 tiers). Live: two
+  processes with US Red, once with the 3D mod (see the PR).
+
+## #72's answers (owner, 2026-10-17: every recommendation taken)
+
+- G40 accepted as built.
+- #76: the next session merges it locally as Claude once `af169152` is
+  on `origin/gen1recomp-coop` and coop-ci is green on #76.
+- German "Kein Laden im Koop: Die Welt liegt beim Host.": kept, for the
+  owner's later review of `german-wording.md`.
+- Next session: #75 (the `>` glyph).
 
 ## #7's answers (owner, 2026-10-17: every recommendation taken)
 
@@ -166,12 +184,12 @@ Forfeit EXP became #67 (Group 12).
 
 ## Next candidates
 
-- **First: merge #74** if the owner says so (once coop-ci is green; a
-  fast-forward when `gen1recomp-coop` has not moved, else a merge commit
-  the owner pushes with `--no-verify`).
-- **#72** (Group 10): F1/F2/speed (and the phone's quick bar SAVE, LOAD,
-  SPEED) in a co-op session. First step: a two-process test where the
-  guest gives an item away and presses F2; see what the host's record does.
+- **First:** check that `af169152` reached `origin/gen1recomp-coop` (#74
+  closed), then merge #76 locally as Claude once coop-ci is green (owner).
+- **Then #75** (the owner's pick for the next session).
+- **#75** (Group 10, small): the partner-battle notice's `>`. First
+  step: a test that draws every co-op notice and menu string with
+  `Font` and fails on a missing glyph.
 - **#73** (Group 10): A15.2 swipe/tap over the CO-OP menu and co-op
   battles on a phone. First step: a test feeding `love.touchmoved` over an
   open CO-OP menu; then the emulator (recipe below).
@@ -317,6 +335,22 @@ Forfeit EXP became #67 (Group 12).
   give it `EVENT_GOT_STARTER` and a party Pokémon first. Taps are window
   pixels of the 1080 x 2400 screen. The voxel mod builds its cache once
   (about 5 min on the emulator).
+- **Quick keys and speed (#72).**
+  - A scripted run pins `Game.speedOverride = 1` (main.lua), so the
+    speed key does nothing. To test GAME SPEED, set
+    `game.speedOverride = nil` in the driver, then send
+    `love.keypressed("1")`.
+  - A driver run steps `Game:update(1/60)` once per yield, uncapped, so
+    real seconds mean nothing. Count driver frames (`U.frame()`) and
+    logic frames (`Presence.frame`) instead.
+  - Send keys with `love.keypressed(key)`: that is the path the touch
+    quick bar takes.
+  - The player's cell is `ow.player.cellX`/`cellY`.
+  - A joiner enters a co-op battle at a turn boundary. The battle's
+    owner must keep fighting; a driver that waits for the joiner's
+    copy before acting deadlocks.
+  - A party menu can open over the copy for a replacement, so look for
+    the copy (`state.coop`) anywhere in the stack, not only on top.
 - **Loopback test clients** need a hex `device` id (`"c1"`, not `"y1"`):
   the protocol drops a hello with another one.
 - **Cells used for #16:**
@@ -329,10 +363,12 @@ Forfeit EXP became #67 (Group 12).
 
 - Main checkout on `gen1recomp-coop` (behind origin until pulled; leave
   it to the owner).
-- The Superset worktree `veiled-degree-…` is on `coop/group10-mobile`
-  (PR #74). `coop/group10-editor-close` (#71, merged) is deleted.
-- No background processes (the emulator and the desktop host are stopped).
-- Scratch: `g7/` (#7's runs, host import, PR body) is deleted.
+- The Superset worktree `veiled-degree-…` is on `coop/group10-quick-keys`
+  (PR #76). The local branch `coop/group10-mobile` (#74) can be deleted,
+  locally and on GitHub, once `af169152` is pushed.
+- No background processes.
+- Scratch: `g72/` (#72's import, drivers, runs, the pre-fix worktree) is
+  deleted.
   `android-sdk/` (9.7 GB: SDK, NDK, emulator, the AVD `coop34`,
   app data wiped) and `android-build/` (1.2 GB, incremental gradle tree)
   are kept for #73 (owner); `bin/` holds the helpers above; `mod-dl/dsv` is the owner's
