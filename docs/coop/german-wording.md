@@ -542,12 +542,6 @@ The credit line of upstream's licence is not translated.
 | The look of those buttons. | Wie diese Tasten aussehen. | |
 | A mod's .zip, copied into this device's save folder. | Die .zip eines Mods, kopiert in den Speicherordner dieses Geräts. | |
 | A .sav is the cartridge's own format, as an emulator or a cartridge reader writes it. EXPORT asks where to put the file. | Eine .sav ist das Format des Moduls, wie ein Emulator oder ein Modul-Lesegerät es schreibt. EXPORTIEREN fragt, wohin die Datei soll. | |
-### The quick keys (#72)
-
-| English | German now | Better German |
-| --- | --- | --- |
-| No loading in co-op: the host keeps the world. | Kein Laden im Koop: Die Welt liegt beim Host. | |
-
 <!-- end of the made part -->
 
 ## The games (#25)
@@ -843,6 +837,7 @@ characters, a menu row fewer.
 | SAVED %d MIN AGO | VOR %d MIN GESP. | |
 | SAVED %d H AGO | VOR %d H GESP. | |
 | AUTOSAVE: ON | AUTO-SPEICHERN: AN | |
+| No loading in co-op: the host keeps the world. | Kein Laden im Koop: Die Welt liegt beim Host. | |
 | %s shared %s. | %s teilt %s. | |
 | %s went to the PC. | %s liegt jetzt im PC. | |
 | %s handed over %s. | %s hat %s abgegeben. | |
